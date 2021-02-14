@@ -29,11 +29,21 @@ impl Writer {
 use corus::node::{self, Node};
 use node::{add::Add, amp::Amp, constant::Constant, sine::Sine};
 
-fn f<A: Node<f32>, B: Node<f32>, DA: AsMut<A>, DB: AsMut<B>>(frequency: DA, env: DB, gain: f32) -> Amp<f32, Sine<A, DA>, Amp<f32, Constant<f32>, B, Box<Constant<f32>>, DB>, Box<Sine<A, DA>>, Box<Amp<f32, Constant<f32>, B, Box<Constant<f32>>, DB>>>  {
-    let sine = Box::new(Sine::new(frequency));
-    let gain = Box::new(Constant::new(gain));
-    let env = Box::new(node::amp::Amp::new(gain, env));
-    node::amp::Amp::new(sine, env)
+fn f<A: Node<f32>, B: Node<f32>, DA: AsMut<A>, DB: AsMut<B>>(
+    frequency: DA,
+    env: DB,
+    gain: f32,
+) -> Amp<
+    f32,
+    Sine<A, DA>,
+    Amp<f32, Constant<f32>, B, Constant<f32>, DB>,
+    Sine<A, DA>,
+    Amp<f32, Constant<f32>, B, Constant<f32>, DB>,
+> {
+    let sine = Sine::new(frequency);
+    let gain = Constant::new(gain);
+    let env = Amp::new(gain, env);
+    Amp::new(sine, env)
 }
 
 fn main() {
@@ -53,7 +63,7 @@ fn main() {
         Box::new(param)
     };
     let env2 = Box::new(node::envelope::Envelope::new(0.1, 0.25, 0.5, 0.5, 2.0));
-    let modu = f(Box::new(Constant::new(220.1)), env1, 3000.0);
+    let modu = f(Constant::new(220.1), env1, 3000.0);
     let add = Add::new(Constant::new(440.0), modu);
     let mut node = f(Box::new(add), env2, 1.0);
     let mut pc = ProcContext::new(sample_rate);

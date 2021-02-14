@@ -43,6 +43,6 @@ where
     DA: AsMut<A>,
 {
     fn as_mut(&mut self) -> &mut Self {
-        todo!()
+        self
     }
 }
