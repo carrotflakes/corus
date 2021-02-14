@@ -133,6 +133,12 @@ impl Node<f32> for Param {
     }
 }
 
+impl AsMut<Param> for Param {
+    fn as_mut(&mut self) -> &mut Param {
+        self
+    }
+}
+
 #[test]
 fn test() {
     let mut param = Param::new();

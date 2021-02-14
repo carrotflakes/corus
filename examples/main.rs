@@ -60,7 +60,7 @@ fn main() {
         // ctrl.set_value_at_time(1.0, 1.0);
         // ctrl.set_value_at_time(1.5, 0.8);
         // ctrl.set_value_at_time(2.0, 0.5);
-        Box::new(param)
+        param
     };
     let env2 = Box::new(node::envelope::Envelope::new(0.1, 0.25, 0.5, 0.5, 2.0));
     let modu = f(Constant::new(220.1), env1, 3000.0);
