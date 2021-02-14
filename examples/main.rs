@@ -27,12 +27,13 @@ impl Writer {
     }
 }
 use corus::node::{self, Node};
+use node::{add::Add, amp::Amp, constant::Constant, sine::Sine};
 
-fn f(frequency: Box<dyn Node<f32>>, env: Box<dyn Node<f32>>, gain: f32) -> Box<dyn Node<f32>> {
-    let sine = Box::new(node::sine::Sine::new(frequency));
-    let gain = Box::new(node::constant::Constant::new(gain));
+fn f<A: Node<f32>, B: Node<f32>, DA: AsMut<A>, DB: AsMut<B>>(frequency: DA, env: DB, gain: f32) -> Amp<f32, Sine<A, DA>, Amp<f32, Constant<f32>, B, Box<Constant<f32>>, DB>, Box<Sine<A, DA>>, Box<Amp<f32, Constant<f32>, B, Box<Constant<f32>>, DB>>>  {
+    let sine = Box::new(Sine::new(frequency));
+    let gain = Box::new(Constant::new(gain));
     let env = Box::new(node::amp::Amp::new(gain, env));
-    Box::new(node::amp::Amp::new(sine, env))
+    node::amp::Amp::new(sine, env)
 }
 
 fn main() {
@@ -52,8 +53,9 @@ fn main() {
         Box::new(param)
     };
     let env2 = Box::new(node::envelope::Envelope::new(0.1, 0.25, 0.5, 0.5, 2.0));
-    let modu = f(Box::new(node::constant::Constant::new(220.1)), env1, 3000.0);
-    let mut node = f(Box::new(node::add::Add::new(Box::new(node::constant::Constant::new(440.0)), modu)), env2, 1.0);
+    let modu = f(Box::new(Constant::new(220.1)), env1, 3000.0);
+    let add = Add::new(Constant::new(440.0), modu);
+    let mut node = f(Box::new(add), env2, 1.0);
     let mut pc = ProcContext::new(sample_rate);
     let mut writer = Writer::new("output.wav");
     for _ in 0..sample_rate * 3 {
