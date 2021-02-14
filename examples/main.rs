@@ -28,9 +28,8 @@ impl Writer {
 }
 use corus::node::{self, Node};
 
-fn f(frequency: Box<dyn Node<f32>>, gain: f32) -> Box<dyn Node<f32>> {
+fn f(frequency: Box<dyn Node<f32>>, env: Box<dyn Node<f32>>, gain: f32) -> Box<dyn Node<f32>> {
     let sine = Box::new(node::sine::Sine::new(frequency));
-    let env = Box::new(node::envelope::Envelope::new(0.1, 0.25, 0.5, 0.5, 2.0));
     let gain = Box::new(node::constant::Constant::new(gain));
     let env = Box::new(node::amp::Amp::new(gain, env));
     Box::new(node::amp::Amp::new(sine, env))
@@ -38,13 +37,27 @@ fn f(frequency: Box<dyn Node<f32>>, gain: f32) -> Box<dyn Node<f32>> {
 
 fn main() {
     let sample_rate = 44100;
-    let modu = f(Box::new(node::constant::Constant::new(440.1)), 3000.0);
-    let node = f(Box::new(node::add::Add::new(Box::new(node::constant::Constant::new(440.0)), modu)), 1.0);
-    let mut p = node.procedure();
-    let pc = ProcContext::new(sample_rate);
+    let env1 = {
+        let param = node::param::Param::new();
+        let mut ctrl = param.controller();
+        ctrl.linera_ramp_to_value_at_time(0.5, 0.1);
+        ctrl.linera_ramp_to_value_at_time(1.0, 0.05);
+        ctrl.set_target_at_time(1.0, 0.0, 0.1);
+        // ctrl.set_value_at_time(0.1, 0.1);
+        // ctrl.set_value_at_time(0.2, 0.2);
+        // ctrl.set_value_at_time(0.5, 0.5);
+        // ctrl.set_value_at_time(1.0, 1.0);
+        // ctrl.set_value_at_time(1.5, 0.8);
+        // ctrl.set_value_at_time(2.0, 0.5);
+        Box::new(param)
+    };
+    let env2 = Box::new(node::envelope::Envelope::new(0.1, 0.25, 0.5, 0.5, 2.0));
+    let modu = f(Box::new(node::constant::Constant::new(220.1)), env1, 3000.0);
+    let mut node = f(Box::new(node::add::Add::new(Box::new(node::constant::Constant::new(440.0)), modu)), env2, 1.0);
+    let mut pc = ProcContext::new(sample_rate);
     let mut writer = Writer::new("output.wav");
     for _ in 0..sample_rate * 3 {
-        let s = p(&pc);
+        let s = pc.sample(&mut node);
         writer.write(s, s);
     }
     writer.finish();

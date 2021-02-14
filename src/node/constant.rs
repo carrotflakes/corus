@@ -14,8 +14,7 @@ impl<T: Clone + 'static> Constant<T> {
 }
 
 impl<T: Clone + 'static> Node<T> for Constant<T> {
-    fn procedure(&self) -> Box<dyn FnMut(&ProcContext) -> T> {
-        let this = self.clone();
-        Box::new(move |_ctx| this.value.clone())
+    fn proc(&mut self, _ctx: &ProcContext) -> T {
+        self.value.clone()
     }
 }

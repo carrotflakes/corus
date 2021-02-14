@@ -15,11 +15,7 @@ impl<T: Clone + 'static + std::ops::Add<Output=T>> Add<T> {
 }
 
 impl<T: Clone + 'static + std::ops::Add<Output=T>> Node<T> for Add<T> {
-    fn procedure(&self) -> Box<dyn FnMut(&ProcContext) -> T> {
-        let mut a = self.a.procedure();
-        let mut b = self.b.procedure();
-        Box::new(move |ctx| {
-            a(ctx) + b(ctx)
-        })
+    fn proc(&mut self, ctx: &ProcContext) -> T {
+        self.a.proc(ctx) + self.b.proc(ctx)
     }
 }

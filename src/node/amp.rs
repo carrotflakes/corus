@@ -15,11 +15,7 @@ impl<T: Clone + 'static + std::ops::Mul<Output=T>> Amp<T> {
 }
 
 impl<T: Clone + 'static + std::ops::Mul<Output=T>> Node<T> for Amp<T> {
-    fn procedure(&self) -> Box<dyn FnMut(&ProcContext) -> T> {
-        let mut input = self.input.procedure();
-        let mut gain = self.gain.procedure();
-        Box::new(move |ctx| {
-            input(ctx) * gain(ctx)
-        })
+    fn proc(&mut self, ctx: &ProcContext) -> T {
+        self.input.proc(ctx) * self.gain.proc(ctx)
     }
 }
