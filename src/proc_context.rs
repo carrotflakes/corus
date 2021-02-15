@@ -1,4 +1,4 @@
-use crate::node::Node;
+use crate::{iterator::SampleIterator, node::Node};
 
 pub struct ProcContext {
     pub sample_rate: u64,
@@ -17,5 +17,9 @@ impl ProcContext {
         let r = node.as_mut().proc(self);
         self.time += 1.0 / self.sample_rate as f64;
         r
+    }
+
+    pub fn into_iter<T: 'static, A: Node<T>, DA: AsMut<A>>(self, node: DA) -> SampleIterator<T, A, DA> {
+        SampleIterator::new(self, node)
     }
 }
