@@ -16,42 +16,41 @@ pub struct Event {
     body: EventBody,
 }
 
-#[derive(Clone)]
 pub struct Param {
-    events: Rc<RefCell<Vec<Event>>>,
-    current_value: f32,
+    body: Rc<RefCell<ParamBody>>,
 }
 
-#[derive(Clone)]
-pub struct ParamController {
-    events: Rc<RefCell<Vec<Event>>>,
+pub struct ParamBody {
+    events: Vec<Event>,
 }
 
 impl Param {
     pub fn new() -> Self {
         Param {
-            events: Rc::new(RefCell::new(Vec::new())),
-            current_value: 0.0,
+            body: Rc::new(RefCell::new(ParamBody {
+                events: vec![Event {
+                    time: 0.0,
+                    body: EventBody::SetValueAtTime {value: 0.0}
+                }],
+            })),
         }
     }
 
-    pub fn controller(&self) -> ParamController {
-        ParamController {
-            events: self.events.clone(),
+    pub fn controller(&self) -> Param {
+        Param {
+            body: self.body.clone(),
         }
     }
-}
 
-impl ParamController {
     pub fn push_event(&mut self, event: Event) {
-        let mut events = self.events.borrow_mut();
-        for (i, e) in events.iter().enumerate() {
+        let mut body = self.body.borrow_mut();
+        for (i, e) in body.events.iter().enumerate() {
             if event.time < e.time {
-                events.insert(i, event);
+                body.events.insert(i, event);
                 return;
             }
         }
-        events.push(event);
+        body.events.push(event);
     }
 
     pub fn set_value_at_time(&mut self, time: f64, value: f32) {
@@ -76,60 +75,123 @@ impl ParamController {
     }
 
     pub fn cancel_scheduled_values(&mut self, time: f64) {
-        let mut events = self.events.borrow_mut();
-        if let Some(i) = events.iter().position(|e| time <= e.time) {
-            events.truncate(i);
+        let mut body = self.body.borrow_mut();
+        if let Some(i) = body.events.iter().position(|e| time <= e.time) {
+            body.events.truncate(i);
         }
     }
 
+    pub fn cancel_and_hold_at_time(&mut self, time: f64) {
+        let value = self.compute_value(time);
+        self.cancel_scheduled_values(time);
+        self.set_value_at_time(time, value)
+    }
+
+    pub fn compute_value(&self, time: f64) -> f32 {
+        let body = self.body.borrow();
+        let mut before = None;
+        let mut after = None;
+        for event in &body.events {
+            if time < event.time {
+                match event.body {
+                    EventBody::SetValueAtTime { .. } => {
+                    }
+                    EventBody::LinearRampToValueAtTime { .. } => {
+                        after = Some(event);
+                    }
+                    EventBody::SetTargetAtTime { .. } => {
+                    }
+                }
+                break;
+            }
+            match event.body {
+                EventBody::SetValueAtTime { .. } => {
+                    before = Some(event);
+                    after = None;
+                }
+                EventBody::LinearRampToValueAtTime { .. } => {
+                    before = Some(event);
+                    after = None;
+                }
+                EventBody::SetTargetAtTime { .. } => {
+                    after = Some(event);
+                }
+            }
+        }
+        if let Some(before) = before {
+            let before_value = match before.body {
+                EventBody::SetValueAtTime { value } => {value}
+                EventBody::LinearRampToValueAtTime { value } => {value}
+                EventBody::SetTargetAtTime { .. } => {
+                    unreachable!()
+                }
+            };
+            if let Some(after) = after {
+                match after.body {
+                    EventBody::SetValueAtTime { .. } => {
+                        unreachable!()
+                    }
+                    EventBody::LinearRampToValueAtTime { value } => {
+                        let r = ((time - before.time) / (after.time - before.time)) as f32;
+                        before_value * (1.0 - r) + value * r
+                    }
+                    EventBody::SetTargetAtTime { target, time_constant } => {
+                        let t = (time - before.time) as f32;
+                        let r = std::f32::consts::E.powf(-t / time_constant);
+                        before_value * r + target * (1.0 - r)
+                    }
+                }
+            } else {
+                before_value
+            }
+        } else {
+            unreachable!()
+        }
+    }
     // TODO: https://developer.mozilla.org/en-US/docs/Web/API/AudioParam/cancelAndHoldAtTime
 }
 
 impl Node<f32> for Param {
     fn proc(&mut self, ctx: &ProcContext) -> f32 {
-        let mut events = self.events.borrow_mut();
-        let mut canceled = false;
-        while !events.is_empty() {
-            let time = events[0].time;
-            match events[0].body {
-                EventBody::SetValueAtTime { value } => {
-                    if time <= ctx.time {
-                        self.current_value = value;
-                        canceled = true;
-                        events.remove(0);
-                    } else {
-                        break;
-                    }
+        {
+            let mut body = self.body.borrow_mut();
+
+            while body.events.len() >= 2 {
+                if ctx.time < body.events[1].time {
+                    break;
                 }
-                EventBody::LinearRampToValueAtTime { value } => {
-                    if time <= ctx.time {
-                        self.current_value = value;
-                        canceled = true;
-                        events.remove(0);
-                    } else {
-                        if !canceled {
-                            self.current_value += (value - self.current_value) / ((time - ctx.time) as f32 * ctx.sample_rate as f32 + 1.0);
-                        }
-                        break;
+                match body.events[1].body {
+                    EventBody::SetValueAtTime { .. } => {
+                        body.events.remove(0);
                     }
-                }
-                EventBody::SetTargetAtTime { target, time_constant } => {
-                    if time <= ctx.time {
-                        if events.len() >= 2 && events[1].time <= ctx.time {
-                            events.remove(0);
-                            continue;
+                    EventBody::LinearRampToValueAtTime { .. } => {
+                        body.events.remove(0);
+                    }
+                    EventBody::SetTargetAtTime { .. } => {
+                        if let Some(e) = body.events.get(2) {
+                            if ctx.time < e.time {
+                                break;
+                            }
+                            match e.body {
+                                EventBody::SetValueAtTime { .. } => {
+                                    body.events.drain(0..2).count();
+                                }
+                                EventBody::LinearRampToValueAtTime { .. } => {
+                                    body.events.drain(0..2).count();
+                                }
+                                EventBody::SetTargetAtTime { .. } => {
+                                    body.events.remove(1);
+                                }
+                            }
                         } else {
-                            let factor = 1.0 / std::f32::consts::E.powf(1.0 / (ctx.sample_rate as f32 * time_constant));
-                            self.current_value = (self.current_value - target) * factor + target;
                             break;
                         }
-                    } else {
-                        break;
                     }
                 }
             }
         }
-        self.current_value
+
+        self.compute_value(ctx.time)
     }
 }
 
