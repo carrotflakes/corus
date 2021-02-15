@@ -1,4 +1,4 @@
-use corus::node::ProcContext;
+use corus::proc_context::ProcContext;
 
 pub struct Writer(hound::WavWriter<std::io::BufWriter<std::fs::File>>);
 
