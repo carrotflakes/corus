@@ -65,10 +65,12 @@ fn main() {
     let env2 = Box::new(node::envelope::Envelope::new(0.1, 0.25, 0.5, 0.5, 2.0));
     let modu = f(Constant::new(220.1), env1, 3000.0);
     let add = Add::new(Constant::new(440.0), modu);
-    let node = f(Box::new(add), env2, 1.0);
+    let node1 = f(Box::new(add), env2, 0.5);
+    let node2 = f(Constant::new(460.0), Constant::new(1.0), 0.5);
+    let mix = node::mix::Mix::new(vec![Box::new(node1) as Box<dyn Node<f32>>, Box::new(node2) as Box<dyn Node<f32>>]);
     let pc = ProcContext::new(sample_rate);
     let mut writer = Writer::new("output.wav");
-    for s in pc.into_iter(node).take(sample_rate as usize * 3) {
+    for s in pc.into_iter(mix).take(sample_rate as usize * 3) {
         writer.write(s, s);
     }
     writer.finish();

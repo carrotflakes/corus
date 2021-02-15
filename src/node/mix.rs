@@ -2,7 +2,7 @@ use std::iter::Sum;
 
 use super::{Node, ProcContext};
 
-pub struct Add<T, DA>
+pub struct Mix<T, DA>
 where
     T: Clone + 'static + Sum,
     DA: AsMut<dyn Node<T>>,
@@ -11,20 +11,20 @@ where
     _t: std::marker::PhantomData<T>,
 }
 
-impl<T, DA> Add<T, DA>
+impl<T, DA> Mix<T, DA>
 where
     T: Clone + 'static + Sum,
     DA: AsMut<dyn Node<T>>,
 {
     pub fn new(nodes: Vec<DA>) -> Self {
-        Add {
+        Mix {
             nodes,
             _t: Default::default(),
         }
     }
 }
 
-impl<T, DA> Node<T> for Add<T, DA>
+impl<T, DA> Node<T> for Mix<T, DA>
 where
     T: Clone + 'static + Sum,
     DA: AsMut<dyn Node<T>>,
@@ -34,12 +34,12 @@ where
     }
 }
 
-impl<T, DA> AsMut<Self> for Add<T, DA>
+impl<T, DA> AsMut<Self> for Mix<T, DA>
 where
     T: Clone + 'static + Sum,
     DA: AsMut<dyn Node<T>>,
 {
-    fn as_mut(&mut self) -> &mut Add<T, DA> {
+    fn as_mut(&mut self) -> &mut Mix<T, DA> {
         self
     }
 }
