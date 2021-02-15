@@ -1,9 +1,10 @@
-pub mod sine;
-pub mod constant;
-pub mod amp;
-pub mod envelope;
 pub mod add;
+pub mod amp;
+pub mod constant;
+pub mod envelope;
 pub mod param;
+pub mod share;
+pub mod sine;
 
 pub struct ProcContext {
     pub sample_rate: u64,
