@@ -2,6 +2,7 @@ pub mod add;
 pub mod amp;
 pub mod constant;
 pub mod envelope;
+pub mod map;
 pub mod mix;
 pub mod param;
 pub mod share;

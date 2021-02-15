@@ -68,6 +68,7 @@ fn main() {
     let node1 = f(Box::new(add), env2, 0.5);
     let node2 = f(Constant::new(460.0), Constant::new(1.0), 0.5);
     let mix = node::mix::Mix::new(vec![Box::new(node1) as Box<dyn Node<f32>>, Box::new(node2) as Box<dyn Node<f32>>]);
+    let mix = node::map::Map::new(mix, |x| x.max(-0.1).min(0.1));
     let pc = ProcContext::new(sample_rate);
     let mut writer = Writer::new("output.wav");
     for s in pc.into_iter(mix).take(sample_rate as usize * 3) {
