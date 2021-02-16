@@ -1,5 +1,8 @@
 use corus::{
-    node::{amp::Amp, constant::Constant, param::Param, sine::Sine},
+    node::{
+        accumulator::Accumulator, amp::Amp, constant::Constant, param::Param, share::Share,
+        sine::Sine,
+    },
     notenum_to_frequency,
     poly_synth::{PolySynth, Voice},
     proc_context::ProcContext,
@@ -10,15 +13,18 @@ fn main() {
 
     let builder = || {
         let freq_param = Param::new();
-        let sine = Sine::new(freq_param.controller());
+        // let sine = Sine::new(freq_param.controller());
+        let mut acc = Share::new(Accumulator::new(freq_param.controller(), 1.0));
+        let saw = corus::node::add::Add::new(acc.clone(), Constant::new(-0.5));
         let env = Param::new();
-        let node = Amp::new(sine, env.controller());
+        let node = Amp::new(saw, env.controller());
         Voice::new(
             freq_param,
             node,
             Box::new({
                 let mut env = env.controller();
                 move |time| {
+                    acc.borrow_mut().set_value_at_time(time, 0.5);
                     env.cancel_and_hold_at_time(time);
                     env.set_value_at_time(time, 0.001);
                     env.exponential_ramp_to_value_at_time(time + 0.01, 1.0);
@@ -49,9 +55,8 @@ fn main() {
     synth.note_off(1.6, notenum_to_frequency(64));
     synth.note_on(1.2, notenum_to_frequency(67));
     synth.note_off(1.6, notenum_to_frequency(67));
-    synth.note_on(1.3, notenum_to_frequency(70));
-    synth.note_off(1.6, notenum_to_frequency(70));
-
+    synth.note_on(1.3, notenum_to_frequency(71));
+    synth.note_off(1.6, notenum_to_frequency(71));
 
     let node = Amp::new(synth, Constant::new(0.1));
 

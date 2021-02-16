@@ -48,3 +48,16 @@ where
         self
     }
 }
+
+impl<T, A> Clone for Share<T, A>
+where
+    T: 'static,
+    A: Node<T>,
+{
+    fn clone(&self) -> Self {
+        Self {
+            node: self.node.clone(),
+            _t: self._t.clone(),
+        }
+    }
+}
