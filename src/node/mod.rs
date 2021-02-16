@@ -8,6 +8,7 @@ pub mod param;
 pub mod proc_once;
 pub mod share;
 pub mod sine;
+pub mod accumulator;
 
 use crate::proc_context::ProcContext;
 
