@@ -4,10 +4,10 @@ use super::{Node, ProcContext};
 
 #[derive(Debug, Clone)]
 pub enum EventBody {
-    SetValueAtTime {value: f32},
-    LinearRampToValueAtTime {value: f32},
-    ExponentialRampToValueAtTime {value: f32},
-    SetTargetAtTime {target: f32, time_constant: f32},
+    SetValueAtTime { value: f32 },
+    LinearRampToValueAtTime { value: f32 },
+    ExponentialRampToValueAtTime { value: f32 },
+    SetTargetAtTime { target: f32, time_constant: f32 },
 }
 
 #[derive(Debug, Clone)]
@@ -26,11 +26,15 @@ pub struct ParamBody {
 
 impl Param {
     pub fn new() -> Self {
+        Self::with_value(0.0)
+    }
+
+    pub fn with_value(value: f32) -> Self {
         Param {
             body: Rc::new(RefCell::new(ParamBody {
                 events: vec![Event {
                     time: 0.0,
-                    body: EventBody::SetValueAtTime {value: 0.0}
+                    body: EventBody::SetValueAtTime { value },
                 }],
             })),
         }
@@ -56,28 +60,31 @@ impl Param {
     pub fn set_value_at_time(&mut self, time: f64, value: f32) {
         self.push_event(Event {
             time,
-            body: EventBody::SetValueAtTime {value},
+            body: EventBody::SetValueAtTime { value },
         });
     }
 
     pub fn linear_ramp_to_value_at_time(&mut self, time: f64, value: f32) {
         self.push_event(Event {
             time,
-            body: EventBody::LinearRampToValueAtTime {value},
+            body: EventBody::LinearRampToValueAtTime { value },
         });
     }
 
     pub fn exponential_ramp_to_value_at_time(&mut self, time: f64, value: f32) {
         self.push_event(Event {
             time,
-            body: EventBody::ExponentialRampToValueAtTime {value},
+            body: EventBody::ExponentialRampToValueAtTime { value },
         });
     }
 
     pub fn set_target_at_time(&mut self, time: f64, target: f32, time_constant: f32) {
         self.push_event(Event {
             time,
-            body: EventBody::SetTargetAtTime {target, time_constant},
+            body: EventBody::SetTargetAtTime {
+                target,
+                time_constant,
+            },
         });
     }
 
@@ -101,13 +108,12 @@ impl Param {
         for event in &body.events {
             if time < event.time {
                 match event.body {
-                    EventBody::SetValueAtTime { .. } => {
-                    }
-                    EventBody::LinearRampToValueAtTime { .. } | EventBody::ExponentialRampToValueAtTime { .. } => {
+                    EventBody::SetValueAtTime { .. } => {}
+                    EventBody::LinearRampToValueAtTime { .. }
+                    | EventBody::ExponentialRampToValueAtTime { .. } => {
                         after = Some(event);
                     }
-                    EventBody::SetTargetAtTime { .. } => {
-                    }
+                    EventBody::SetTargetAtTime { .. } => {}
                 }
                 break;
             }
@@ -116,7 +122,8 @@ impl Param {
                     before = Some(event);
                     after = None;
                 }
-                EventBody::LinearRampToValueAtTime { .. } | EventBody::ExponentialRampToValueAtTime { .. } => {
+                EventBody::LinearRampToValueAtTime { .. }
+                | EventBody::ExponentialRampToValueAtTime { .. } => {
                     before = Some(event);
                     after = None;
                 }
@@ -127,7 +134,9 @@ impl Param {
         }
         if let Some(before) = before {
             let before_value = match before.body {
-                EventBody::SetValueAtTime { value } | EventBody::LinearRampToValueAtTime { value } | EventBody::ExponentialRampToValueAtTime { value } => {value}
+                EventBody::SetValueAtTime { value }
+                | EventBody::LinearRampToValueAtTime { value }
+                | EventBody::ExponentialRampToValueAtTime { value } => value,
                 EventBody::SetTargetAtTime { .. } => {
                     unreachable!()
                 }
@@ -145,7 +154,10 @@ impl Param {
                         let r = ((time - before.time) / (after.time - before.time)) as f32;
                         (before_value.ln() * (1.0 - r) + value.ln() * r).exp()
                     }
-                    EventBody::SetTargetAtTime { target, time_constant } => {
+                    EventBody::SetTargetAtTime {
+                        target,
+                        time_constant,
+                    } => {
                         let t = (time - before.time) as f32;
                         let r = (-t / time_constant).exp();
                         before_value * r + target * (1.0 - r)
@@ -171,7 +183,9 @@ impl Node<f32> for Param {
                     break;
                 }
                 match body.events[1].body {
-                    EventBody::SetValueAtTime { .. } | EventBody::LinearRampToValueAtTime { .. } | EventBody::ExponentialRampToValueAtTime { .. } => {
+                    EventBody::SetValueAtTime { .. }
+                    | EventBody::LinearRampToValueAtTime { .. }
+                    | EventBody::ExponentialRampToValueAtTime { .. } => {
                         body.events.remove(0);
                     }
                     EventBody::SetTargetAtTime { .. } => {
@@ -180,7 +194,9 @@ impl Node<f32> for Param {
                                 break;
                             }
                             match e.body {
-                                EventBody::SetValueAtTime { .. } | EventBody::LinearRampToValueAtTime { .. } | EventBody::ExponentialRampToValueAtTime { .. } => {
+                                EventBody::SetValueAtTime { .. }
+                                | EventBody::LinearRampToValueAtTime { .. }
+                                | EventBody::ExponentialRampToValueAtTime { .. } => {
                                     body.events.drain(0..2).count();
                                 }
                                 EventBody::SetTargetAtTime { .. } => {
