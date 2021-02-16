@@ -6,6 +6,7 @@ pub mod map;
 pub mod mix;
 pub mod param;
 pub mod proc_once;
+pub mod share;
 pub mod sine;
 
 use crate::proc_context::ProcContext;
