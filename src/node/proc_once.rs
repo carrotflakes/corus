@@ -1,6 +1,6 @@
 use super::{Node, ProcContext};
 
-pub struct Share<T, A, DA>
+pub struct ProcOnce<T, A, DA>
 where
     T: 'static + Clone + Default,
     A: Node<T> + ?Sized,
@@ -12,14 +12,14 @@ where
     _a: std::marker::PhantomData<A>,
 }
 
-impl<T, A, DA> Share<T, A, DA>
+impl<T, A, DA> ProcOnce<T, A, DA>
 where
     T: 'static + Clone + Default,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
     pub fn new(node: DA) -> Self {
-        Share {
+        ProcOnce {
             node,
             time: -1.0,
             value: Default::default(),
@@ -28,7 +28,7 @@ where
     }
 }
 
-impl<T, A, DA> Node<T> for Share<T, A, DA>
+impl<T, A, DA> Node<T> for ProcOnce<T, A, DA>
 where
     T: 'static + Clone + Default,
     A: Node<T> + ?Sized,
@@ -43,7 +43,7 @@ where
     }
 }
 
-impl<T, A, DA> AsMut<Self> for Share<T, A, DA>
+impl<T, A, DA> AsMut<Self> for ProcOnce<T, A, DA>
 where
     T: 'static + Clone + Default,
     A: Node<T> + ?Sized,
