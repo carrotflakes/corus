@@ -51,8 +51,8 @@ fn main() {
     let env1 = {
         let param = node::param::Param::new();
         let mut ctrl = param.controller();
-        ctrl.linera_ramp_to_value_at_time(0.5, 0.1);
-        ctrl.linera_ramp_to_value_at_time(1.0, 0.05);
+        ctrl.linear_ramp_to_value_at_time(0.5, 0.1);
+        ctrl.linear_ramp_to_value_at_time(1.0, 0.05);
         ctrl.set_target_at_time(1.0, 0.0, 0.1);
         // ctrl.set_value_at_time(0.1, 0.1);
         // ctrl.set_value_at_time(0.2, 0.2);
