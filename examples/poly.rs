@@ -57,9 +57,11 @@ fn main() {
 
     let pc = ProcContext::new(sample_rate);
     let mut writer = Writer::new("poly.wav");
+    let start = std::time::Instant::now();
     for s in pc.into_iter(node).take(sample_rate as usize * 3) {
         writer.write(s, s);
     }
+    println!("{:?} elapsed", start.elapsed());
     writer.finish();
 }
 
