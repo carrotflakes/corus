@@ -5,6 +5,7 @@ pub mod envelope;
 pub mod map;
 pub mod mix;
 pub mod param;
+pub mod param2;
 pub mod proc_once;
 pub mod share;
 pub mod sine;
