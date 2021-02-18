@@ -1,9 +1,10 @@
-use corus::{node::{Node, amp::Amp, constant::Constant, controllable::Controllable, mix::Mix, param2::Param, sine::Sine}, proc_context::ProcContext};
+use corus::{node::{Node, add::Add, amp::Amp, constant::Constant, controllable::Controllable, mix::Mix, param2::Param, proc_once_share::ProcOnceShare, sine::Sine}, proc_context::ProcContext};
 
 fn main() {
     let sample_rate = 44100;
 
     let mut nodes = Vec::new();
+    let modulator = ProcOnceShare::new(Amp::new(Sine::new(Constant::new(4.0)), Constant::new(20.0)));
     for i in 0..100 {
         let freq = Controllable::new(Param::new());
         let mut freq_ctrl = freq.controller();
@@ -11,7 +12,7 @@ fn main() {
         freq_ctrl.lock().set_value_at_time(0.0, f);
         freq_ctrl.lock().linear_ramp_to_value_at_time(1.0, f * 2.0);
         freq_ctrl.lock().exponential_ramp_to_value_at_time(2.0, f);
-        nodes.push(Box::new(Amp::new(Sine::new(freq), Constant::new(1.0 / (i + 1) as f32))) as Box<dyn Node<f32>>);
+        nodes.push(Box::new(Amp::new(Sine::new(Add::new(freq, modulator.clone())), Constant::new(1.0 / (i + 1) as f32))) as Box<dyn Node<f32>>);
     }
 
     let mix = Mix::new(nodes);

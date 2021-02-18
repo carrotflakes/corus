@@ -29,13 +29,13 @@ where
         }
     }
 
-    pub fn as_ref(&self) -> &DA {
-        &self.node
-    }
+    // pub fn as_ref(&self) -> &DA {
+    //     &self.node
+    // }
 
-    pub fn as_mut(&mut self) -> &mut DA {
-        &mut self.node
-    }
+    // pub fn as_mut(&mut self) -> &mut DA {
+    //     &mut self.node
+    // }
 }
 
 impl<T, A, DA> Node<T> for ProcOnce<T, A, DA>
