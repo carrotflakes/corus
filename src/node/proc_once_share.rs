@@ -23,8 +23,8 @@ where
         }
     }
 
-    fn get_mut(&mut self) -> &mut DA {
-        unsafe { std::mem::transmute::<_, &mut DA>(Arc::as_ptr(&mut self.proc_once)) }
+    fn get_mut(&mut self) -> &mut ProcOnce<T, A, DA> {
+        unsafe { std::mem::transmute::<_, &mut ProcOnce<T, A, DA>>(Arc::as_ptr(&mut self.proc_once)) }
     }
 }
 
