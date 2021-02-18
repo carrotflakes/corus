@@ -35,6 +35,14 @@ where
         self.phase = (self.phase + f / ctx.sample_rate as f32).fract();
         (std::f32::consts::PI * 2.0 * p).sin()
     }
+
+    fn lock(&mut self) {
+        self.frequency.as_mut().lock();
+    }
+
+    fn unlock(&mut self) {
+        self.frequency.as_mut().unlock();
+    }
 }
 
 impl<A, DA> AsMut<Self> for Sine<A, DA>

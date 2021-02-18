@@ -45,6 +45,16 @@ where
     fn proc(&mut self, ctx: &ProcContext) -> T {
         self.a.as_mut().proc(ctx) + self.b.as_mut().proc(ctx)
     }
+
+    fn lock(&mut self) {
+        self.a.as_mut().lock();
+        self.b.as_mut().lock();
+    }
+
+    fn unlock(&mut self) {
+        self.a.as_mut().unlock();
+        self.b.as_mut().unlock();
+    }
 }
 
 

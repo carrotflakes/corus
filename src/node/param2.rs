@@ -193,6 +193,12 @@ impl Node<f32> for Param {
 
         self.compute_value(ctx.time)
     }
+
+    fn lock(&mut self) {
+    }
+
+    fn unlock(&mut self) {
+    }
 }
 
 impl AsMut<Param> for Param {

@@ -40,7 +40,7 @@ fn main() {
             }),
         )
     };
-    let mut synth = PolySynth::new(&builder);
+    let mut synth = PolySynth::new(&builder, 10);
     synth.note_on(0.2, notenum_to_frequency(60));
     synth.note_off(0.4, notenum_to_frequency(60));
     synth.note_on(0.4, notenum_to_frequency(64));

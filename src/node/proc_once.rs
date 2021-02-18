@@ -49,6 +49,14 @@ where
         }
         self.value.clone()
     }
+
+    fn lock(&mut self) {
+        self.node.as_mut().lock();
+    }
+
+    fn unlock(&mut self) {
+        self.node.as_mut().unlock();
+    }
 }
 
 impl<T, A, DA> AsMut<Self> for ProcOnce<T, A, DA>

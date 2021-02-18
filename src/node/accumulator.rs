@@ -65,6 +65,14 @@ where
         self.value = self.value.rem_euclid(self.upper);
         self.value
     }
+
+    fn lock(&mut self) {
+        self.node.as_mut().lock();
+    }
+
+    fn unlock(&mut self) {
+        self.node.as_mut().unlock();
+    }
 }
 
 impl<A, DA> AsMut<Self> for Accumulator<A, DA>

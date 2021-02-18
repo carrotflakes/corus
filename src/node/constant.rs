@@ -17,6 +17,12 @@ impl<T: Clone + 'static> Node<T> for Constant<T> {
     fn proc(&mut self, _ctx: &ProcContext) -> T {
         self.value.clone()
     }
+
+    fn lock(&mut self) {
+    }
+
+    fn unlock(&mut self) {
+    }
 }
 
 impl <T: Clone + 'static> AsMut<Constant<T>> for Constant<T> {

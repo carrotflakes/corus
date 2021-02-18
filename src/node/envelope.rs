@@ -37,6 +37,12 @@ impl Node<f32> for Envelope {
             self.get(self.time)
         }
     }
+
+    fn lock(&mut self) {
+    }
+
+    fn unlock(&mut self) {
+    }
 }
 
 #[test]

@@ -32,6 +32,18 @@ where
     fn proc(&mut self, ctx: &ProcContext) -> T {
         self.nodes.iter_mut().map(|n| n.as_mut().proc(ctx)).sum()
     }
+
+    fn lock(&mut self) {
+        for node in &mut self.nodes {
+            node.as_mut().lock();
+        }
+    }
+
+    fn unlock(&mut self) {
+        for node in &mut self.nodes {
+            node.as_mut().unlock();
+        }
+    }
 }
 
 impl<T, DA> AsMut<Self> for Mix<T, DA>

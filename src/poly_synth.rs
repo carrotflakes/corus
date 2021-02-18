@@ -1,13 +1,9 @@
-use std::{cell::RefCell, rc::Rc};
-
 use crate::{
     node::{param::Param, Node},
     proc_context::ProcContext,
 };
 
-pub struct PolySynth<A: Node<f32>>(Rc<RefCell<PolySynthBody<A>>>);
-
-pub struct PolySynthBody<A: Node<f32>> {
+pub struct PolySynth<A: Node<f32>> {
     voices: Vec<Voice<A>>,
     current: usize,
 }
@@ -38,30 +34,24 @@ impl<A: Node<f32>> Voice<A> {
 }
 
 impl<A: Node<f32>> PolySynth<A> {
-    pub fn new(voice_builder: &dyn Fn() -> Voice<A>) -> Self {
-        Self(Rc::new(RefCell::new(PolySynthBody {
-            voices: (0..10).map(|_| voice_builder()).collect(),
+    pub fn new(voice_builder: &dyn Fn() -> Voice<A>, voice_num: usize) -> Self {
+        Self {
+            voices: (0..voice_num).map(|_| voice_builder()).collect(),
             current: 0,
-        })))
-    }
-
-    pub fn controller(&self) -> Self {
-        PolySynth(self.0.clone())
+        }
     }
 
     pub fn note_on(&mut self, time: f64, frequency: f32) {
-        let mut body = self.0.borrow_mut();
-        let current = body.current;
-        let voice = &mut body.voices[current];
+        let current = self.current;
+        let voice = &mut self.voices[current];
         voice.frequency = frequency;
         voice.frequency_param.set_value_at_time(time, frequency);
         (voice.note_on)(time);
-        body.current = (body.current + 1) % body.voices.len();
+        self.current = (self.current + 1) % self.voices.len();
     }
 
     pub fn note_off(&mut self, time: f64, frequency: f32) {
-        let mut body = self.0.borrow_mut();
-        for voice in &mut body.voices {
+        for voice in &mut self.voices {
             if voice.frequency == frequency {
                 (voice.note_off)(time);
             }
@@ -71,11 +61,22 @@ impl<A: Node<f32>> PolySynth<A> {
 
 impl<A: Node<f32>> Node<f32> for PolySynth<A> {
     fn proc(&mut self, ctx: &ProcContext) -> f32 {
-        let mut body = self.0.borrow_mut();
-        body.voices
+        self.voices
             .iter_mut()
             .map(|voice| voice.node.proc(ctx))
             .sum()
+    }
+
+    fn lock(&mut self) {
+        for voice in &mut self.voices {
+            voice.node.lock();
+        }
+    }
+
+    fn unlock(&mut self) {
+        for voice in &mut self.voices {
+            voice.node.unlock();
+        }
     }
 }
 

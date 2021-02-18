@@ -40,6 +40,14 @@ where
     fn proc(&mut self, ctx: &ProcContext) -> T {
         (self.f)(self.node.as_mut().proc(ctx))
     }
+
+    fn lock(&mut self) {
+        self.node.as_mut().lock();
+    }
+
+    fn unlock(&mut self) {
+        self.node.as_mut().unlock();
+    }
 }
 
 impl<T, F, A, DA> AsMut<Self> for Map<T, F, A, DA>

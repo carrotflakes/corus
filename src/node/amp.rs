@@ -45,6 +45,16 @@ where
     fn proc(&mut self, ctx: &ProcContext) -> T {
         self.input.as_mut().proc(ctx) * self.gain.as_mut().proc(ctx)
     }
+
+    fn lock(&mut self) {
+        self.input.as_mut().lock();
+        self.gain.as_mut().lock();
+    }
+
+    fn unlock(&mut self) {
+        self.input.as_mut().unlock();
+        self.gain.as_mut().unlock();
+    }
 }
 
 impl<T, A, B, DA, DB> AsMut<Self> for Amp<T, A, B, DA, DB>
