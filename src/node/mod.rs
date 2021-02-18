@@ -1,15 +1,17 @@
+pub mod accumulator;
 pub mod add;
 pub mod amp;
 pub mod constant;
+pub mod controllable;
 pub mod envelope;
 pub mod map;
 pub mod mix;
 pub mod param;
 pub mod param2;
 pub mod proc_once;
+pub mod proc_once_share;
 pub mod share;
 pub mod sine;
-pub mod accumulator;
 
 use crate::proc_context::ProcContext;
 

@@ -9,6 +9,7 @@ where
     node: DA,
     time: f64,
     value: T,
+    pub(crate) lock_count: u32,
     _a: std::marker::PhantomData<A>,
 }
 
@@ -23,6 +24,7 @@ where
             node,
             time: -1.0,
             value: Default::default(),
+            lock_count: 0,
             _a: Default::default(),
         }
     }
@@ -51,11 +53,17 @@ where
     }
 
     fn lock(&mut self) {
-        self.node.as_mut().lock();
+        self.lock_count += 1;
+        if self.lock_count == 1 {
+            self.node.as_mut().lock();
+        }
     }
 
     fn unlock(&mut self) {
-        self.node.as_mut().unlock();
+        self.lock_count -= 1;
+        if self.lock_count == 0 {
+            self.node.as_mut().unlock();
+        }
     }
 }
 

@@ -163,3 +163,9 @@ where
         }
     }
 }
+
+unsafe impl<T, A> Send for ShareC<T, A>
+where
+    T: 'static,
+    A: Node<T>,
+    {}

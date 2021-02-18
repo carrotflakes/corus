@@ -2,6 +2,7 @@ use corus::{
     node::{
         accumulator::Accumulator, amp::Amp, constant::Constant, param::Param, share::Share,
         sine::Sine,
+        Node,
     },
     notenum_to_frequency,
     poly_synth::{PolySynth, Voice},
@@ -58,14 +59,16 @@ fn main() {
     synth.note_on(1.3, notenum_to_frequency(71));
     synth.note_off(1.6, notenum_to_frequency(71));
 
-    let node = Amp::new(synth, Constant::new(0.1));
+    let mut node = Amp::new(synth, Constant::new(0.1));
 
     let pc = ProcContext::new(sample_rate);
     let mut writer = Writer::new("poly.wav");
     let start = std::time::Instant::now();
-    for s in pc.into_iter(node).take(sample_rate as usize * 3) {
+    node.lock();
+    for s in pc.into_iter(&mut node).take(sample_rate as usize * 3) {
         writer.write(s, s);
     }
+    node.unlock();
     println!("{:?} elapsed", start.elapsed());
     writer.finish();
 }
