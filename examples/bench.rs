@@ -1,8 +1,8 @@
 use corus::{
     node::{
         add::Add, amp::Amp, buffer::Buffer, buffer_playback::BufferPlayback, constant::Constant,
-        controllable::Controllable, mix::Mix, param2::Param, proc_once_share::ProcOnceShare,
-        sine::Sine, Node,
+        controllable::Controllable, mix::Mix, param2::Param, placeholder::Placeholder,
+        proc_once_share::ProcOnceShare, sine::Sine, Node,
     },
     proc_context::ProcContext,
 };
@@ -29,14 +29,19 @@ fn main() {
     let mix = Mix::new(nodes);
 
     let mix = {
-        let buffer = ProcOnceShare::new(Buffer::new(mix, sample_rate as usize));
-        Add::new(
-            buffer.clone(),
-            Amp::new(
-                BufferPlayback::new(Constant::new(0.5), buffer),
-                Constant::new(0.5),
-            )
-        )
+        let mut p = Placeholder::new();
+        let mut ps = p.setter();
+        let buffer = ProcOnceShare::new(Buffer::new(p, sample_rate as usize));
+        unsafe {
+            ps.set(Box::new(Add::new(
+                mix,
+                Amp::new(
+                    BufferPlayback::new(Constant::new(0.5), buffer.clone()),
+                    Constant::new(0.5),
+                ),
+            )) as Box<dyn Node<f32>>);
+        }
+        buffer
     };
 
     let mut node = Amp::new(mix, Constant::new(0.1));
@@ -45,7 +50,7 @@ fn main() {
     let mut writer = Writer::new("bench.wav");
     let start = std::time::Instant::now();
     node.lock();
-    for s in pc.into_iter(&mut node).take(sample_rate as usize * 3) {
+    for s in pc.into_iter(&mut node).take(sample_rate as usize * 4) {
         writer.write(s, s);
     }
     node.unlock();
