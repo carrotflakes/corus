@@ -10,6 +10,7 @@ pub mod map;
 pub mod mix;
 pub mod param;
 pub mod param2;
+pub mod placeholder;
 pub mod proc_once;
 pub mod proc_once_share;
 pub mod share;
