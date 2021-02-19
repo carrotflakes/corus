@@ -29,11 +29,11 @@ where
         }
     }
 
-    // pub fn as_ref(&self) -> &DA {
-    //     &self.node
-    // }
+    pub(crate) fn get_ref(&self) -> &DA {
+        &self.node
+    }
 
-    // pub fn as_mut(&mut self) -> &mut DA {
+    // pub(crate) fn get_mut(&mut self) -> &mut DA {
     //     &mut self.node
     // }
 }

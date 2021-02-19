@@ -67,3 +67,14 @@ where
         self
     }
 }
+
+impl<T, A, DA> std::borrow::Borrow<RingBuffer<T>> for Buffer<T, A, DA>
+where
+    T: 'static + Clone + Default,
+    A: Node<T> + ?Sized,
+    DA: AsMut<A>,
+{
+    fn borrow(&self) -> &RingBuffer<T> {
+        &self.buffer
+    }
+}

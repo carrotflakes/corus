@@ -23,6 +23,10 @@ where
         }
     }
 
+    pub(crate) fn get_ref(&self) -> &ProcOnce<T, A, DA> {
+        unsafe { std::mem::transmute::<_, &ProcOnce<T, A, DA>>(Arc::as_ptr(&self.proc_once)) }
+    }
+
     fn get_mut(&mut self) -> &mut ProcOnce<T, A, DA> {
         unsafe { std::mem::transmute::<_, &mut ProcOnce<T, A, DA>>(Arc::as_ptr(&mut self.proc_once)) }
     }

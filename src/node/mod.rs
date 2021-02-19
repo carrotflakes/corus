@@ -2,6 +2,7 @@ pub mod accumulator;
 pub mod add;
 pub mod amp;
 pub mod buffer;
+pub mod buffer_playback;
 pub mod constant;
 pub mod controllable;
 pub mod envelope;
@@ -20,6 +21,22 @@ pub trait Node<T: 'static> {
     fn proc(&mut self, ctx: &ProcContext) -> T;
     fn lock(&mut self);
     fn unlock(&mut self);
+}
+
+use crate::ring_buffer::RingBuffer;
+use std::borrow::Borrow;
+
+use self::{buffer::Buffer, proc_once_share::ProcOnceShare};
+
+impl<T, A, DA> Borrow<RingBuffer<T>> for ProcOnceShare<T, Buffer<T, A, DA>, Buffer<T, A, DA>>
+where
+    T: 'static + Clone + Default,
+    A: Node<T> + ?Sized,
+    DA: AsMut<A>,
+{
+    fn borrow(&self) -> &RingBuffer<T> {
+        &self.get_ref().get_ref().borrow()
+    }
 }
 
 #[test]
