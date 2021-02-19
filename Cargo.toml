@@ -10,3 +10,4 @@ edition = "2018"
 
 [dev-dependencies]
 hound = "3.4"
+ezmid = {git = "https://github.com/carrotflakes/ezmid.git", branch = "main"}
