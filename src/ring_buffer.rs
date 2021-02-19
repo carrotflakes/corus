@@ -28,6 +28,11 @@ impl<T: Clone + Default> RingBuffer<T> {
         let i = (size + self.pos - index) % size;
         self.buffer[i].clone()
     }
+
+    pub fn fast_resize(&mut self, size: usize) {
+        self.buffer.resize(size, Default::default());
+        self.pos = self.pos % size;
+    }
 }
 
 #[test]
