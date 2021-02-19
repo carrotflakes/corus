@@ -2,6 +2,12 @@
 
 Primitive sound synthesis library.
 
+TODO:
+
+- panning
+- biquad filter
+- reverb
+
 ## Author
 
 * carrotflakes (carrotflakes@gmail.com)
