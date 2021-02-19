@@ -1,13 +1,4 @@
-use corus::{
-    node::{
-        accumulator::Accumulator, amp::Amp, constant::Constant, param::Param, share::Share,
-        sine::Sine,
-        Node,
-    },
-    notenum_to_frequency,
-    poly_synth::{PolySynth, Voice},
-    proc_context::ProcContext,
-};
+use corus::{node::{Node, accumulator::Accumulator, amp::Amp, constant::Constant, controllable::Controllable, param::Param, sine::Sine}, notenum_to_frequency, poly_synth::{PolySynth, Voice}, proc_context::ProcContext};
 
 fn main() {
     let sample_rate = 44100;
@@ -15,8 +6,9 @@ fn main() {
     let builder = || {
         let freq_param = Param::new();
         // let sine = Sine::new(freq_param.controller());
-        let mut acc = Share::new(Accumulator::new(freq_param.controller(), 1.0));
-        let saw = corus::node::add::Add::new(acc.clone(), Constant::new(-0.5));
+        let acc = Controllable::new(Accumulator::new(freq_param.controller(), 1.0));
+        let mut acc_ctrl = acc.controller();
+        let saw = corus::node::add::Add::new(acc, Constant::new(-0.5));
         let env = Param::new();
         let node = Amp::new(saw, env.controller());
         Voice::new(
@@ -25,7 +17,7 @@ fn main() {
             Box::new({
                 let mut env = env.controller();
                 move |time| {
-                    acc.borrow_mut().set_value_at_time(time, 0.5);
+                    acc_ctrl.lock().set_value_at_time(time, 0.5);
                     env.cancel_and_hold_at_time(time);
                     env.set_value_at_time(time, 0.001);
                     env.exponential_ramp_to_value_at_time(time + 0.01, 1.0);

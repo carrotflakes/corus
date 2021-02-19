@@ -13,7 +13,6 @@ pub mod param2;
 pub mod placeholder;
 pub mod proc_once;
 pub mod proc_once_share;
-pub mod share;
 pub mod sine;
 
 use crate::proc_context::ProcContext;
