@@ -1,6 +1,7 @@
 pub mod accumulator;
 pub mod add;
 pub mod amp;
+pub mod buffer;
 pub mod constant;
 pub mod controllable;
 pub mod envelope;
