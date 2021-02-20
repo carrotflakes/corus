@@ -41,6 +41,7 @@ where
     DA: AsMut<A>,
     B: Borrow<RingBuffer<T>>,
 {
+    #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         let t = self.node.as_mut().proc(ctx);
         let i = (t * ctx.sample_rate as f32).round() as usize;

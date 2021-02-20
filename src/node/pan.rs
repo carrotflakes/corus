@@ -51,6 +51,7 @@ where
     DA: AsMut<A>,
     DB: AsMut<B>,
 {
+    #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> O {
         let v: T = self.a.as_mut().proc(ctx);
         let pan = self.b.as_mut().proc(ctx);

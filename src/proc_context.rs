@@ -13,6 +13,7 @@ impl ProcContext {
         }
     }
 
+    #[inline]
     pub fn sample<T: 'static, N: Node<T> + ?Sized>(&mut self, mut node: impl AsMut<N>) -> T {
         let r = node.as_mut().proc(self);
         self.time += 1.0 / self.sample_rate as f64;

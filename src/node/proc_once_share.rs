@@ -38,6 +38,7 @@ where
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
+    #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         self.get_mut().as_mut().proc(ctx)
     }

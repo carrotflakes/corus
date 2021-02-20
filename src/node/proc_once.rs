@@ -44,6 +44,7 @@ where
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
+    #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         if self.time != ctx.time {
             self.time = ctx.time;

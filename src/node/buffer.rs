@@ -42,6 +42,7 @@ where
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
+    #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         let v = self.node.as_mut().proc(ctx);
         self.buffer.push(v.clone());

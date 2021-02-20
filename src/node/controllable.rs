@@ -57,6 +57,7 @@ where
     T: 'static,
     A: Node<T> + 'static,
 {
+    #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         self.ref_mut
             .as_mut()

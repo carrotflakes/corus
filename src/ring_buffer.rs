@@ -11,15 +11,18 @@ impl<T: Clone + Default> RingBuffer<T> {
         }
     }
 
+    #[inline]
     pub fn size(&self) -> usize {
         self.buffer.len()
     }
 
+    #[inline]
     pub fn push(&mut self, value: T) {
         self.pos = (self.pos + 1) % self.buffer.len();
         self.buffer[self.pos] = value;
     }
 
+    #[inline]
     pub fn get(&self, index: usize) -> T {
         let size = self.buffer.len();
         if size < index {
@@ -29,6 +32,7 @@ impl<T: Clone + Default> RingBuffer<T> {
         self.buffer[i].clone()
     }
 
+    #[inline]
     pub fn fast_resize(&mut self, size: usize) {
         self.buffer.resize(size, Default::default());
         self.pos = self.pos % size;

@@ -62,6 +62,7 @@ where
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
+    #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         let d = self.node.as_mut().proc(ctx) * C1f32::from(1.0 / ctx.sample_rate as f32);
         self.value = self.value.clone() + d;

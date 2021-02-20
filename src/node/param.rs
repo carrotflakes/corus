@@ -162,6 +162,7 @@ impl Param {
 }
 
 impl Node<C1f32> for Param {
+    #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C1f32 {
         {
             while !self.events.is_empty() {
