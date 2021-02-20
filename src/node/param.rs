@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crate::signal::C1f32;
 
 use super::{Node, ProcContext};
@@ -17,7 +19,8 @@ pub struct Event {
 }
 
 pub struct Param {
-    events: Vec<Event>,
+    first_event: Event,
+    events: VecDeque<Event>,
 }
 
 impl Param {
@@ -27,10 +30,11 @@ impl Param {
 
     pub fn with_value(value: f32) -> Self {
         Param {
-            events: vec![Event {
+            first_event: Event {
                 time: 0.0,
                 body: EventBody::SetValueAtTime { value },
-            }]
+            },
+            events: vec![].into(),
         }
     }
 
@@ -41,7 +45,7 @@ impl Param {
                 return;
             }
         }
-        self.events.push(event);
+        self.events.push_back(event);
     }
 
     pub fn set_value_at_time(&mut self, time: f64, value: f32) {
@@ -88,7 +92,7 @@ impl Param {
     }
 
     pub fn compute_value(&self, time: f64) -> f32 {
-        let mut before = None;
+        let mut before = Some(&self.first_event);
         let mut after = None;
         for event in &self.events {
             if time < event.time {
@@ -160,18 +164,18 @@ impl Param {
 impl Node<C1f32> for Param {
     fn proc(&mut self, ctx: &ProcContext) -> C1f32 {
         {
-            while self.events.len() >= 2 {
-                if ctx.time < self.events[1].time {
+            while !self.events.is_empty() {
+                if ctx.time < self.events[0].time {
                     break;
                 }
-                match self.events[1].body {
+                match self.events[0].body {
                     EventBody::SetValueAtTime { .. }
                     | EventBody::LinearRampToValueAtTime { .. }
                     | EventBody::ExponentialRampToValueAtTime { .. } => {
-                        self.events.remove(0);
+                        self.first_event = self.events.pop_front().unwrap();
                     }
                     EventBody::SetTargetAtTime { .. } => {
-                        if let Some(e) = self.events.get(2) {
+                        if let Some(e) = self.events.get(1) {
                             if ctx.time < e.time {
                                 break;
                             }
@@ -179,10 +183,11 @@ impl Node<C1f32> for Param {
                                 EventBody::SetValueAtTime { .. }
                                 | EventBody::LinearRampToValueAtTime { .. }
                                 | EventBody::ExponentialRampToValueAtTime { .. } => {
-                                    self.events.drain(0..2).count();
+                                    self.events.pop_front();
+                                    self.first_event = self.events.pop_front().unwrap();
                                 }
                                 EventBody::SetTargetAtTime { .. } => {
-                                    self.events.remove(1);
+                                    self.events.pop_front();
                                 }
                             }
                         } else {
@@ -196,11 +201,9 @@ impl Node<C1f32> for Param {
         self.compute_value(ctx.time).into()
     }
 
-    fn lock(&mut self) {
-    }
+    fn lock(&mut self) {}
 
-    fn unlock(&mut self) {
-    }
+    fn unlock(&mut self) {}
 }
 
 impl AsMut<Param> for Param {
