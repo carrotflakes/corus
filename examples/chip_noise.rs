@@ -12,14 +12,14 @@ fn main() {
     let sample_rate = 44100;
 
     let mut node: EventControll<C1f32, NoiseEvent> = EventControll::new(Noise::new());
-    node.push_event(NoiseEvent::ShortFreq(2.0 * 0.0, false));
-    node.push_event(NoiseEvent::OriginalFreq(2.0 * 0.1, 1, 4));
-    node.push_event(NoiseEvent::OriginalFreq(2.0 * 0.2, 2, 4));
-    node.push_event(NoiseEvent::OriginalFreq(2.0 * 0.3, 3, 4));
-    node.push_event(NoiseEvent::OriginalFreq(2.0 * 0.4, 4, 4));
-    node.push_event(NoiseEvent::OriginalFreq(2.0 * 0.5, 5, 4));
-    node.push_event(NoiseEvent::OriginalFreq(2.0 * 0.6, 6, 4));
-    node.push_event(NoiseEvent::OriginalFreq(2.0 * 0.7, 7, 4));
+    node.push_event(2.0 * 0.0, NoiseEvent::ShortFreq(false));
+    node.push_event(2.0 * 0.1, NoiseEvent::OriginalFreq(1, 4));
+    node.push_event(2.0 * 0.2, NoiseEvent::OriginalFreq(2, 4));
+    node.push_event(2.0 * 0.3, NoiseEvent::OriginalFreq(3, 4));
+    node.push_event(2.0 * 0.4, NoiseEvent::OriginalFreq(4, 4));
+    node.push_event(2.0 * 0.5, NoiseEvent::OriginalFreq(5, 4));
+    node.push_event(2.0 * 0.6, NoiseEvent::OriginalFreq(6, 4));
+    node.push_event(2.0 * 0.7, NoiseEvent::OriginalFreq(7, 4));
     let pc = ProcContext::new(sample_rate);
     let mut writer = Writer::new("chip_noise.wav");
     node.lock();

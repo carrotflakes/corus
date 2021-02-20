@@ -63,36 +63,27 @@ impl AsMut<Self> for Noise {
 }
 
 pub enum NoiseEvent {
-    OriginalFreq(f64, u8, u8),
-    Freq(f64, u32),
-    ShortFreq(f64, bool),
-    ResetReg(f64),
+    OriginalFreq(u8, u8),
+    Freq(u32),
+    ShortFreq(bool),
+    ResetReg,
 }
 
 impl Event<C1f32> for NoiseEvent {
     type Node = Noise;
 
-    fn get_time(&self) -> f64 {
-        match self {
-            NoiseEvent::OriginalFreq(time, _, _) => *time,
-            NoiseEvent::Freq(time, _) => *time,
-            NoiseEvent::ShortFreq(time, _) => *time,
-            NoiseEvent::ResetReg(time) => *time,
-        }
-    }
-
     fn dispatch(&self, node: &mut Self::Node) {
         match self {
-            NoiseEvent::OriginalFreq(_, f1, f2) => {
+            NoiseEvent::OriginalFreq(f1, f2) => {
                 node.freq = Noise::compute_freq(*f1, *f2);
             }
-            NoiseEvent::Freq(_, freq) => {
+            NoiseEvent::Freq(freq) => {
                 node.freq = *freq;
             }
-            NoiseEvent::ShortFreq(_, short_freq) => {
+            NoiseEvent::ShortFreq(short_freq) => {
                 node.short_freq = *short_freq;
             }
-            NoiseEvent::ResetReg(_) => {
+            NoiseEvent::ResetReg => {
                 node.reg = 1;
             }
         }

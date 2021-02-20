@@ -5,13 +5,12 @@ use crate::{node::Node, proc_context::ProcContext};
 pub trait Event<T: 'static> {
     type Node: Node<T>;
 
-    fn get_time(&self) -> f64;
     fn dispatch(&self, node: &mut Self::Node);
 }
 
 pub struct EventControll<T: 'static, E: Event<T>> {
     node: E::Node,
-    events: VecDeque<E>,
+    events: VecDeque<(f64, E)>,
     _t: PhantomData<T>,
 }
 
@@ -24,26 +23,25 @@ impl<T: 'static, E: Event<T>> EventControll<T, E> {
         }
     }
 
-    pub fn push_event(&mut self, event: E) {
-        let time = event.get_time();
+    pub fn push_event(&mut self, time: f64, event: E) {
         for (i, e) in self.events.iter().enumerate() {
-            if time < e.get_time() {
-                self.events.insert(i, event);
+            if time < e.0 {
+                self.events.insert(i, (time, event));
                 return;
             }
         }
-        self.events.push_back(event);
+        self.events.push_back((time, event));
     }
 }
 
 impl<T: 'static, E: Event<T>> Node<T> for EventControll<T, E> {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
-        while let Some(event) = self.events.front_mut() {
-            if ctx.time < event.get_time() {
+        while let Some(e) = self.events.front_mut() {
+            if ctx.time < e.0 {
                 break;
             }
-            event.dispatch(&mut self.node);
+            e.1.dispatch(&mut self.node);
             self.events.pop_front();
         }
         self.node.proc(ctx)
