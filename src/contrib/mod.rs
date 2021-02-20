@@ -1,5 +1,7 @@
+mod effects;
 mod oscillators;
 
+pub use effects::*;
 pub use oscillators::*;
 
 use crate::{

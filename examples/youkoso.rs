@@ -1,14 +1,7 @@
-use corus::{
-    contrib::{amp_pan, controllable_param},
-    node::{
+use corus::{contrib::{amp_pan, controllable_param, delay_fx}, node::{
         accumulator::Accumulator, amp::Amp, constant::Constant, controllable::Controllable,
         mix::Mix, pan::Pan, param::Param, Node,
-    },
-    notenum_to_frequency,
-    poly_synth::{PolySynth, Voice},
-    proc_context::ProcContext,
-    signal::{C1f32, C2f32},
-};
+    }, notenum_to_frequency, poly_synth::{PolySynth, Voice}, proc_context::ProcContext, signal::{C1f32, C2f32}};
 
 fn main() {
     let sample_rate = 44100;
@@ -101,6 +94,7 @@ fn main() {
             .collect(),
     );
     let mut node = Amp::new(mix, Constant::new(C2f32([0.25, 0.25])));
+    let mut node = delay_fx(node, sample_rate as usize, 0.3, 0.3);
 
     let pc = ProcContext::new(sample_rate);
     let mut writer = Writer::new("youkoso.wav");
