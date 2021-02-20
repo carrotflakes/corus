@@ -5,7 +5,6 @@ pub mod buffer;
 pub mod buffer_playback;
 pub mod constant;
 pub mod controllable;
-pub mod envelope;
 pub mod map;
 pub mod mix;
 pub mod pan;
