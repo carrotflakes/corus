@@ -6,7 +6,11 @@ TODO:
 
 - biquad filter
 - reverb
+- wavetable
+- pararell mix
+- chip
 - basic nodes
+- f64
 
 ## Author
 
