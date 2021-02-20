@@ -1,7 +1,7 @@
-use corus::{contrib::{amp_pan, controllable_param, delay_fx}, node::{
+use corus::{contrib::{amp_pan, controllable_param, delay_fx, poly_synth::{PolySynth, Voice}}, node::{
         accumulator::Accumulator, amp::Amp, constant::Constant, controllable::Controllable,
         mix::Mix, pan::Pan, param::Param, Node,
-    }, notenum_to_frequency, poly_synth::{PolySynth, Voice}, proc_context::ProcContext, signal::{C1f32, C2f32}};
+    }, notenum_to_frequency, proc_context::ProcContext, signal::{C1f32, C2f32}};
 
 fn main() {
     let sample_rate = 44100;

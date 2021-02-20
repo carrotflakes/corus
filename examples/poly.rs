@@ -1,4 +1,4 @@
-use corus::{node::{Node, accumulator::Accumulator, amp::Amp, constant::Constant, controllable::Controllable, param::Param, sine::Sine}, notenum_to_frequency, poly_synth::{PolySynth, Voice}, proc_context::ProcContext, signal::C1f32};
+use corus::{contrib::poly_synth::{PolySynth, Voice}, node::{Node, accumulator::Accumulator, amp::Amp, constant::Constant, controllable::Controllable, param::Param, sine::Sine}, notenum_to_frequency, proc_context::ProcContext, signal::C1f32};
 
 fn main() {
     let sample_rate = 44100;

@@ -1,5 +1,6 @@
 mod effects;
 mod oscillators;
+pub mod poly_synth;
 
 pub use effects::*;
 pub use oscillators::*;
