@@ -1,19 +1,29 @@
-use corus::{contrib::{amp_pan, controllable_param, delay_fx, poly_synth::{PolySynth, Voice}}, node::{
-        accumulator::Accumulator, amp::Amp, constant::Constant, controllable::Controllable,
-        mix::Mix, pan::Pan, param::Param, Node,
-    }, notenum_to_frequency, proc_context::ProcContext, signal::{C1f32, C2f32}};
+use corus::{
+    contrib::{
+        amp_pan, controllable_param, delay_fx,
+        poly_synth::{PolySynth, Voice},
+        resetable_acc,
+    },
+    node::{amp::Amp, constant::Constant, mix::Mix, Node},
+    notenum_to_frequency,
+    proc_context::ProcContext,
+    signal::C2f32,
+};
 
 fn main() {
     let sample_rate = 44100;
 
     let builder = || {
-        let freq_param = Controllable::new(Param::new());
-        let freq_param_ctrl = freq_param.controller();
-        let acc = Controllable::new(Accumulator::new(freq_param, C1f32::from(1.0)));
-        let mut acc_ctrl = acc.controller();
+        let (freq_param, freq_param_ctrl) = controllable_param(1.0);
+        // let freq_param = Controllable::new(Param::new());
+        // let freq_param_ctrl = freq_param.controller();
+        let (acc, mut acc_reset) = resetable_acc(freq_param);
+        // let acc = Controllable::new(Accumulator::new(freq_param, C1f32::from(1.0)));
+        // let mut acc_ctrl = acc.controller();
         let saw = corus::node::add::Add::new(acc, Constant::from(-0.5));
-        let env = Controllable::new(Param::new());
-        let env_ctrl = env.controller();
+        // let env = Controllable::new(Param::new());
+        // let env_ctrl = env.controller();
+        let (env, env_ctrl) = controllable_param(1.0);
         let node = Amp::new(saw, env);
         Voice::new(
             freq_param_ctrl,
@@ -21,7 +31,8 @@ fn main() {
             Box::new({
                 let mut env_ctrl = env_ctrl.clone();
                 move |time| {
-                    acc_ctrl.lock().set_value_at_time(time, C1f32::from(0.5));
+                    acc_reset(time, 0.5);
+                    // acc_ctrl.lock().set_value_at_time(time, C1f32::from(0.5));
                     let mut env = env_ctrl.lock();
                     env.cancel_and_hold_at_time(time);
                     env.set_value_at_time(time, 0.001);
