@@ -1,13 +1,16 @@
 use corus::{
     contrib::{
-        amp_pan, controllable_param, delay_fx,
+        amp_pan,
+        chip::Noise,
+        controllable_param, delay_fx,
+        envelope::{AdsrEnvelope, ArEnvelope},
         poly_synth::{PolySynth, Voice},
         resetable_acc,
     },
     node::{amp::Amp, constant::Constant, mix::Mix, Node},
     notenum_to_frequency,
     proc_context::ProcContext,
-    signal::C2f32,
+    signal::{C1f32, C2f32},
 };
 
 fn main() {
@@ -15,44 +18,48 @@ fn main() {
 
     let builder = || {
         let (freq_param, freq_param_ctrl) = controllable_param(1.0);
-        // let freq_param = Controllable::new(Param::new());
-        // let freq_param_ctrl = freq_param.controller();
         let (acc, mut acc_reset) = resetable_acc(freq_param);
-        // let acc = Controllable::new(Accumulator::new(freq_param, C1f32::from(1.0)));
-        // let mut acc_ctrl = acc.controller();
         let saw = corus::node::add::Add::new(acc, Constant::from(-0.5));
-        // let env = Controllable::new(Param::new());
-        // let env_ctrl = env.controller();
-        let (env, env_ctrl) = controllable_param(1.0);
+        let (env, mut env_on, env_off) = AdsrEnvelope {
+            a: 0.01,
+            d: 0.5,
+            s: 0.2,
+            r: 0.3,
+        }
+        .build();
         let node = Amp::new(saw, env);
         Voice::new(
             freq_param_ctrl,
-            node,
-            Box::new({
-                let mut env_ctrl = env_ctrl.clone();
-                move |time| {
-                    acc_reset(time, 0.5);
-                    // acc_ctrl.lock().set_value_at_time(time, C1f32::from(0.5));
-                    let mut env = env_ctrl.lock();
-                    env.cancel_and_hold_at_time(time);
-                    env.set_value_at_time(time, 0.001);
-                    env.exponential_ramp_to_value_at_time(time + 0.01, 1.0);
-                    env.exponential_ramp_to_value_at_time(time + 0.2, 0.5);
-                }
+            Box::new(node) as Box<dyn Node<C1f32>>,
+            Box::new(move |time| {
+                acc_reset(time, 0.5);
+                env_on(time);
             }),
-            Box::new({
-                let mut env_ctrl = env_ctrl.clone();
-                move |time| {
-                    let mut env = env_ctrl.lock();
-                    env.cancel_and_hold_at_time(time);
-                    env.set_target_at_time(time, 0.0, 0.1);
-                }
-            }),
+            Box::new(env_off),
+        )
+    };
+    let builder2 = || {
+        let (_, freq_param_ctrl) = controllable_param(1.0);
+        let mut node = Noise::new();
+        node.freq = Noise::compute_freq(3, 3);
+        let (env, env_on, env_off) = ArEnvelope { a: 0.01, r: 0.3 }.build();
+        let node = Amp::new(node, Amp::new(env, Constant::from(0.25)));
+        Voice::new(
+            freq_param_ctrl,
+            Box::new(node) as Box<dyn Node<C1f32>>,
+            Box::new(env_on),
+            Box::new(env_off),
         )
     };
     let mut tracks: Vec<_> = (0..20)
-        .map(|_| {
-            let synth = PolySynth::new(&builder, 16);
+        .map(|i| {
+            let synth = if i == 9 {
+                Box::new(PolySynth::new(&builder2, 16))
+                    as Box<PolySynth<dyn Node<C1f32>, Box<dyn Node<C1f32>>>>
+            } else {
+                Box::new(PolySynth::new(&builder, 16))
+                    as Box<PolySynth<dyn Node<C1f32>, Box<dyn Node<C1f32>>>>
+            };
             let (gain, gain_ctrl) = controllable_param(1.0);
             let (pan, pan_ctrl) = controllable_param(0.0);
             (synth, gain, pan, gain_ctrl, pan_ctrl)
@@ -60,11 +67,18 @@ fn main() {
         .collect();
 
     let time = {
-        let data = std::fs::read("youkoso.mid").unwrap();
+        let file = std::env::args().skip(1).next().unwrap_or("./youkoso.mid".to_string());
+        let data = std::fs::read(file).unwrap();
         let events = ezmid::parse(&data);
         let mut time = 0.0;
         for e in ezmid::Dispatcher::new(events) {
             time = e.time;
+
+            // mute drum part
+            // if e.event.channel == 9 {
+            //     continue;
+            // }
+
             let track = &mut tracks[e.event.channel as usize];
             match e.event.body {
                 ezmid::EventBody::NoteOn {
@@ -91,8 +105,8 @@ fn main() {
                 ezmid::EventBody::Pan { pan, .. } => {
                     track.4.lock().set_value_at_time(e.time, pan);
                 }
-                ezmid::EventBody::PitchBend { bend, raw_bend } => {}
-                ezmid::EventBody::Tempo { tempo } => {}
+                ezmid::EventBody::PitchBend { bend: _, raw_bend: _ } => {}
+                ezmid::EventBody::Tempo { tempo: _ } => {}
             }
         }
         time + 1.0
@@ -104,7 +118,7 @@ fn main() {
             .map(|t| Box::new(amp_pan(t.0, t.1, t.2)) as Box<dyn Node<C2f32>>)
             .collect(),
     );
-    let mut node = Amp::new(mix, Constant::new(C2f32([0.25, 0.25])));
+    let node = Amp::new(mix, Constant::new(C2f32([0.25, 0.25])));
     let mut node = delay_fx(node, sample_rate as usize, 0.3, 0.3);
 
     let pc = ProcContext::new(sample_rate);
