@@ -1,6 +1,8 @@
 use corus::{
-    contrib::chip::{Noise, NoiseEvent},
-    event_controll::EventControll,
+    contrib::{
+        chip::{Noise, NoiseEvent},
+        event_controll::EventControll,
+    },
     proc_context::ProcContext,
     signal::C1f32,
 };
