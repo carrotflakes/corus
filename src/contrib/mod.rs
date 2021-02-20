@@ -1,3 +1,4 @@
+pub mod chip;
 mod effects;
 mod oscillators;
 pub mod poly_synth;
