@@ -14,7 +14,6 @@ where
     _t: std::marker::PhantomData<T>,
 }
 
-#[derive(Clone)]
 pub struct Controller<T, A>
 where
     T: 'static,
@@ -98,6 +97,19 @@ where
 {
     pub fn lock(&mut self) -> std::sync::MutexGuard<A> {
         self.node.lock().unwrap()
+    }
+}
+
+impl<T, A> Clone for Controller<T, A>
+where
+    T: 'static,
+    A: Node<T> + 'static,
+{
+    fn clone(&self) -> Self {
+        Self {
+            node: self.node.clone(),
+            _t: self._t,
+        }
     }
 }
 

@@ -1,18 +1,15 @@
-use corus::{
-    node::{
+use corus::{node::{
         add::Add, amp::Amp, buffer::Buffer, buffer_playback::BufferPlayback, constant::Constant,
-        controllable::Controllable, mix::Mix, param2::Param, placeholder::Placeholder,
+        controllable::Controllable, mix::Mix, param::Param, placeholder::Placeholder,
         proc_once_share::ProcOnceShare, sine::Sine, Node,
-    },
-    proc_context::ProcContext,
-};
+    }, proc_context::ProcContext, signal::C1f32};
 
 fn main() {
     let sample_rate = 44100;
 
     let mut nodes = Vec::new();
     let modulator =
-        ProcOnceShare::new(Amp::new(Sine::new(Constant::new(4.0)), Constant::new(20.0)));
+        ProcOnceShare::new(Amp::new(Sine::new(Constant::from(4.0)), Constant::from(20.0)));
     for i in 0..100 {
         let freq = Controllable::new(Param::new());
         let mut freq_ctrl = freq.controller();
@@ -22,8 +19,8 @@ fn main() {
         freq_ctrl.lock().exponential_ramp_to_value_at_time(2.0, f);
         nodes.push(Box::new(Amp::new(
             Sine::new(Add::new(freq, modulator.clone())),
-            Constant::new(1.0 / (i + 1) as f32),
-        )) as Box<dyn Node<f32>>);
+            Constant::from(1.0 / (i + 1) as f32),
+        )) as Box<dyn Node<C1f32>>);
     }
 
     let mix = Mix::new(nodes);
@@ -36,22 +33,22 @@ fn main() {
             ps.set(Box::new(Add::new(
                 mix,
                 Amp::new(
-                    BufferPlayback::new(Constant::new(0.5), buffer.clone()),
-                    Constant::new(0.5),
+                    BufferPlayback::new(Constant::from(0.5), buffer.clone()),
+                    Constant::from(0.5),
                 ),
-            )) as Box<dyn Node<f32>>);
+            )) as Box<dyn Node<C1f32>>);
         }
         buffer
     };
 
-    let mut node = Amp::new(mix, Constant::new(0.1));
+    let mut node = Amp::new(mix, Constant::from(0.1));
 
     let pc = ProcContext::new(sample_rate);
     let mut writer = Writer::new("bench.wav");
     let start = std::time::Instant::now();
     node.lock();
     for s in pc.into_iter(&mut node).take(sample_rate as usize * 4) {
-        writer.write(s, s);
+        writer.write(s.0[0], s.0[0]);
     }
     node.unlock();
     println!("{:?} elapsed", start.elapsed());

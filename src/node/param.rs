@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use crate::signal::C1f32;
 
 use super::{Node, ProcContext};
 
@@ -17,10 +17,6 @@ pub struct Event {
 }
 
 pub struct Param {
-    body: Rc<RefCell<ParamBody>>,
-}
-
-pub struct ParamBody {
     events: Vec<Event>,
 }
 
@@ -31,30 +27,21 @@ impl Param {
 
     pub fn with_value(value: f32) -> Self {
         Param {
-            body: Rc::new(RefCell::new(ParamBody {
-                events: vec![Event {
-                    time: 0.0,
-                    body: EventBody::SetValueAtTime { value },
-                }],
-            })),
-        }
-    }
-
-    pub fn controller(&self) -> Param {
-        Param {
-            body: self.body.clone(),
+            events: vec![Event {
+                time: 0.0,
+                body: EventBody::SetValueAtTime { value },
+            }]
         }
     }
 
     pub fn push_event(&mut self, event: Event) {
-        let mut body = self.body.borrow_mut();
-        for (i, e) in body.events.iter().enumerate() {
+        for (i, e) in self.events.iter().enumerate() {
             if event.time < e.time {
-                body.events.insert(i, event);
+                self.events.insert(i, event);
                 return;
             }
         }
-        body.events.push(event);
+        self.events.push(event);
     }
 
     pub fn set_value_at_time(&mut self, time: f64, value: f32) {
@@ -89,9 +76,8 @@ impl Param {
     }
 
     pub fn cancel_scheduled_values(&mut self, time: f64) {
-        let mut body = self.body.borrow_mut();
-        if let Some(i) = body.events.iter().position(|e| time <= e.time) {
-            body.events.truncate(i);
+        if let Some(i) = self.events.iter().position(|e| time <= e.time) {
+            self.events.truncate(i);
         }
     }
 
@@ -102,10 +88,9 @@ impl Param {
     }
 
     pub fn compute_value(&self, time: f64) -> f32 {
-        let body = self.body.borrow();
         let mut before = None;
         let mut after = None;
-        for event in &body.events {
+        for event in &self.events {
             if time < event.time {
                 match event.body {
                     EventBody::SetValueAtTime { .. } => {}
@@ -170,26 +155,23 @@ impl Param {
             unreachable!()
         }
     }
-    // TODO: https://developer.mozilla.org/en-US/docs/Web/API/AudioParam/cancelAndHoldAtTime
 }
 
-impl Node<f32> for Param {
-    fn proc(&mut self, ctx: &ProcContext) -> f32 {
+impl Node<C1f32> for Param {
+    fn proc(&mut self, ctx: &ProcContext) -> C1f32 {
         {
-            let mut body = self.body.borrow_mut();
-
-            while body.events.len() >= 2 {
-                if ctx.time < body.events[1].time {
+            while self.events.len() >= 2 {
+                if ctx.time < self.events[1].time {
                     break;
                 }
-                match body.events[1].body {
+                match self.events[1].body {
                     EventBody::SetValueAtTime { .. }
                     | EventBody::LinearRampToValueAtTime { .. }
                     | EventBody::ExponentialRampToValueAtTime { .. } => {
-                        body.events.remove(0);
+                        self.events.remove(0);
                     }
                     EventBody::SetTargetAtTime { .. } => {
-                        if let Some(e) = body.events.get(2) {
+                        if let Some(e) = self.events.get(2) {
                             if ctx.time < e.time {
                                 break;
                             }
@@ -197,10 +179,10 @@ impl Node<f32> for Param {
                                 EventBody::SetValueAtTime { .. }
                                 | EventBody::LinearRampToValueAtTime { .. }
                                 | EventBody::ExponentialRampToValueAtTime { .. } => {
-                                    body.events.drain(0..2).count();
+                                    self.events.drain(0..2).count();
                                 }
                                 EventBody::SetTargetAtTime { .. } => {
-                                    body.events.remove(1);
+                                    self.events.remove(1);
                                 }
                             }
                         } else {
@@ -211,7 +193,7 @@ impl Node<f32> for Param {
             }
         }
 
-        self.compute_value(ctx.time)
+        self.compute_value(ctx.time).into()
     }
 
     fn lock(&mut self) {
@@ -230,16 +212,15 @@ impl AsMut<Param> for Param {
 #[test]
 fn test() {
     let mut param = Param::new();
-    let mut ctrl = param.controller();
     let mut pc = ProcContext::new(4);
 
-    ctrl.set_value_at_time(2.0 / 4.0, 1.0);
-    ctrl.set_value_at_time(4.0 / 4.0, 2.0);
-    ctrl.linear_ramp_to_value_at_time(6.0 / 4.0, -2.0);
-    ctrl.linear_ramp_to_value_at_time(10.0 / 4.0, 1.0);
-    ctrl.set_target_at_time(12.0 / 4.0, 0.0, 0.5);
-    ctrl.cancel_and_hold_at_time(15.0 / 4.0);
-    ctrl.exponential_ramp_to_value_at_time(19.0 / 4.0, 1.0);
+    param.set_value_at_time(2.0 / 4.0, 1.0);
+    param.set_value_at_time(4.0 / 4.0, 2.0);
+    param.linear_ramp_to_value_at_time(6.0 / 4.0, -2.0);
+    param.linear_ramp_to_value_at_time(10.0 / 4.0, 1.0);
+    param.set_target_at_time(12.0 / 4.0, 0.0, 0.5);
+    param.cancel_and_hold_at_time(15.0 / 4.0);
+    param.exponential_ramp_to_value_at_time(19.0 / 4.0, 1.0);
 
     for _ in 0..20 {
         dbg!(pc.time);

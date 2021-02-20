@@ -2,7 +2,7 @@ mod audio;
 
 use std::{thread, time::Duration};
 
-use corus::{node::{add::Add, amp::Amp, constant::Constant, controllable::Controllable, param2::Param, proc_once::ProcOnce, proc_once_share::ProcOnceShare, sine::Sine}, notenum_to_frequency};
+use corus::{node::{add::Add, amp::Amp, constant::Constant, controllable::Controllable, param::Param, proc_once_share::ProcOnceShare, sine::Sine}, notenum_to_frequency};
 use sdl2::{
     audio::AudioSpecDesired, event::Event, keyboard::Keycode, pixels::Color, rect::Rect,
     render::Canvas, video::Window,
@@ -46,7 +46,7 @@ fn main() {
                             mod_gain,
                         ),
                     )),
-                    Constant::new(0.2),
+                    Constant::from(0.2),
                 )),
             )
         })

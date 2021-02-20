@@ -1,10 +1,10 @@
-use std::iter::Sum;
+use std::ops::Add;
 
 use super::{Node, ProcContext};
 
 pub struct Mix<T, DA>
 where
-    T: Clone + 'static + Sum,
+    T: Clone + 'static + Add<Output = T> + Default,
     DA: AsMut<dyn Node<T>>,
 {
     nodes: Vec<DA>,
@@ -13,7 +13,7 @@ where
 
 impl<T, DA> Mix<T, DA>
 where
-    T: Clone + 'static + Sum,
+    T: Clone + 'static + Add<Output = T> + Default,
     DA: AsMut<dyn Node<T>>,
 {
     pub fn new(nodes: Vec<DA>) -> Self {
@@ -26,11 +26,15 @@ where
 
 impl<T, DA> Node<T> for Mix<T, DA>
 where
-    T: Clone + 'static + Sum,
+    T: Clone + 'static + Add<Output = T> + Default,
     DA: AsMut<dyn Node<T>>,
 {
     fn proc(&mut self, ctx: &ProcContext) -> T {
-        self.nodes.iter_mut().map(|n| n.as_mut().proc(ctx)).sum()
+        let mut v = Default::default();
+        for node in self.nodes.iter_mut() {
+            v = v + node.as_mut().proc(ctx);
+        }
+        v
     }
 
     fn lock(&mut self) {
@@ -48,7 +52,7 @@ where
 
 impl<T, DA> AsMut<Self> for Mix<T, DA>
 where
-    T: Clone + 'static + Sum,
+    T: Clone + 'static + Add<Output = T> + Default,
     DA: AsMut<dyn Node<T>>,
 {
     fn as_mut(&mut self) -> &mut Mix<T, DA> {

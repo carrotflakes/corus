@@ -1,23 +1,25 @@
-use corus::{node::{Node, accumulator::Accumulator, amp::Amp, constant::Constant, controllable::Controllable, param::Param, sine::Sine}, notenum_to_frequency, poly_synth::{PolySynth, Voice}, proc_context::ProcContext};
+use corus::{node::{Node, accumulator::Accumulator, amp::Amp, constant::Constant, controllable::Controllable, param::Param, sine::Sine}, notenum_to_frequency, poly_synth::{PolySynth, Voice}, proc_context::ProcContext, signal::C1f32};
 
 fn main() {
     let sample_rate = 44100;
 
     let builder = || {
-        let freq_param = Param::new();
-        // let sine = Sine::new(freq_param.controller());
-        let acc = Controllable::new(Accumulator::new(freq_param.controller(), 1.0));
+        let freq_param = Controllable::new(Param::new());
+        let freq_param_ctrl = freq_param.controller();
+        let acc = Controllable::new(Accumulator::new(freq_param, C1f32::from(1.0)));
         let mut acc_ctrl = acc.controller();
-        let saw = corus::node::add::Add::new(acc, Constant::new(-0.5));
-        let env = Param::new();
-        let node = Amp::new(saw, env.controller());
+        let saw = corus::node::add::Add::new(acc, Constant::from(-0.5));
+        let env = Controllable::new(Param::new());
+        let env_ctrl = env.controller();
+        let node = Amp::new(saw, env);
         Voice::new(
-            freq_param,
+            freq_param_ctrl,
             node,
             Box::new({
-                let mut env = env.controller();
+                let mut env_ctrl = env_ctrl.clone();
                 move |time| {
-                    acc_ctrl.lock().set_value_at_time(time, 0.5);
+                    acc_ctrl.lock().set_value_at_time(time, C1f32::from(0.5));
+                    let mut env = env_ctrl.lock();
                     env.cancel_and_hold_at_time(time);
                     env.set_value_at_time(time, 0.001);
                     env.exponential_ramp_to_value_at_time(time + 0.01, 1.0);
@@ -25,8 +27,9 @@ fn main() {
                 }
             }),
             Box::new({
-                let mut env = env.controller();
+                let mut env_ctrl = env_ctrl.clone();
                 move |time| {
+                    let mut env = env_ctrl.lock();
                     env.cancel_and_hold_at_time(time);
                     env.set_target_at_time(time, 0.0, 0.1);
                 }
@@ -51,14 +54,14 @@ fn main() {
     synth.note_on(1.3, notenum_to_frequency(71));
     synth.note_off(1.6, notenum_to_frequency(71));
 
-    let mut node = Amp::new(synth, Constant::new(0.1));
+    let mut node = Amp::new(synth, Constant::from(0.1));
 
     let pc = ProcContext::new(sample_rate);
     let mut writer = Writer::new("poly.wav");
     let start = std::time::Instant::now();
     node.lock();
     for s in pc.into_iter(&mut node).take(sample_rate as usize * 3) {
-        writer.write(s, s);
+        writer.write(s.0[0], s.0[0]);
     }
     node.unlock();
     println!("{:?} elapsed", start.elapsed());

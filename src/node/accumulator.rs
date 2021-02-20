@@ -1,39 +1,50 @@
+use std::ops::{Add, Mul};
+
+use crate::signal::{C1f32, Signal};
+
 use super::{Node, ProcContext};
 
 #[derive(Debug, Clone)]
-pub struct Event {
+pub struct Event<T>
+where
+    T: Signal + Mul<C1f32, Output = T> + Add<Output = T> + Default + Clone,
+{
     time: f64,
-    value: f32,
+    value: T,
 }
 
-pub struct Accumulator<A, DA>
+pub struct Accumulator<T, A, DA>
 where
-    A: Node<f32> + ?Sized,
+    T: Signal + Mul<C1f32, Output = T> + Add<Output = T> + Default + Clone,
+    A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
-    events: Vec<Event>,
+    events: Vec<Event<T>>,
     node: DA,
-    value: f32,
-    upper: f32,
+    value: T,
+    upper: T,
+    _t: std::marker::PhantomData<T>,
     _a: std::marker::PhantomData<A>,
 }
 
-impl<A, DA> Accumulator<A, DA>
+impl<T, A, DA> Accumulator<T, A, DA>
 where
-    A: Node<f32> + ?Sized,
+    T: Signal + Mul<C1f32, Output = T> + Add<Output = T> + Default + Clone,
+    A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
-    pub fn new(node: DA, upper: f32) -> Self {
+    pub fn new(node: DA, upper: T) -> Self {
         Accumulator {
             events: vec![],
             node,
-            value: 0.0,
+            value: Default::default(),
             upper,
+            _t: Default::default(),
             _a: Default::default(),
         }
     }
 
-    pub fn set_value_at_time(&mut self, time: f64, value: f32) {
+    pub fn set_value_at_time(&mut self, time: f64, value: T) {
         let event = Event { time, value };
         for (i, e) in self.events.iter().enumerate() {
             if time < e.time {
@@ -45,25 +56,28 @@ where
     }
 }
 
-impl<A, DA> Node<f32> for Accumulator<A, DA>
+impl<T, A, DA> Node<T> for Accumulator<T, A, DA>
 where
-    A: Node<f32> + ?Sized,
+    T: Signal<Float = f32> + Mul<C1f32, Output = T> + Add<Output = T> + Default + Clone,
+    A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
-    fn proc(&mut self, ctx: &ProcContext) -> f32 {
-        let d = self.node.as_mut().proc(ctx) / ctx.sample_rate as f32;
-        self.value = self.value + d;
+    fn proc(&mut self, ctx: &ProcContext) -> T {
+        let d = self.node.as_mut().proc(ctx) * C1f32::from(1.0 / ctx.sample_rate as f32);
+        self.value = self.value.clone() + d;
 
         while !self.events.is_empty() {
             if ctx.time < self.events[0].time {
                 break;
             }
-            self.value = self.events[0].value;
+            self.value = self.events[0].value.clone();
             self.events.remove(0);
         }
 
-        self.value = self.value.rem_euclid(self.upper);
-        self.value
+        self.value = self
+            .value
+            .map2_1(self.upper.clone(), |v, u| v.rem_euclid(u));
+        self.value.clone()
     }
 
     fn lock(&mut self) {
@@ -75,9 +89,10 @@ where
     }
 }
 
-impl<A, DA> AsMut<Self> for Accumulator<A, DA>
+impl<T, A, DA> AsMut<Self> for Accumulator<T, A, DA>
 where
-    A: Node<f32> + ?Sized,
+    T: Signal + Mul<C1f32, Output = T> + Add<Output = T> + Default + Clone,
+    A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
     fn as_mut(&mut self) -> &mut Self {
@@ -87,12 +102,15 @@ where
 
 #[test]
 fn test() {
-    let mut accumulator = Accumulator::new(super::constant::Constant::new(1.0), 4.0);
+    let mut accumulator = Accumulator::new(
+        super::constant::Constant::new(C1f32::from(1.0)),
+        C1f32::from(4.0),
+    );
     let mut pc = ProcContext::new(4);
 
-    accumulator.set_value_at_time(0.0, 1.0);
-    accumulator.set_value_at_time(2.0, 0.5);
-    accumulator.set_value_at_time(3.0, -1.0);
+    accumulator.set_value_at_time(0.0, 1.0.into());
+    accumulator.set_value_at_time(2.0, 0.5.into());
+    accumulator.set_value_at_time(3.0, (-1.0).into());
 
     for _ in 0..20 {
         dbg!(pc.time);

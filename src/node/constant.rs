@@ -7,9 +7,11 @@ pub struct Constant<T: Clone + 'static> {
 
 impl<T: Clone + 'static> Constant<T> {
     pub fn new(value: T) -> Self {
-        Constant {
-            value,
-        }
+        Constant { value }
+    }
+
+    pub fn from<S: Clone + 'static + Into<T>>(src: S) -> Self {
+        Constant { value: src.into() }
     }
 }
 
@@ -18,14 +20,12 @@ impl<T: Clone + 'static> Node<T> for Constant<T> {
         self.value.clone()
     }
 
-    fn lock(&mut self) {
-    }
+    fn lock(&mut self) {}
 
-    fn unlock(&mut self) {
-    }
+    fn unlock(&mut self) {}
 }
 
-impl <T: Clone + 'static> AsMut<Constant<T>> for Constant<T> {
+impl<T: Clone + 'static> AsMut<Constant<T>> for Constant<T> {
     fn as_mut(&mut self) -> &mut Constant<T> {
         self
     }

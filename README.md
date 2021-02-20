@@ -4,9 +4,9 @@ Primitive sound synthesis library.
 
 TODO:
 
-- panning
 - biquad filter
 - reverb
+- basic nodes
 
 ## Author
 
