@@ -29,6 +29,7 @@ where
     T: Clone + 'static + Add<Output = T> + Default,
     DA: AsMut<dyn Node<T>>,
 {
+    #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         let mut v = Default::default();
         for node in self.nodes.iter_mut() {

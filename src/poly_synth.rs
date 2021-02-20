@@ -64,6 +64,7 @@ impl<A: Node<C1f32>> PolySynth<A> {
 }
 
 impl<A: Node<C1f32>> Node<C1f32> for PolySynth<A> {
+    #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C1f32 {
         let mut v = Default::default();
         for voice in &mut self.voices {

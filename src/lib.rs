@@ -1,3 +1,4 @@
+pub mod contrib;
 pub mod iterator;
 pub mod node;
 pub mod poly_synth;

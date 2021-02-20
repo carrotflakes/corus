@@ -42,6 +42,7 @@ where
     DA: AsMut<A>,
     DB: AsMut<B>,
 {
+    #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         self.input.as_mut().proc(ctx) * self.gain.as_mut().proc(ctx)
     }
