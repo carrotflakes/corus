@@ -1,4 +1,4 @@
-use crate::{iterator::SampleIterator, node::Node};
+use crate::{sample_iterator::SampleIterator, node::Node};
 
 pub struct ProcContext {
     pub sample_rate: u64,
