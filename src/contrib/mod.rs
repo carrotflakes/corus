@@ -2,6 +2,7 @@ pub mod chip;
 mod effects;
 pub mod envelope;
 pub mod event_controll;
+pub mod fm_synth;
 mod oscillators;
 pub mod poly_synth;
 
