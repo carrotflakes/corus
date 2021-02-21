@@ -6,6 +6,7 @@ use corus::{
         envelope::{AdsrEnvelope, ArEnvelope},
         event_controll::EventControll,
         poly_synth::{PolySynth, Voice},
+        rand_fm_synth::rand_fm_synth,
         resetable_acc,
     },
     node::{amp::Amp, constant::Constant, controllable::Controllable, mix::Mix, Node},
@@ -59,13 +60,14 @@ fn main() {
             Box::new(env_off),
         )
     };
-    let mut tracks: Vec<_> = (0..20)
+    let mut tracks: Vec<_> = (0..16)
         .map(|i| {
             let synth = if i == 9 {
-                Box::new(PolySynth::new(&builder2, 16))
+                Box::new(PolySynth::new(&builder2, 8))
                     as Box<PolySynth<dyn Node<C1f32>, Box<dyn Node<C1f32>>>>
             } else {
-                Box::new(PolySynth::new(&builder, 16))
+                // Box::new(PolySynth::new(&|| builder3(i + 10), 8))
+                Box::new(PolySynth::new(&builder, 8))
                     as Box<PolySynth<dyn Node<C1f32>, Box<dyn Node<C1f32>>>>
             };
             let (gain, gain_ctrl) = controllable_param(1.0);
@@ -144,6 +146,23 @@ fn main() {
     node.unlock();
     println!("{:?} elapsed", start.elapsed());
     writer.finish();
+}
+
+fn builder3(seed: u32) -> Voice<dyn Node<C1f32>, Box<dyn Node<C1f32>>> {
+    let synth = Controllable::new(rand_fm_synth(seed));
+    let mut ctrl1 = synth.controller();
+    let mut ctrl2 = synth.controller();
+    Voice::new(
+        Box::new(synth) as Box<dyn Node<C1f32>>,
+        Box::new(move |time, notenum| {
+            ctrl1
+                .lock()
+                .note_on(time, notenum_to_frequency(notenum as u32))
+        }),
+        Box::new(move |time| {
+            ctrl2.lock().note_off(time);
+        }),
+    )
 }
 
 pub struct Writer(hound::WavWriter<std::io::BufWriter<std::fs::File>>);
