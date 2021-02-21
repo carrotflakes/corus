@@ -7,6 +7,7 @@ use std::ops::{Add, Mul};
 pub trait Signal: 'static + Sized {
     type Float;
 
+    fn get(&self, channel: usize) -> Self::Float;
     fn map<F: Fn(Self::Float) -> Self::Float>(&self, f: F) -> Self;
     fn map2_1<F: Fn(Self::Float, Self::Float) -> Self::Float>(&self, self2: Self, f: F) -> Self;
 }
@@ -137,6 +138,11 @@ impl Signal for C1f32 {
     type Float = f32;
 
     #[inline]
+    fn get(&self, channel: usize) -> Self::Float {
+        self.0[channel]
+    }
+
+    #[inline]
     fn map<F: Fn(f32) -> f32>(&self, f: F) -> Self {
         Self([f(self.0[0])])
     }
@@ -151,6 +157,11 @@ impl Signal for C2f32 {
     type Float = f32;
 
     #[inline]
+    fn get(&self, channel: usize) -> Self::Float {
+        self.0[channel]
+    }
+
+    #[inline]
     fn map<F: Fn(f32) -> f32>(&self, f: F) -> Self {
         Self([f(self.0[0]), f(self.0[1])])
     }
@@ -160,4 +171,41 @@ impl Signal for C2f32 {
         Self([f(self.0[0], self2.0[0]), f(self.0[1], self2.0[1])])
     }
 }
-// TODO:...
+
+impl Signal for C1f64 {
+    type Float = f64;
+
+    #[inline]
+    fn get(&self, channel: usize) -> Self::Float {
+        self.0[channel]
+    }
+
+    #[inline]
+    fn map<F: Fn(f64) -> f64>(&self, f: F) -> Self {
+        Self([f(self.0[0])])
+    }
+
+    #[inline]
+    fn map2_1<F: Fn(f64, f64) -> f64>(&self, self2: Self, f: F) -> Self {
+        Self([f(self.0[0], self2.0[0])])
+    }
+}
+
+impl Signal for C2f64 {
+    type Float = f64;
+
+    #[inline]
+    fn get(&self, channel: usize) -> Self::Float {
+        self.0[channel]
+    }
+
+    #[inline]
+    fn map<F: Fn(f64) -> f64>(&self, f: F) -> Self {
+        Self([f(self.0[0]), f(self.0[1])])
+    }
+
+    #[inline]
+    fn map2_1<F: Fn(f64, f64) -> f64>(&self, self2: Self, f: F) -> Self {
+        Self([f(self.0[0], self2.0[0]), f(self.0[1], self2.0[1])])
+    }
+}
