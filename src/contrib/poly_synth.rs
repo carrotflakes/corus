@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    node::{controllable::Controller, param::Param, Node},
+    node::Node,
     proc_context::ProcContext,
     signal::C1f32,
 };
@@ -12,24 +12,21 @@ pub struct PolySynth<A: Node<C1f32> + ?Sized, DA: AsMut<A>> {
 }
 
 pub struct Voice<A: Node<C1f32> + ?Sized, DA: AsMut<A>> {
-    frequency: f32,
-    frequency_param: Controller<C1f32, Param>,
+    last_notenum: u8,
     node: DA,
-    note_on: Box<dyn FnMut(f64)>,
+    note_on: Box<dyn FnMut(f64, u8)>,
     note_off: Box<dyn FnMut(f64)>,
     _a: PhantomData<A>,
 }
 
 impl<A: Node<C1f32> + ?Sized, DA: AsMut<A>> Voice<A, DA> {
     pub fn new(
-        frequency_param: Controller<C1f32, Param>,
         node: DA,
-        note_on: Box<dyn FnMut(f64)>,
+        note_on: Box<dyn FnMut(f64, u8)>,
         note_off: Box<dyn FnMut(f64)>,
     ) -> Self {
         Self {
-            frequency: 1.0,
-            frequency_param,
+            last_notenum: 127,
             node,
             note_on,
             note_off,
@@ -46,21 +43,17 @@ impl<A: Node<C1f32> + ?Sized, DA: AsMut<A>> PolySynth<A, DA> {
         }
     }
 
-    pub fn note_on(&mut self, time: f64, frequency: f32) {
+    pub fn note_on(&mut self, time: f64, notenum: u8) {
         let current = self.current;
         let voice = &mut self.voices[current];
-        voice.frequency = frequency;
-        voice
-            .frequency_param
-            .lock()
-            .set_value_at_time(time, frequency);
-        (voice.note_on)(time);
+        voice.last_notenum = notenum;
+        (voice.note_on)(time, notenum);
         self.current = (self.current + 1) % self.voices.len();
     }
 
-    pub fn note_off(&mut self, time: f64, frequency: f32) {
+    pub fn note_off(&mut self, time: f64, notenum: u8) {
         for voice in &mut self.voices {
-            if voice.frequency == frequency {
+            if voice.last_notenum == notenum {
                 (voice.note_off)(time);
             }
         }

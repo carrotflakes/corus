@@ -1,13 +1,14 @@
 use corus::{
     contrib::{
         amp_pan,
-        chip::Noise,
+        chip::{Noise, NoiseEvent},
         controllable_param, delay_fx,
         envelope::{AdsrEnvelope, ArEnvelope},
+        event_controll::EventControll,
         poly_synth::{PolySynth, Voice},
         resetable_acc,
     },
-    node::{amp::Amp, constant::Constant, mix::Mix, Node},
+    node::{amp::Amp, constant::Constant, controllable::Controllable, mix::Mix, Node},
     notenum_to_frequency,
     proc_context::ProcContext,
     signal::{C1f32, C2f32},
@@ -17,7 +18,7 @@ fn main() {
     let sample_rate = 44100;
 
     let builder = || {
-        let (freq_param, freq_param_ctrl) = controllable_param(1.0);
+        let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
         let (acc, mut acc_reset) = resetable_acc(freq_param);
         let saw = corus::node::add::Add::new(acc, Constant::from(-0.5));
         let (env, mut env_on, env_off) = AdsrEnvelope {
@@ -29,9 +30,11 @@ fn main() {
         .build();
         let node = Amp::new(saw, env);
         Voice::new(
-            freq_param_ctrl,
             Box::new(node) as Box<dyn Node<C1f32>>,
-            Box::new(move |time| {
+            Box::new(move |time, notenum| {
+                freq_param_ctrl
+                    .lock()
+                    .set_value_at_time(time, notenum_to_frequency(notenum as u32));
                 acc_reset(time, 0.5);
                 env_on(time);
             }),
@@ -39,15 +42,20 @@ fn main() {
         )
     };
     let builder2 = || {
-        let (_, freq_param_ctrl) = controllable_param(1.0);
-        let mut node = Noise::new();
-        node.freq = Noise::compute_freq(3, 3);
-        let (env, env_on, env_off) = ArEnvelope { a: 0.01, r: 0.3 }.build();
-        let node = Amp::new(node, Amp::new(env, Constant::from(0.25)));
+        let noise = Controllable::new(EventControll::new(Noise::new()));
+        let mut noise_ctrl = noise.controller();
+        let (env, mut env_on, env_off) = ArEnvelope { a: 0.01, r: 0.3 }.build();
+        let node = Amp::new(noise, Amp::new(env, Constant::from(0.25)));
         Voice::new(
-            freq_param_ctrl,
             Box::new(node) as Box<dyn Node<C1f32>>,
-            Box::new(env_on),
+            Box::new(move |time, notenum| {
+                noise_ctrl.lock().push_event(time, NoiseEvent::ResetReg);
+                noise_ctrl.lock().push_event(
+                    time,
+                    NoiseEvent::OriginalFreq(notenum % 7, (15 * notenum as usize / 127) as u8),
+                );
+                env_on(time)
+            }),
             Box::new(env_off),
         )
     };
@@ -67,7 +75,10 @@ fn main() {
         .collect();
 
     let time = {
-        let file = std::env::args().skip(1).next().unwrap_or("./youkoso.mid".to_string());
+        let file = std::env::args()
+            .skip(1)
+            .next()
+            .unwrap_or("./youkoso.mid".to_string());
         let data = std::fs::read(file).unwrap();
         let events = ezmid::parse(&data);
         let mut time = 0.0;
@@ -86,18 +97,14 @@ fn main() {
                     velocity: _,
                     raw_velocity: _,
                 } => {
-                    track
-                        .0
-                        .note_on(e.time, notenum_to_frequency(notenum as u32));
+                    track.0.note_on(e.time, notenum);
                 }
                 ezmid::EventBody::NoteOff {
                     notenum,
                     velocity: _,
                     raw_velocity: _,
                 } => {
-                    track
-                        .0
-                        .note_off(e.time, notenum_to_frequency(notenum as u32));
+                    track.0.note_off(e.time, notenum);
                 }
                 ezmid::EventBody::Volume { volume, .. } => {
                     track.3.lock().set_value_at_time(e.time, volume);
@@ -105,7 +112,10 @@ fn main() {
                 ezmid::EventBody::Pan { pan, .. } => {
                     track.4.lock().set_value_at_time(e.time, pan);
                 }
-                ezmid::EventBody::PitchBend { bend: _, raw_bend: _ } => {}
+                ezmid::EventBody::PitchBend {
+                    bend: _,
+                    raw_bend: _,
+                } => {}
                 ezmid::EventBody::Tempo { tempo: _ } => {}
             }
         }

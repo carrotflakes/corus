@@ -5,7 +5,7 @@ fn main() {
 
     let builder = || {
         let freq_param = Controllable::new(Param::new());
-        let freq_param_ctrl = freq_param.controller();
+        let mut freq_param_ctrl = freq_param.controller();
         let acc = Controllable::new(Accumulator::new(freq_param, C1f32::from(1.0)));
         let mut acc_ctrl = acc.controller();
         let saw = corus::node::add::Add::new(acc, Constant::from(-0.5));
@@ -13,11 +13,11 @@ fn main() {
         let env_ctrl = env.controller();
         let node = Amp::new(saw, env);
         Voice::new(
-            freq_param_ctrl,
             node,
             Box::new({
                 let mut env_ctrl = env_ctrl.clone();
-                move |time| {
+                move |time, notenum| {
+                    freq_param_ctrl.lock().set_value_at_time(time, notenum_to_frequency(notenum as u32));
                     acc_ctrl.lock().set_value_at_time(time, C1f32::from(0.5));
                     let mut env = env_ctrl.lock();
                     env.cancel_and_hold_at_time(time);
@@ -37,22 +37,22 @@ fn main() {
         )
     };
     let mut synth = PolySynth::new(&builder, 10);
-    synth.note_on(0.2, notenum_to_frequency(60));
-    synth.note_off(0.4, notenum_to_frequency(60));
-    synth.note_on(0.4, notenum_to_frequency(64));
-    synth.note_off(0.6, notenum_to_frequency(64));
-    synth.note_on(0.6, notenum_to_frequency(67));
-    synth.note_off(0.8, notenum_to_frequency(67));
-    synth.note_on(0.8, notenum_to_frequency(64));
-    synth.note_off(1.0, notenum_to_frequency(64));
-    synth.note_on(1.0, notenum_to_frequency(60));
-    synth.note_off(1.6, notenum_to_frequency(60));
-    synth.note_on(1.1, notenum_to_frequency(64));
-    synth.note_off(1.6, notenum_to_frequency(64));
-    synth.note_on(1.2, notenum_to_frequency(67));
-    synth.note_off(1.6, notenum_to_frequency(67));
-    synth.note_on(1.3, notenum_to_frequency(71));
-    synth.note_off(1.6, notenum_to_frequency(71));
+    synth.note_on(0.2, 60);
+    synth.note_off(0.4, 60);
+    synth.note_on(0.4, 64);
+    synth.note_off(0.6, 64);
+    synth.note_on(0.6, 67);
+    synth.note_off(0.8, 67);
+    synth.note_on(0.8, 64);
+    synth.note_off(1.0, 64);
+    synth.note_on(1.0, 60);
+    synth.note_off(1.6, 60);
+    synth.note_on(1.1, 64);
+    synth.note_off(1.6, 64);
+    synth.note_on(1.2, 67);
+    synth.note_off(1.6, 67);
+    synth.note_on(1.3, 71);
+    synth.note_off(1.6, 71);
 
     let mut node = Amp::new(synth, Constant::from(0.1));
 
