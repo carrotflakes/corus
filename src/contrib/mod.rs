@@ -24,11 +24,19 @@ use crate::{
     signal::{C1f32, C2f32},
 };
 
-pub fn amp_pan<A: Node<C1f32> + 'static, G: Node<C1f32> + 'static, P: Node<C1f32> + 'static>(
-    node: impl AsMut<A>,
-    gain: impl AsMut<G>,
-    pan: impl AsMut<P>,
-) -> impl Node<C2f32> {
+pub fn amp_pan<A, G, P, DA, DG, DP>(
+    node: DA,
+    gain: DG,
+    pan: DP,
+) -> Pan<f32, C1f32, C1f32, C2f32, Amp<C1f32, A, G, DA, DG>, P, Amp<C1f32, A, G, DA, DG>, DP>
+where
+    A: Node<C1f32> + 'static,
+    G: Node<C1f32> + 'static,
+    P: Node<C1f32> + 'static,
+    DA: AsMut<A>,
+    DG: AsMut<G>,
+    DP: AsMut<P>,
+{
     Pan::new(Amp::new(node, gain), pan)
 }
 
