@@ -14,9 +14,13 @@ use corus::{
     proc_context::ProcContext,
     signal::{C1f32, C2f32},
 };
+const SAMPLE_RATE: usize = 44100;
 
 fn main() {
-    let sample_rate = 44100;
+    let file = std::env::args()
+        .skip(1)
+        .next()
+        .unwrap_or("./youkoso.mid".to_string());
 
     let builder = || {
         let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
@@ -77,11 +81,7 @@ fn main() {
         .collect();
 
     let time = {
-        let file = std::env::args()
-            .skip(1)
-            .next()
-            .unwrap_or("./youkoso.mid".to_string());
-        let data = std::fs::read(file).unwrap();
+        let data = std::fs::read(&file).unwrap();
         let events = ezmid::parse(&data);
         let mut time = 0.0;
         for e in ezmid::Dispatcher::new(events) {
@@ -131,21 +131,11 @@ fn main() {
             .collect(),
     );
     let node = Amp::new(mix, Constant::new(C2f32([0.25, 0.25])));
-    let mut node = delay_fx(node, sample_rate as usize, 0.3, 0.3);
+    let node = delay_fx(node, SAMPLE_RATE as usize, 0.3, 0.3);
 
-    let pc = ProcContext::new(sample_rate);
-    let mut writer = Writer::new("youkoso.wav");
-    let start = std::time::Instant::now();
-    node.lock();
-    for s in pc
-        .into_iter(&mut node)
-        .take((sample_rate as f64 * time) as usize)
-    {
-        writer.write(s.0[0], s.0[1]);
-    }
-    node.unlock();
-    println!("{:?} elapsed", start.elapsed());
-    writer.finish();
+    let file = format!("{}.wav", file[..file.len() - 4].to_string());
+    write_to_file(file.as_str(), SAMPLE_RATE, time, node);
+    println!("saved {:?}", &file);
 }
 
 fn builder3(seed: u32) -> Voice<dyn Node<C1f32>, Box<dyn Node<C1f32>>> {
@@ -165,29 +155,26 @@ fn builder3(seed: u32) -> Voice<dyn Node<C1f32>, Box<dyn Node<C1f32>>> {
     )
 }
 
-pub struct Writer(hound::WavWriter<std::io::BufWriter<std::fs::File>>);
-
-impl Writer {
-    pub fn new(name: &str) -> Self {
-        let spec = hound::WavSpec {
-            channels: 2,
-            sample_rate: 44100,
-            bits_per_sample: 16,
-            sample_format: hound::SampleFormat::Int,
-        };
-        Writer(hound::WavWriter::create(name, spec).unwrap())
-    }
-
-    pub fn write(&mut self, sample1: f32, sample2: f32) {
-        self.0
-            .write_sample((sample1 * std::i16::MAX as f32) as i16)
+pub fn write_to_file<N: Node<C2f32>, DN: AsMut<N>>(name: &str, sample_rate: usize, len: f64, mut node: DN) {
+    let spec = hound::WavSpec {
+        channels: 2,
+        sample_rate: 44100,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+    let mut writer = hound::WavWriter::create(name, spec).unwrap();
+    let pc = ProcContext::new(sample_rate as u64);
+    let start = std::time::Instant::now();
+    node.as_mut().lock();
+    for s in pc.into_iter(&mut node).take((sample_rate as f64 * len).ceil() as usize) {
+        writer
+            .write_sample((s.0[0] * std::i16::MAX as f32) as i16)
             .unwrap();
-        self.0
-            .write_sample((sample2 * std::i16::MAX as f32) as i16)
+        writer
+            .write_sample((s.0[1] * std::i16::MAX as f32) as i16)
             .unwrap();
     }
-
-    pub fn finish(self) {
-        self.0.finalize().unwrap();
-    }
+    node.as_mut().unlock();
+    writer.finalize().unwrap();
+    println!("{:?} elapsed", start.elapsed());
 }
