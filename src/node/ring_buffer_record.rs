@@ -2,7 +2,7 @@ use crate::ring_buffer::RingBuffer;
 
 use super::{Node, ProcContext};
 
-pub struct Buffer<T, A, DA>
+pub struct RingBufferRecord<T, A, DA>
 where
     T: 'static + Clone + Default,
     A: Node<T> + ?Sized,
@@ -13,14 +13,14 @@ where
     _a: std::marker::PhantomData<A>,
 }
 
-impl<T, A, DA> Buffer<T, A, DA>
+impl<T, A, DA> RingBufferRecord<T, A, DA>
 where
     T: 'static + Clone + Default,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
     pub fn new(node: DA, size: usize) -> Self {
-        Buffer {
+        RingBufferRecord {
             node,
             buffer: RingBuffer::new(size),
             _a: Default::default(),
@@ -36,7 +36,7 @@ where
     }
 }
 
-impl<T, A, DA> Node<T> for Buffer<T, A, DA>
+impl<T, A, DA> Node<T> for RingBufferRecord<T, A, DA>
 where
     T: 'static + Clone + Default,
     A: Node<T> + ?Sized,
@@ -58,7 +58,7 @@ where
     }
 }
 
-impl<T, A, DA> AsMut<Self> for Buffer<T, A, DA>
+impl<T, A, DA> AsMut<Self> for RingBufferRecord<T, A, DA>
 where
     T: 'static + Clone + Default,
     A: Node<T> + ?Sized,
@@ -69,7 +69,7 @@ where
     }
 }
 
-impl<T, A, DA> std::borrow::Borrow<RingBuffer<T>> for Buffer<T, A, DA>
+impl<T, A, DA> std::borrow::Borrow<RingBuffer<T>> for RingBufferRecord<T, A, DA>
 where
     T: 'static + Clone + Default,
     A: Node<T> + ?Sized,

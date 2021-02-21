@@ -4,7 +4,7 @@ use crate::ring_buffer::RingBuffer;
 
 use super::{Node, ProcContext};
 
-pub struct BufferPlayback<T, A, DA, B>
+pub struct RingBufferPlayback<T, A, DA, B>
 where
     T: 'static + Clone + Default,
     A: Node<f32> + ?Sized,
@@ -17,7 +17,7 @@ where
     _a: std::marker::PhantomData<A>,
 }
 
-impl<T, A, DA, B> BufferPlayback<T, A, DA, B>
+impl<T, A, DA, B> RingBufferPlayback<T, A, DA, B>
 where
     T: 'static + Clone + Default,
     A: Node<f32> + ?Sized,
@@ -25,7 +25,7 @@ where
     B: Borrow<RingBuffer<T>>,
 {
     pub fn new(node: DA, buffer: B) -> Self {
-        BufferPlayback {
+        RingBufferPlayback {
             node,
             buffer,
             _t: Default::default(),
@@ -34,7 +34,7 @@ where
     }
 }
 
-impl<T, A, DA, B> Node<T> for BufferPlayback<T, A, DA, B>
+impl<T, A, DA, B> Node<T> for RingBufferPlayback<T, A, DA, B>
 where
     T: 'static + Clone + Default,
     A: Node<f32> + ?Sized,
@@ -57,7 +57,7 @@ where
     }
 }
 
-impl<T, A, DA, B> AsMut<Self> for BufferPlayback<T, A, DA, B>
+impl<T, A, DA, B> AsMut<Self> for RingBufferPlayback<T, A, DA, B>
 where
     T: 'static + Clone + Default,
     A: Node<f32> + ?Sized,

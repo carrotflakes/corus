@@ -3,8 +3,6 @@ pub mod add;
 pub mod all_pass_filter;
 pub mod amp;
 pub mod biquad_filter;
-pub mod buffer;
-pub mod buffer_playback;
 pub mod comb_filter;
 pub mod constant;
 pub mod controllable;
@@ -16,6 +14,8 @@ pub mod param;
 pub mod placeholder;
 pub mod proc_once;
 pub mod proc_once_share;
+pub mod ring_buffer_playback;
+pub mod ring_buffer_record;
 pub mod sine;
 
 use crate::proc_context::ProcContext;
@@ -29,9 +29,9 @@ pub trait Node<T: 'static> {
 use crate::ring_buffer::RingBuffer;
 use std::borrow::Borrow;
 
-use self::{buffer::Buffer, proc_once_share::ProcOnceShare};
+use self::{proc_once_share::ProcOnceShare, ring_buffer_record::RingBufferRecord};
 
-impl<T, A, DA> Borrow<RingBuffer<T>> for ProcOnceShare<T, Buffer<T, A, DA>, Buffer<T, A, DA>>
+impl<T, A, DA> Borrow<RingBuffer<T>> for ProcOnceShare<T, RingBufferRecord<T, A, DA>, RingBufferRecord<T, A, DA>>
 where
     T: 'static + Clone + Default,
     A: Node<T> + ?Sized,

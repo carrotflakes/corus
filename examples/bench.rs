@@ -1,5 +1,5 @@
 use corus::{node::{
-        add::Add, amp::Amp, buffer::Buffer, buffer_playback::BufferPlayback, constant::Constant,
+        add::Add, amp::Amp, ring_buffer_record::RingBufferRecord, ring_buffer_playback::RingBufferPlayback, constant::Constant,
         controllable::Controllable, mix::Mix, param::Param, placeholder::Placeholder,
         proc_once_share::ProcOnceShare, sine::Sine, Node,
     }, proc_context::ProcContext, signal::C1f32};
@@ -28,12 +28,12 @@ fn main() {
     let mix = {
         let mut p = Placeholder::new();
         let mut ps = p.setter();
-        let buffer = ProcOnceShare::new(Buffer::new(p, sample_rate as usize));
+        let buffer = ProcOnceShare::new(RingBufferRecord::new(p, sample_rate as usize));
         unsafe {
             ps.set(Box::new(Add::new(
                 mix,
                 Amp::new(
-                    BufferPlayback::new(Constant::from(0.5), buffer.clone()),
+                    RingBufferPlayback::new(Constant::from(0.5), buffer.clone()),
                     Constant::from(0.5),
                 ),
             )) as Box<dyn Node<C1f32>>);
