@@ -79,16 +79,35 @@ impl Param {
         });
     }
 
-    pub fn cancel_scheduled_values(&mut self, time: f64) {
+    fn cancel_scheduled_values_(&mut self, time: f64) -> Option<Event> {
         if let Some(i) = self.events.iter().position(|e| time <= e.time) {
+            let e = self.events[i].clone();
             self.events.truncate(i);
+            Some(e)
+        } else {
+            None
         }
+    }
+
+    pub fn cancel_scheduled_values(&mut self, time: f64) {
+        self.cancel_scheduled_values_(time);
     }
 
     pub fn cancel_and_hold_at_time(&mut self, time: f64) {
         let value = self.compute_value(time);
-        self.cancel_scheduled_values(time);
-        self.set_value_at_time(time, value)
+        if let Some(e) = self.cancel_scheduled_values_(time) {
+            match e.body {
+                EventBody::SetValueAtTime { .. } | EventBody::SetTargetAtTime { .. } => {
+                    self.set_value_at_time(time, value)
+                }
+                EventBody::LinearRampToValueAtTime { .. } => {
+                    self.linear_ramp_to_value_at_time(time, value)
+                }
+                EventBody::ExponentialRampToValueAtTime { .. } => {
+                    self.exponential_ramp_to_value_at_time(time, value)
+                }
+            }
+        }
     }
 
     pub fn compute_value(&self, time: f64) -> f32 {
