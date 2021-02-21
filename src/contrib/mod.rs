@@ -5,6 +5,8 @@ pub mod event_controll;
 pub mod fm_synth;
 mod oscillators;
 pub mod poly_synth;
+pub mod rand;
+pub mod rand_fm_synth;
 
 pub use effects::*;
 pub use oscillators::*;
