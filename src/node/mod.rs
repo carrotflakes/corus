@@ -1,6 +1,7 @@
 pub mod accumulator;
 pub mod add;
 pub mod amp;
+pub mod biquad_filter;
 pub mod buffer;
 pub mod buffer_playback;
 pub mod constant;

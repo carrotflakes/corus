@@ -4,7 +4,7 @@ pub use into_stereo::IntoStereo;
 
 use std::ops::{Add, Mul};
 
-pub trait Signal: 'static {
+pub trait Signal: 'static + Sized {
     type Float;
 
     fn map<F: Fn(Self::Float) -> Self::Float>(&self, f: F) -> Self;
