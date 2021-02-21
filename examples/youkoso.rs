@@ -1,3 +1,5 @@
+mod write_to_file;
+
 use corus::{
     contrib::{
         amp_pan,
@@ -9,11 +11,14 @@ use corus::{
         rand_fm_synth::rand_fm_synth,
         resetable_acc,
     },
-    node::{amp::Amp, constant::Constant, controllable::Controllable, mix::Mix, Node},
+    node::{
+        add::Add, amp::Amp, constant::Constant, controllable::Controllable, mix::Mix, param::Param,
+        Node,
+    },
     notenum_to_frequency,
-    proc_context::ProcContext,
     signal::{C1f32, C2f32},
 };
+
 const SAMPLE_RATE: usize = 44100;
 
 fn main() {
@@ -25,7 +30,7 @@ fn main() {
     let builder = || {
         let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
         let (acc, mut acc_reset) = resetable_acc(freq_param);
-        let saw = corus::node::add::Add::new(acc, Constant::from(-0.5));
+        let saw = Add::new(acc, Constant::from(-0.5));
         let (env, mut env_on, env_off) = AdsrEnvelope {
             a: 0.01,
             d: 0.5,
@@ -74,9 +79,9 @@ fn main() {
                 Box::new(PolySynth::new(&builder, 8))
                     as Box<PolySynth<dyn Node<C1f32>, Box<dyn Node<C1f32>>>>
             };
-            let (gain, gain_ctrl) = controllable_param(1.0);
-            let (pan, pan_ctrl) = controllable_param(0.0);
-            (synth, gain, pan, gain_ctrl, pan_ctrl)
+            let gain = Param::with_value(1.0);
+            let pan = Param::with_value(0.0);
+            (synth, gain, pan)
         })
         .collect();
 
@@ -109,10 +114,10 @@ fn main() {
                     track.0.note_off(e.time, notenum);
                 }
                 ezmid::EventBody::Volume { volume, .. } => {
-                    track.3.lock().set_value_at_time(e.time, volume);
+                    track.1.set_value_at_time(e.time, volume);
                 }
                 ezmid::EventBody::Pan { pan, .. } => {
-                    track.4.lock().set_value_at_time(e.time, pan);
+                    track.2.set_value_at_time(e.time, pan);
                 }
                 ezmid::EventBody::PitchBend {
                     bend: _,
@@ -134,7 +139,7 @@ fn main() {
     let node = delay_fx(node, SAMPLE_RATE as usize, 0.3, 0.3);
 
     let file = format!("{}.wav", file[..file.len() - 4].to_string());
-    write_to_file(file.as_str(), SAMPLE_RATE, time, node);
+    write_to_file::write_to_file(file.as_str(), SAMPLE_RATE, time, node);
     println!("saved {:?}", &file);
 }
 
@@ -153,28 +158,4 @@ fn builder3(seed: u32) -> Voice<dyn Node<C1f32>, Box<dyn Node<C1f32>>> {
             ctrl2.lock().note_off(time);
         }),
     )
-}
-
-pub fn write_to_file<N: Node<C2f32>, DN: AsMut<N>>(name: &str, sample_rate: usize, len: f64, mut node: DN) {
-    let spec = hound::WavSpec {
-        channels: 2,
-        sample_rate: 44100,
-        bits_per_sample: 16,
-        sample_format: hound::SampleFormat::Int,
-    };
-    let mut writer = hound::WavWriter::create(name, spec).unwrap();
-    let pc = ProcContext::new(sample_rate as u64);
-    let start = std::time::Instant::now();
-    node.as_mut().lock();
-    for s in pc.into_iter(&mut node).take((sample_rate as f64 * len).ceil() as usize) {
-        writer
-            .write_sample((s.0[0] * std::i16::MAX as f32) as i16)
-            .unwrap();
-        writer
-            .write_sample((s.0[1] * std::i16::MAX as f32) as i16)
-            .unwrap();
-    }
-    node.as_mut().unlock();
-    writer.finalize().unwrap();
-    println!("{:?} elapsed", start.elapsed());
 }
