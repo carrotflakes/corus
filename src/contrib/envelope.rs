@@ -5,6 +5,16 @@ use crate::{
 
 use super::controllable_param;
 
+pub trait EnvelopeGenerator {
+    fn generate(
+        &self,
+    ) -> (
+        Controllable<C1f32, Param>,
+        Box<dyn FnMut(f64)>,
+        Box<dyn FnMut(f64)>,
+    );
+}
+
 #[derive(Debug, Clone)]
 pub struct AdsrEnvelope {
     pub a: f32,
@@ -68,10 +78,33 @@ impl ArEnvelope {
                     env.exponential_ramp_to_value_at_time(time + a_r, 0.001);
                 }
             },
-            {
-                move |_| {
-                }
-            },
+            { move |_| {} },
         )
+    }
+}
+
+impl EnvelopeGenerator for AdsrEnvelope {
+    fn generate(
+        &self,
+    ) -> (
+        Controllable<C1f32, Param>,
+        Box<dyn FnMut(f64)>,
+        Box<dyn FnMut(f64)>,
+    ) {
+        let (c, on, off) = self.build();
+        (c, Box::new(on), Box::new(off))
+    }
+}
+
+impl EnvelopeGenerator for ArEnvelope {
+    fn generate(
+        &self,
+    ) -> (
+        Controllable<C1f32, Param>,
+        Box<dyn FnMut(f64)>,
+        Box<dyn FnMut(f64)>,
+    ) {
+        let (c, on, off) = self.build();
+        (c, Box::new(on), Box::new(off))
     }
 }
