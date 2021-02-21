@@ -1,3 +1,4 @@
+pub mod buffer_playback;
 pub mod chip;
 mod effects;
 pub mod envelope;
