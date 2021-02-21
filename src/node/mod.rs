@@ -1,11 +1,14 @@
 pub mod accumulator;
 pub mod add;
+pub mod all_pass_filter;
 pub mod amp;
 pub mod biquad_filter;
 pub mod buffer;
 pub mod buffer_playback;
+pub mod comb_filter;
 pub mod constant;
 pub mod controllable;
+pub mod impulse;
 pub mod map;
 pub mod mix;
 pub mod pan;
