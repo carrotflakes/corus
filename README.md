@@ -4,8 +4,7 @@ Primitive sound synthesis library.
 
 TODO:
 
-- biquad filter
-- reverb
+- rich reverb
 - wavetable
 - pararell mix
 - chip
