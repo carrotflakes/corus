@@ -1,44 +1,57 @@
-use corus::{node::map::Map, proc_context::ProcContext, signal::C1f32};
+use corus::{
+    node::{map::Map, param::Param},
+    proc_context::ProcContext,
+    signal::C1f32,
+};
 
 use corus::node::{self};
-use node::{accumulator::Accumulator, constant::Constant};
+use node::{
+    accumulator::Accumulator,
+    biquad_filter::BiquadFilter,
+    comb_filter::CombFilter,
+    constant::Constant,
+    Node,
+};
+
+const SAMPLE_RATE: usize = 44100;
 
 fn main() {
-    let sample_rate = 44100;
-
-    let node = Map::new(Accumulator::new(Constant::from(440.0), C1f32::from(1.0)), |v| v + C1f32::from(-0.5));
-    let pc = ProcContext::new(sample_rate);
-    let mut writer = Writer::new("test.wav");
-    for s in pc.into_iter(node).take(sample_rate as usize * 3) {
-        writer.write(s.0[0], s.0[0]);
-    }
-    writer.finish();
+    let node = Map::new(
+        Accumulator::new(Constant::from(440.0), C1f32::from(1.0)),
+        |v| v + C1f32::from(-0.5),
+    );
+    let mut freq = Param::new();
+    freq.set_value_at_time(0.0, 220.0);
+    freq.exponential_ramp_to_value_at_time(2.0, 4000.0);
+    let node = BiquadFilter::new(
+        node::biquad_filter::Peaking,
+        node,
+        freq,
+        Constant::from(10.0),
+        Constant::from(10.0),
+    );
+    let node = CombFilter::new(node, 0.01, 0.9.into());
+    write_to_file("test.wav", 3, node);
 }
 
-
-pub struct Writer(hound::WavWriter<std::io::BufWriter<std::fs::File>>);
-
-impl Writer {
-    pub fn new(name: &str) -> Self {
-        let spec = hound::WavSpec {
-            channels: 2,
-            sample_rate: 44100,
-            bits_per_sample: 16,
-            sample_format: hound::SampleFormat::Int,
-        };
-        Writer(hound::WavWriter::create(name, spec).unwrap())
-    }
-
-    pub fn write(&mut self, sample1: f32, sample2: f32) {
-        self.0
-            .write_sample((sample1 * std::i16::MAX as f32) as i16)
+pub fn write_to_file<N: Node<C1f32>, DN: AsMut<N>>(name: &str, len: usize, mut node: DN) {
+    let spec = hound::WavSpec {
+        channels: 2,
+        sample_rate: 44100,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+    let mut writer = hound::WavWriter::create(name, spec).unwrap();
+    let pc = ProcContext::new(SAMPLE_RATE as u64);
+    node.as_mut().lock();
+    for s in pc.into_iter(&mut node).take(SAMPLE_RATE as usize * len) {
+        writer
+            .write_sample((s.0[0] * std::i16::MAX as f32) as i16)
             .unwrap();
-        self.0
-            .write_sample((sample2 * std::i16::MAX as f32) as i16)
+        writer
+            .write_sample((s.0[0] * std::i16::MAX as f32) as i16)
             .unwrap();
     }
-
-    pub fn finish(self) {
-        self.0.finalize().unwrap();
-    }
+    node.as_mut().unlock();
+    writer.finalize().unwrap();
 }
