@@ -14,7 +14,7 @@ impl Noise {
     pub fn new() -> Self {
         Self {
             freq: Self::compute_freq(0, 0),
-            short_freq: true,
+            short_freq: false,
             reg: 0xffff,
             output: 1,
             steps: 0.0,
