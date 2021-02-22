@@ -4,6 +4,7 @@ mod effects;
 pub mod envelope;
 pub mod event_controll;
 pub mod fm_synth;
+pub mod fn_processor;
 mod oscillators;
 mod perlin_noise;
 pub mod poly_synth;
