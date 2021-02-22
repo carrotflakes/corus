@@ -1,9 +1,10 @@
 use super::{Node, ProcContext};
 
-pub struct Map<T, F, A, DA>
+pub struct Map<T, S, F, A, DA>
 where
     T: Clone + 'static,
-    F: Fn(T) -> T,
+    S: Clone + 'static,
+    F: Fn(T) -> S,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
@@ -13,10 +14,11 @@ where
     _a: std::marker::PhantomData<A>,
 }
 
-impl<T, F, A, DA> Map<T, F, A, DA>
+impl<T, S, F, A, DA> Map<T, S, F, A, DA>
 where
     T: Clone + 'static,
-    F: Fn(T) -> T,
+    S: Clone + 'static,
+    F: Fn(T) -> S,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
@@ -30,15 +32,16 @@ where
     }
 }
 
-impl<T, F, A, DA> Node<T> for Map<T, F, A, DA>
+impl<T, S, F, A, DA> Node<S> for Map<T, S, F, A, DA>
 where
     T: Clone + 'static,
-    F: Fn(T) -> T,
+    S: Clone + 'static,
+    F: Fn(T) -> S,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> S {
         (self.f)(self.node.as_mut().proc(ctx))
     }
 
@@ -51,10 +54,11 @@ where
     }
 }
 
-impl<T, F, A, DA> AsMut<Self> for Map<T, F, A, DA>
+impl<T, S, F, A, DA> AsMut<Self> for Map<T, S, F, A, DA>
 where
     T: Clone + 'static,
-    F: Fn(T) -> T,
+    S: Clone + 'static,
+    F: Fn(T) -> S,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
