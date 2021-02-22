@@ -5,6 +5,7 @@ pub mod envelope;
 pub mod event_controll;
 pub mod fm_synth;
 mod oscillators;
+mod perlin_noise;
 pub mod poly_synth;
 pub mod rand;
 pub mod rand_fm_synth;
@@ -12,6 +13,7 @@ pub mod schroeder;
 
 pub use effects::*;
 pub use oscillators::*;
+pub use perlin_noise::*;
 
 use crate::{
     node::{
