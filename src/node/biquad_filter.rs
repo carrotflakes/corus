@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::signal::{C1f32, Signal};
+use crate::signal::{C1f32, C2f32, Signal};
 
 use super::{Node, ProcContext};
 
@@ -88,6 +88,62 @@ where
             - (a1 / a0) * self.samples[2].0[0]
             - (a2 / a0) * self.samples[3].0[0];
         let sample = C1f32([sample]);
+        self.samples[1] = self.samples[0];
+        self.samples[0] = value;
+        self.samples[3] = self.samples[2];
+        self.samples[2] = sample;
+        sample
+    }
+
+    fn lock(&mut self) {
+        self.node.as_mut().lock();
+        self.frequency.as_mut().lock();
+        self.gain.as_mut().lock();
+        self.q.as_mut().lock();
+    }
+
+    fn unlock(&mut self) {
+        self.node.as_mut().unlock();
+        self.frequency.as_mut().unlock();
+        self.gain.as_mut().unlock();
+        self.q.as_mut().unlock();
+    }
+}
+
+impl<FT, N, A, B, C, DN, DA, DB, DC> Node<C2f32>
+    for BiquadFilter<FT, C2f32, N, A, B, C, DN, DA, DB, DC>
+where
+    FT: BiquadFilterType,
+    N: Node<C2f32> + ?Sized,
+    A: Node<C1f32> + ?Sized,
+    B: Node<C1f32> + ?Sized,
+    C: Node<C1f32> + ?Sized,
+    DN: AsMut<N>,
+    DA: AsMut<A>,
+    DB: AsMut<B>,
+    DC: AsMut<C>,
+{
+    #[inline]
+    fn proc(&mut self, ctx: &ProcContext) -> C2f32 {
+        let frequency = self.frequency.as_mut().proc(ctx);
+        let gain = self.gain.as_mut().proc(ctx);
+        let q = self.q.as_mut().proc(ctx);
+        let value = self.node.as_mut().proc(ctx);
+        let [a0, a1, a2, b0, b1, b2] =
+            self.filter_type
+                .compute_params(ctx.sample_rate, frequency.0[0], gain.0[0], q.0[0]);
+
+        let sample_l = ((b0 / a0) * value.0[0]
+            + (b1 / a0) * self.samples[0].0[0]
+            + (b2 / a0) * self.samples[1].0[0])
+            - (a1 / a0) * self.samples[2].0[0]
+            - (a2 / a0) * self.samples[3].0[0];
+        let sample_r = ((b0 / a0) * value.0[1]
+            + (b1 / a0) * self.samples[0].0[1]
+            + (b2 / a0) * self.samples[1].0[1])
+            - (a1 / a0) * self.samples[2].0[1]
+            - (a2 / a0) * self.samples[3].0[1];
+        let sample = C2f32([sample_l, sample_r]);
         self.samples[1] = self.samples[0];
         self.samples[0] = value;
         self.samples[3] = self.samples[2];
