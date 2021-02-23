@@ -101,6 +101,7 @@ impl AsMut<Self> for Benihora {
 pub enum BenihoraEvent {
     MoveTangue(F, F),
     SetOtherConstrictions(Vec<(F, F)>),
+    SetFrequency(F),
 }
 
 impl crate::contrib::event_controll::Event<C1f64> for BenihoraEvent {
@@ -140,6 +141,9 @@ impl crate::contrib::event_controll::Event<C1f64> for BenihoraEvent {
                     }
                 }
                 node.tract.set_diameter();
+            }
+            BenihoraEvent::SetFrequency(frequency) => {
+                node.glottis.frequency.set(*frequency);
             }
         }
     }

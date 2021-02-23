@@ -115,6 +115,10 @@ impl FrequencyCtrl {
         }
     }
 
+    pub fn set(&mut self, frequency: F) {
+        self.ui_frequency = frequency;
+    }
+
     fn update(&mut self, time: F) {
         let mut vibrato = self.vibrato_amount * (2.0 * PI * time * self.vibrato_frequency).sin();
         vibrato += 0.02 * simplex1(time * 4.07);
