@@ -36,8 +36,8 @@ impl Glottis {
     }
 
     pub fn run_step(&mut self, sample_rate: usize, lambda: F, input: F) -> F {
-        self.tenseness.ui_tenseness = (self.total_time * 2.0).sin() * 0.5 + 0.5;
-        self.loudness = self.tenseness.ui_tenseness.powf(0.25);
+        // self.tenseness.ui_tenseness = (self.total_time * 2.0).sin() * 0.5 + 0.5;
+        // self.loudness = self.tenseness.ui_tenseness.powf(0.25);
         // self.is_touched = 1.0 < self.total_time % 2.0;
 
         let tenseness = self.tenseness.get(lambda);

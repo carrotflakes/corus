@@ -8,7 +8,6 @@ const NOSE_OFFSET: F = 0.8;
 pub struct Tract {
     pub mouth: Mouth,
     pub nose: Nose,
-    pub other_constrictions: Vec<(F, F)>,
     pub movement_speed: F, // CM per second
     rand: Rand,            // for update max_amplitude
 }
@@ -29,7 +28,6 @@ impl Tract {
         let mut tract = Tract {
             mouth: Mouth::new(mouth_length),
             nose: Nose::new(nose_length, mouth_length),
-            other_constrictions: Vec::new(),
             movement_speed: 15.0,
             rand: Rand::new(0),
         };
@@ -74,9 +72,10 @@ impl Tract {
     }
 
     pub fn set_diameter(&mut self) {
-        self.mouth.set_diameter(&self.other_constrictions);
+        self.mouth.set_diameter();
 
         let open_nose = self
+            .mouth
             .other_constrictions
             .iter()
             .find(|(index, diameter)| *index > self.nose.start as F && *diameter < -NOSE_OFFSET)
@@ -122,6 +121,7 @@ pub struct Mouth {
 
     transients: Vec<Transient>,
     pub tongue: (F, F), // (index, diameter) // TODO index -> rate
+    pub other_constrictions: Vec<(F, F)>,
 }
 
 impl Mouth {
@@ -166,6 +166,7 @@ impl Mouth {
             new_reflection_right: 0.0,
             new_reflection_nose: 0.0,
             tongue: (12.9, 2.43),
+            other_constrictions: Vec::new(),
         }
     }
 
@@ -293,17 +294,29 @@ impl Mouth {
             self.l[trans.position] += amplitude / 2.0;
             trans.time_alive += 1.0 / (sample_rate as F * 2.0);
         }
-        self.transients.retain(|t| t.life_time <= t.time_alive)
+        self.transients.retain(|t| t.time_alive <= t.life_time)
     }
 
     fn add_turbulence_noise(&mut self, turbulence_noise: F, noise_mod: F) {
-        // for touch in touchesWithMouse {
-        //     if (touch.index<2 || touch.index>Tract.n) continue;
-        //     if (touch.diameter<=0) continue;
-        //     let intensity = touch.fricative_intensity;
-        //     if (intensity == 0) continue;
-        //     this.addTurbulenceNoiseAtIndex(0.66*turbulence_noise*intensity, touch.index, touch.diameter);
-        // }
+        for (index, diameter) in self.other_constrictions.clone() {
+            let fricative_intensity = 1.0; //TODO
+            if index < 2.0 || index > self.length as F {
+                continue;
+            }
+            if diameter <= 0.0 {
+                continue;
+            }
+            let intensity = fricative_intensity;
+            if intensity == 0.0 {
+                continue;
+            }
+            self.add_turbulence_noise_at_index(
+                0.66 * turbulence_noise * intensity,
+                index,
+                diameter,
+                noise_mod,
+            );
+        }
     }
 
     fn add_turbulence_noise_at_index(
@@ -327,15 +340,15 @@ impl Mouth {
         self.l[i + 2] += noise1 / 2.0;
     }
 
-    pub fn set_diameter(&mut self, other_constrictions: &Vec<(F, F)>) {
-        let grid_offset = 1.7; // ?
+    pub fn set_diameter(&mut self) {
+        const GRID_OFFSET: F = 1.7;
 
         let (tongue_index, tongue_diameter) = self.tongue;
 
         for i in self.blade_start..self.lip_start {
             let t = 1.1 * PI * (tongue_index - i as F) / (self.tip_start - self.blade_start) as F;
             let fixed_tongue_diameter = 2.0 + (tongue_diameter - 2.0) / 1.5;
-            let mut curve = (1.5 - fixed_tongue_diameter + grid_offset) * t.cos();
+            let mut curve = (1.5 - fixed_tongue_diameter + GRID_OFFSET) * t.cos();
             if i == self.blade_start - 2 || i == self.lip_start - 1 {
                 curve *= 0.8;
             }
@@ -346,7 +359,7 @@ impl Mouth {
             self.target_diameter[i] = self.rest_diameter[i]; // ?
         }
 
-        for (index, mut diameter) in other_constrictions.iter().cloned() {
+        for (index, mut diameter) in self.other_constrictions.iter().cloned() {
             if diameter < -0.85 - NOSE_OFFSET {
                 return;
             }

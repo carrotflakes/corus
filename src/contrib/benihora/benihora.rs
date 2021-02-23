@@ -107,7 +107,7 @@ impl crate::contrib::event_controll::Event<C1f64> for BenihoraEvent {
             }
 
             BenihoraEvent::SetOtherConstrictions(other_constrictions) => {
-                node.tract.other_constrictions = other_constrictions.clone();
+                node.tract.mouth.other_constrictions = other_constrictions.clone();
                 node.tract.set_diameter();
             }
         }
