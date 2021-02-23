@@ -4,7 +4,10 @@ use super::{simplex1, F};
 
 pub struct Glottis {
     pub frequency: FrequencyCtrl,
-    pub tenseness: TensenessCtrl,
+    tenseness: TensenessCtrl,
+
+    pub breath: bool,
+    pub glottis_close: bool,
 
     total_time: F,
     time_in_waveform: F,
@@ -13,9 +16,6 @@ pub struct Glottis {
 
     intensity: F,
     loudness: F,
-
-    is_touched: bool,
-    is_touching_somewhere: bool,
 }
 
 impl Glottis {
@@ -27,19 +27,23 @@ impl Glottis {
             total_time: 0.0,
             intensity: 0.0,
             loudness: 1.0,
-            is_touched: true,
-            is_touching_somewhere: false,
+            breath: true,
+            glottis_close: false,
 
             time_in_waveform: 0.0,
             waveform: Waveform::new(140.0, 0.6),
         }
     }
 
-    pub fn run_step(&mut self, sample_rate: usize, lambda: F, input: F) -> F {
-        // self.tenseness.ui_tenseness = (self.total_time * 2.0).sin() * 0.5 + 0.5;
-        // self.loudness = self.tenseness.ui_tenseness.powf(0.25);
-        // self.is_touched = 1.0 < self.total_time % 2.0;
+    /// let v = v.clamp(0.0, 1.0);
+    /// set_tenseness(1.0 - (v * std::f64::consts::PI * 0.5).cos());
+    pub fn set_tenseness(&mut self, tenseness: F) {
+        let tenseness = tenseness.clamp(0.0, 1.0);
+        self.tenseness.ui_tenseness = tenseness;
+        self.loudness = self.tenseness.ui_tenseness.powf(0.25);
+    }
 
+    pub fn run_step(&mut self, sample_rate: usize, lambda: F, input: F) -> F {
         let tenseness = self.tenseness.get(lambda);
 
         let time_step = 1.0 / sample_rate as F;
@@ -70,18 +74,14 @@ impl Glottis {
     }
 
     pub fn update_block(&mut self, block_time: F) {
-        let always_voice = false;
-
-        let glottis_open = !self.is_touched && (always_voice || self.is_touching_somewhere);
-
         self.frequency.update(self.total_time);
         self.tenseness.update(
             self.total_time,
-            glottis_open,
+            self.glottis_close,
             self.intensity,
         );
 
-        if self.is_touched || always_voice || self.is_touching_somewhere {
+        if self.breath {
             self.intensity += 0.13
         } else {
             self.intensity -= block_time * 5.0
@@ -157,13 +157,13 @@ impl TensenessCtrl {
         }
     }
 
-    fn update(&mut self, time: F, glottis_open: bool, intensity: F) {
+    fn update(&mut self, time: F, glottis_close: bool, intensity: F) {
         self.old_tenseness = self.new_tenseness;
         self.new_tenseness =
             self.ui_tenseness + 0.1 * simplex1(time * 0.46) + 0.05 * simplex1(time * 0.36);
 
-        if glottis_open {
-            self.new_tenseness += (3.0 - self.ui_tenseness) * (1.0 - intensity)
+        if glottis_close {
+            self.new_tenseness += (3.0 - self.ui_tenseness) * (1.0 - intensity); // なにこれ？
         }
     }
 

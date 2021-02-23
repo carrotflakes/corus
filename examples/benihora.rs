@@ -77,16 +77,31 @@ fn main() {
         9.5,
         BenihoraEvent::SetFrequency(notenum_to_frequency(60) as f64),
     );
+    benihora.push_event(
+        10.0,
+        BenihoraEvent::SetFrequency(notenum_to_frequency(48) as f64),
+    );
 
     benihora.push_event(7.0, BenihoraEvent::MoveTangue(12.9, 2.43));
     benihora.push_event(7.5, BenihoraEvent::MoveTangue(19.4, 3.43));
     benihora.push_event(8.0, BenihoraEvent::MoveTangue(22.8, 2.05));
     benihora.push_event(8.5, BenihoraEvent::MoveTangue(27.2, 2.2));
     benihora.push_event(9.0, BenihoraEvent::MoveTangue(12.9, 2.43));
+
+    benihora.push_event(10.0, BenihoraEvent::SetTenseness(0.0));
+    benihora.push_event(10.5, BenihoraEvent::SetTenseness(0.25));
+    benihora.push_event(11.0, BenihoraEvent::SetTenseness(0.5));
+    benihora.push_event(11.5, BenihoraEvent::SetTenseness(0.75));
+    benihora.push_event(12.0, BenihoraEvent::SetTenseness(1.0));
+    benihora.push_event(12.5, BenihoraEvent::SetTenseness(0.6));
+
+    benihora.push_event(13.0, BenihoraEvent::SetStatus(false, false));
+    benihora.push_event(14.0, BenihoraEvent::SetStatus(true, false));
+
     let node = amp_pan(
         Map::new(benihora, |c| C1f32([c.0[0] as f32])),
         Constant::from(1.0),
         Constant::from(0.0),
     );
-    write_to_file::write_to_file("benihora.wav", SAMPLE_RATE, 10.0, node);
+    write_to_file::write_to_file("benihora.wav", SAMPLE_RATE, 20.0, node);
 }

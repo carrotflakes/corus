@@ -102,6 +102,8 @@ pub enum BenihoraEvent {
     MoveTangue(F, F),
     SetOtherConstrictions(Vec<(F, F)>),
     SetFrequency(F),
+    SetTenseness(F),
+    SetStatus(bool, bool),
 }
 
 impl crate::contrib::event_controll::Event<C1f64> for BenihoraEvent {
@@ -113,7 +115,6 @@ impl crate::contrib::event_controll::Event<C1f64> for BenihoraEvent {
                 node.tract.mouth.tongue = (*index, *diameter);
                 node.tract.set_diameter();
             }
-
             BenihoraEvent::SetOtherConstrictions(new_ocs) => {
                 let ocs = &mut node.tract.mouth.other_constrictions;
                 for c in new_ocs.iter() {
@@ -144,6 +145,13 @@ impl crate::contrib::event_controll::Event<C1f64> for BenihoraEvent {
             }
             BenihoraEvent::SetFrequency(frequency) => {
                 node.glottis.frequency.set(*frequency);
+            }
+            BenihoraEvent::SetTenseness(tenseness) => {
+                node.glottis.set_tenseness(*tenseness);
+            }
+            BenihoraEvent::SetStatus(breath, close) => {
+                node.glottis.breath = *breath;
+                node.glottis.glottis_close = *close;
             }
         }
     }
