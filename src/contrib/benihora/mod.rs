@@ -25,7 +25,7 @@ pub struct Benihora {
     node: Box<dyn Node<C2f32>>,
     glottis: Glottis,
     tract: Tract,
-    block_time: f64, // sec
+    block_time: f64,         // sec
     block_updated_time: f64, // sec
 }
 
@@ -46,15 +46,14 @@ impl Node<C1f64> for Benihora {
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
         if self.block_updated_time + self.block_time <= ctx.time {
             self.block_updated_time += self.block_time;
-            self.glottis
-                .update_block(self.block_time);
-            self.tract
-                .update_block(self.block_time);
+            self.glottis.update_block(self.block_time);
+            self.tract.update_block(self.block_time);
         }
 
         let v = self.node.as_mut().proc(ctx);
         let lambda1 = (ctx.time - self.block_updated_time) / self.block_time;
-        let lambda2 = (ctx.time - self.block_updated_time + 0.5 / ctx.sample_rate as f64) / self.block_time;
+        let lambda2 =
+            (ctx.time - self.block_updated_time + 0.5 / ctx.sample_rate as f64) / self.block_time;
         let glottal_output = self
             .glottis
             .run_step(ctx.sample_rate as usize, lambda1, v.0[0] as F);
@@ -78,13 +77,15 @@ impl Node<C1f64> for Benihora {
 
             (vocal_out * 0.5).into()
         } else {
-            self.tract.run_step(
-                glottal_output,
-                v.0[1] as F,
-                lambda1,
-                ctx.sample_rate as usize * 2,
-                noise_mod,
-            ).into()
+            self.tract
+                .run_step(
+                    glottal_output,
+                    v.0[1] as F,
+                    lambda1,
+                    ctx.sample_rate as usize,
+                    noise_mod,
+                )
+                .into()
         }
     }
 
