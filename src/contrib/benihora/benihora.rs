@@ -12,6 +12,7 @@ pub struct Benihora {
     tract: Tract,
     block_time: f64,         // sec
     block_updated_time: f64, // sec
+    pub twice: bool,
 }
 
 impl Benihora {
@@ -22,6 +23,7 @@ impl Benihora {
             node,
             block_time: 0.04,
             block_updated_time: 0.0,
+            twice: true,
         }
     }
 }
@@ -43,7 +45,7 @@ impl Node<C1f64> for Benihora {
             .glottis
             .run_step(ctx.sample_rate as usize, lambda1, v.0[0] as F);
         let noise_mod = self.glottis.get_noise_modulator();
-        if true {
+        if self.twice {
             let mut vocal_out = 0.0;
             vocal_out += self.tract.run_step(
                 glottal_output,
