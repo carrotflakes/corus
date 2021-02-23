@@ -21,75 +21,12 @@ struct Transient {
 
 impl Tract {
     pub fn new() -> Self {
-        let length = 44usize;
-        let diameter: Vec<_> = (0..length)
-            .map(|i| {
-                if i < (7.0 * length as F / 44.0 - 0.5) as usize {
-                    0.6
-                } else if i < (12.0 * length as F / 44.0) as usize {
-                    1.1
-                } else {
-                    1.5
-                }
-            })
-            .collect();
-
-        //nose length
-        let length = (28.0 * length as F / 44.0).floor() as usize;
+        let n = 44;
+        let mouth_length = n;
+        let nose_length = (28.0 * mouth_length as F / 44.0).floor() as usize; // magic number 44???
         let mut tract = Tract {
-            mouth: Mouth {
-                length,
-                blade_start: (10.0 * length as f32 / 44.0).floor() as usize,
-                tip_start: (32.0 * length as f32 / 44.0).floor() as usize,
-                lip_start: (39.0 * length as f32 / 44.0).floor() as usize,
-                r: vec![0.0; length],
-                l: vec![0.0; length],
-                reflection: vec![0.0; length + 1],
-                new_reflection: vec![0.0; length + 1],
-                junction_output_r: vec![0.0; length + 1],
-                junction_output_l: vec![0.0; length + 1],
-                max_amplitude: vec![0.0; length],
-                diameter: diameter.clone(),
-                rest_diameter: diameter.clone(),
-                target_diameter: diameter.clone(),
-                a: vec![0.0; length],
-                glottal_reflection: 0.75,
-                lip_reflection: -0.85,
-                last_obstruction: usize::MAX,
-                lip_output: 0.0,
-                transients: Vec::new(),
-
-                reflection_left: 0.0,
-                reflection_right: 0.0,
-                reflection_nose: 0.0,
-                new_reflection_left: 0.0,
-                new_reflection_right: 0.0,
-                new_reflection_nose: 0.0,
-            },
-            nose: Nose {
-                length,
-                start: length - length + 1,
-                r: vec![0.0; length],
-                l: vec![0.0; length],
-                junction_output_r: vec![0.0; length + 1],
-                junction_output_l: vec![0.0; length + 1],
-                reflection: vec![0.0; length + 1],
-                diameter: (0..length)
-                    .map(|i| {
-                        let d = 2.0 * i as F / length as F;
-                        (1.9 as F).min(if d < 1.0 {
-                            0.4 + 1.6 * d
-                        } else {
-                            0.5 + 1.5 * (2.0 - d)
-                        })
-                    })
-                    .collect(),
-                a: vec![0.0; length],
-                max_amplitude: vec![0.0; length],
-                fade: 0.999,
-                velum_target: 0.5, // 0.01
-                output: 0.0,
-            },
+            mouth: Mouth::new(mouth_length),
+            nose: Nose::new(nose_length, mouth_length),
             movement_speed: 15.0,
 
             rand: Rand::new(0),
@@ -174,6 +111,49 @@ pub struct Mouth {
 }
 
 impl Mouth {
+    fn new(length: usize) -> Self {
+        let diameter: Vec<_> = (0..length)
+            .map(|i| {
+                if i < (7.0 * length as F / 44.0 - 0.5) as usize {
+                    0.6
+                } else if i < (12.0 * length as F / 44.0) as usize {
+                    1.1
+                } else {
+                    1.5
+                }
+            })
+            .collect();
+        Mouth {
+            length,
+            blade_start: (10.0 * length as f32 / 44.0).floor() as usize,
+            tip_start: (32.0 * length as f32 / 44.0).floor() as usize,
+            lip_start: (39.0 * length as f32 / 44.0).floor() as usize,
+            r: vec![0.0; length],
+            l: vec![0.0; length],
+            reflection: vec![0.0; length + 1],
+            new_reflection: vec![0.0; length + 1],
+            junction_output_r: vec![0.0; length + 1],
+            junction_output_l: vec![0.0; length + 1],
+            max_amplitude: vec![0.0; length],
+            diameter: diameter.clone(),
+            rest_diameter: diameter.clone(),
+            target_diameter: diameter.clone(),
+            a: vec![0.0; length],
+            glottal_reflection: 0.75,
+            lip_reflection: -0.85,
+            last_obstruction: usize::MAX,
+            lip_output: 0.0,
+            transients: Vec::new(),
+
+            reflection_left: 0.0,
+            reflection_right: 0.0,
+            reflection_nose: 0.0,
+            new_reflection_left: 0.0,
+            new_reflection_right: 0.0,
+            new_reflection_nose: 0.0,
+        }
+    }
+
     fn reshape(&mut self, delta_time: F, nose: &Nose, movement_speed: F) {
         // mouth
         let amount = delta_time * movement_speed;
@@ -372,6 +352,33 @@ pub struct Nose {
 }
 
 impl Nose {
+    fn new(length: usize, mouth_length: usize) -> Self {
+        Nose {
+            length,
+            start: mouth_length - length + 1,
+            r: vec![0.0; length],
+            l: vec![0.0; length],
+            junction_output_r: vec![0.0; length + 1],
+            junction_output_l: vec![0.0; length + 1],
+            reflection: vec![0.0; length + 1],
+            diameter: (0..length)
+                .map(|i| {
+                    let d = 2.0 * i as F / length as F;
+                    (1.9 as F).min(if d < 1.0 {
+                        0.4 + 1.6 * d
+                    } else {
+                        0.5 + 1.5 * (2.0 - d)
+                    })
+                })
+                .collect(),
+            a: vec![0.0; length],
+            max_amplitude: vec![0.0; length],
+            fade: 0.999,
+            velum_target: 0.5, // 0.01
+            output: 0.0,
+        }
+    }
+
     fn run_step(&mut self, mouth: &Mouth, update_amplitudes: bool) {
         self.junction_output_l[self.length] = self.r[self.length - 1] * mouth.lip_reflection;
 
