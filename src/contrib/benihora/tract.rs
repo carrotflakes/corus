@@ -3,6 +3,7 @@ use std::f64::consts::PI;
 use crate::contrib::rand::Rand;
 
 use super::F;
+const NOSE_OFFSET: F = 0.8;
 
 pub struct Tract {
     pub mouth: Mouth,
@@ -327,7 +328,48 @@ impl Mouth {
             }
             self.rest_diameter[i] = 1.5 - curve;
             self.target_diameter[i] = self.rest_diameter[i]; // ?
-            self.diameter[i] = self.rest_diameter[i]; // ?
+        }
+    }
+
+    pub fn set_other_diameter(&mut self, index: F, mut diameter: F) {
+        if diameter < -0.85 - NOSE_OFFSET {
+            return;
+        }
+        diameter -= 0.3;
+        if diameter < 0.0 {
+            diameter = 0.0;
+        }
+
+        let width = if index < 25.0 {
+            10.0
+        } else if index >= self.tip_start as F {
+            5.0
+        } else {
+            10.0 - 5.0 * (index - 25.0) / (self.tip_start as F - 25.0)
+        };
+
+        if index >= 2.0 && index < self.length as F && diameter < 3.0 { // && y<tractCanvas.height
+            let int_index = index.round() as isize;
+            for i in -width.ceil() as isize - 1..width as isize + 1 {
+                let idx = int_index + i;
+
+                if idx < 0 || idx >= self.length as isize {
+                    continue;
+                }
+                let idx = idx as usize;
+                let relpos = (idx as F - index).abs() - 0.5;
+                let shrink = if relpos <= 0.0 {
+                    0.0
+                } else if relpos > width {
+                    1.0
+                } else {
+                    0.5 * (1.0 - (PI * relpos / width).cos())
+                };
+                if diameter < self.target_diameter[idx] {
+                    self.target_diameter[idx] =
+                        diameter + (self.target_diameter[idx] - diameter) * shrink;
+                }
+            }
         }
     }
 }
@@ -424,6 +466,14 @@ impl Nose {
         for i in 1..self.length {
             self.reflection[i] = (self.a[i - 1] - self.a[i]) / (self.a[i - 1] + self.a[i]);
         }
+    }
+
+    pub fn set_other_diameter(&mut self, index: F, diameter: F) {
+        self.velum_target = if index > self.start as F && diameter < -NOSE_OFFSET {
+            0.4
+        } else {
+            0.01
+        };
     }
 }
 
