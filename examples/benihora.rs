@@ -24,12 +24,28 @@ fn main() {
     benihora.push_event(3.0, BenihoraEvent::MoveTangue(27.2, 2.2));
     benihora.push_event(4.0, BenihoraEvent::MoveTangue(12.9, 2.43));
     // benihora.push_event(5.0, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.6)]));
-    benihora.push_event(5.0, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.0)]));
+    benihora.push_event(5.0, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.3)]));
     benihora.push_event(5.1, BenihoraEvent::SetOtherConstrictions(vec![]));
-    benihora.push_event(5.2, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.0)]));
+    benihora.push_event(5.2, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.3)]));
     benihora.push_event(5.3, BenihoraEvent::SetOtherConstrictions(vec![]));
-    benihora.push_event(5.4, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.0)]));
+    benihora.push_event(5.4, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.3)]));
     benihora.push_event(5.5, BenihoraEvent::SetOtherConstrictions(vec![]));
+    benihora.push_event(5.6, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.3)]));
+    benihora.push_event(5.7, BenihoraEvent::SetOtherConstrictions(vec![]));
+
+    // benihora.push_event(5.0, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.3)]));
+    // benihora.push_event(5.3, BenihoraEvent::SetOtherConstrictions(vec![]));
+    // benihora.push_event(5.6, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.3)]));
+    // benihora.push_event(5.9, BenihoraEvent::SetOtherConstrictions(vec![]));
+    // benihora.push_event(6.2, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.3)]));
+    // benihora.push_event(6.5, BenihoraEvent::SetOtherConstrictions(vec![]));
+
+
+    benihora.push_event(7.0, BenihoraEvent::MoveTangue(12.9, 2.43));
+    benihora.push_event(7.5, BenihoraEvent::MoveTangue(19.4, 3.43));
+    benihora.push_event(8.0, BenihoraEvent::MoveTangue(22.8, 2.05));
+    benihora.push_event(8.5, BenihoraEvent::MoveTangue(27.2, 2.2));
+    benihora.push_event(9.0, BenihoraEvent::MoveTangue(12.9, 2.43));
     let node = amp_pan(
         Map::new(benihora, |c| C1f32([c.0[0] as f32])),
         Constant::from(1.0),

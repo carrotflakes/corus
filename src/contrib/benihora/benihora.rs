@@ -4,7 +4,11 @@ use crate::{
     signal::{C1f64, C2f32},
 };
 
-use super::{glottis::Glottis, tract::Tract, F};
+use super::{
+    glottis::Glottis,
+    tract::{Constriction, Tract},
+    F,
+};
 
 pub struct Benihora {
     node: Box<dyn Node<C2f32>>,
@@ -48,6 +52,7 @@ impl Node<C1f64> for Benihora {
         if self.twice {
             let mut vocal_out = 0.0;
             vocal_out += self.tract.run_step(
+                ctx.time,
                 glottal_output,
                 v.0[1] as F,
                 lambda1,
@@ -55,6 +60,7 @@ impl Node<C1f64> for Benihora {
                 noise_mod,
             );
             vocal_out += self.tract.run_step(
+                ctx.time + 0.5 / ctx.sample_rate as f64,
                 glottal_output,
                 v.0[1] as F,
                 lambda2,
@@ -66,6 +72,7 @@ impl Node<C1f64> for Benihora {
         } else {
             self.tract
                 .run_step(
+                    ctx.time,
                     glottal_output,
                     v.0[1] as F,
                     lambda1,
@@ -99,15 +106,39 @@ pub enum BenihoraEvent {
 impl crate::contrib::event_controll::Event<C1f64> for BenihoraEvent {
     type Node = Benihora;
 
-    fn dispatch(&self, node: &mut Self::Node) {
+    fn dispatch(&self, time: f64, node: &mut Self::Node) {
         match self {
             BenihoraEvent::MoveTangue(index, diameter) => {
                 node.tract.mouth.tongue = (*index, *diameter);
                 node.tract.set_diameter();
             }
 
-            BenihoraEvent::SetOtherConstrictions(other_constrictions) => {
-                node.tract.mouth.other_constrictions = other_constrictions.clone();
+            BenihoraEvent::SetOtherConstrictions(new_ocs) => {
+                let ocs = &mut node.tract.mouth.other_constrictions;
+                for c in new_ocs.iter() {
+                    if ocs
+                        .iter()
+                        .find(|x| x.index == c.0 && x.diameter == c.1 && x.end_time.is_none())
+                        .is_none()
+                    {
+                        ocs.push(Constriction {
+                            index: c.0,
+                            diameter: c.1,
+                            start_time: time,
+                            end_time: None,
+                        });
+                    }
+                }
+                for c in ocs.iter_mut() {
+                    if c.end_time.is_none()
+                        && new_ocs
+                            .iter()
+                            .find(|x| c.index == x.0 && c.diameter == x.1)
+                            .is_none()
+                    {
+                        c.end_time = Some(time);
+                    }
+                }
                 node.tract.set_diameter();
             }
         }

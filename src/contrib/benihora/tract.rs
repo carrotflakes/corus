@@ -42,6 +42,7 @@ impl Tract {
 
     pub fn run_step(
         &mut self,
+        time: f64,
         glottal_output: F,
         turbulence_noise: F,
         lambda: F,
@@ -52,6 +53,7 @@ impl Tract {
 
         self.mouth.run_step(
             &mut self.nose,
+            time,
             glottal_output,
             turbulence_noise,
             lambda,
@@ -66,8 +68,8 @@ impl Tract {
 
     pub fn update_block(&mut self, block_time: F) {
         self.mouth
-            .reshape(block_time, &self.nose, self.movement_speed);
-        self.nose.reshape(block_time, self.movement_speed);
+            .reshape(block_time * self.movement_speed, &self.nose);
+        self.nose.reshape(block_time * self.movement_speed);
         self.mouth.calculate_reflections(&self.nose);
     }
 
@@ -78,7 +80,11 @@ impl Tract {
             .mouth
             .other_constrictions
             .iter()
-            .find(|(index, diameter)| *index > self.nose.start as F && *diameter < -NOSE_OFFSET)
+            .find(|constriction| {
+                constriction.index > self.nose.start as F
+                    && constriction.diameter < -NOSE_OFFSET
+                    && constriction.end_time.is_none()
+            })
             .is_some();
         self.nose.velum_target = if open_nose { 0.4 } else { 0.01 };
     }
@@ -121,7 +127,7 @@ pub struct Mouth {
 
     transients: Vec<Transient>,
     pub tongue: (F, F), // (index, diameter) // TODO index -> rate
-    pub other_constrictions: Vec<(F, F)>,
+    pub other_constrictions: Vec<Constriction>,
 }
 
 impl Mouth {
@@ -170,9 +176,7 @@ impl Mouth {
         }
     }
 
-    fn reshape(&mut self, delta_time: F, nose: &Nose, movement_speed: F) {
-        // mouth
-        let amount = delta_time * movement_speed;
+    fn reshape(&mut self, amount: F, nose: &Nose) {
         let mut new_last_obstruction = usize::MAX; // 閉塞フラグ
         for i in 0..self.length {
             if self.diameter[i] <= 0.0 {
@@ -204,6 +208,7 @@ impl Mouth {
     fn run_step(
         &mut self,
         nose: &mut Nose,
+        time: f64,
         glottal_output: F,
         turbulence_noise: F,
         lambda: F,
@@ -213,7 +218,7 @@ impl Mouth {
     ) {
         // mouth
         self.process_transients(sample_rate);
-        self.add_turbulence_noise(turbulence_noise, noise_mod);
+        self.add_turbulence_noise(time, turbulence_noise, noise_mod);
 
         //self.glottalReflection = -0.8 + 1.6 * Glottis.newTenseness;
         self.junction_output_r[0] = self.l[0] * self.glottal_reflection + glottal_output;
@@ -297,26 +302,32 @@ impl Mouth {
         self.transients.retain(|t| t.time_alive <= t.life_time)
     }
 
-    fn add_turbulence_noise(&mut self, turbulence_noise: F, noise_mod: F) {
-        for (index, diameter) in self.other_constrictions.clone() {
-            let fricative_intensity = 1.0; //TODO
-            if index < 2.0 || index > self.length as F {
+    fn add_turbulence_noise(&mut self, time: f64, turbulence_noise: F, noise_mod: F) {
+        for constriction in self.other_constrictions.clone() {
+            if constriction.index < 2.0 || constriction.index > self.length as F {
                 continue;
             }
-            if diameter <= 0.0 {
+            if constriction.diameter <= 0.0 {
                 continue;
             }
-            let intensity = fricative_intensity;
+            let intensity = constriction.fricative_intensity(time);
             if intensity == 0.0 {
                 continue;
             }
             self.add_turbulence_noise_at_index(
                 0.66 * turbulence_noise * intensity,
-                index,
-                diameter,
+                constriction.index,
+                constriction.diameter,
                 noise_mod,
             );
         }
+
+        // Remove dead constrictions
+        self.other_constrictions.retain(|c| {
+            c.end_time
+                .map(|end_time| time < end_time + 1.0)
+                .unwrap_or(true)
+        });
     }
 
     fn add_turbulence_noise_at_index(
@@ -340,7 +351,7 @@ impl Mouth {
         self.l[i + 2] += noise1 / 2.0;
     }
 
-    pub fn set_diameter(&mut self) {
+    fn set_diameter(&mut self) {
         const GRID_OFFSET: F = 1.7;
 
         let (tongue_index, tongue_diameter) = self.tongue;
@@ -356,17 +367,16 @@ impl Mouth {
                 curve *= 0.94;
             }
             self.rest_diameter[i] = 1.5 - curve;
-            self.target_diameter[i] = self.rest_diameter[i]; // ?
+            self.target_diameter[i] = self.rest_diameter[i];
         }
 
-        for (index, mut diameter) in self.other_constrictions.iter().cloned() {
-            if diameter < -0.85 - NOSE_OFFSET {
-                return;
+        for constriction in self.other_constrictions.iter() {
+            let index = constriction.index;
+            let mut diameter = constriction.diameter;
+            if diameter < -0.85 - NOSE_OFFSET || constriction.end_time.is_some() {
+                continue;
             }
-            diameter -= 0.3;
-            if diameter < 0.0 {
-                diameter = 0.0;
-            }
+            diameter = (diameter - 0.3).max(0.0);
 
             let width = if index < 25.0 {
                 10.0
@@ -477,8 +487,7 @@ impl Nose {
         self.output = self.r[self.length - 1];
     }
 
-    fn reshape(&mut self, delta_time: F, movement_speed: F) {
-        let amount = delta_time * movement_speed;
+    fn reshape(&mut self, amount: F) {
         self.diameter[0] = move_towards(
             self.diameter[0],
             self.velum_target,
@@ -504,5 +513,24 @@ fn move_towards(current: F, target: F, up: F, down: F) -> F {
         target.min(current + up)
     } else {
         target.max(current - down)
+    }
+}
+
+#[derive(Clone)]
+pub struct Constriction {
+    pub index: F,
+    pub diameter: F,
+    pub start_time: f64,
+    pub end_time: Option<f64>,
+}
+
+impl Constriction {
+    fn fricative_intensity(&self, time: f64) -> F {
+        let fricative_attack_time = 0.1;
+        if let Some(end_time) = self.end_time {
+            ((time - end_time) / fricative_attack_time).clamp(0.0, 1.0)
+        } else {
+            (1.0 - (time - self.start_time) / fricative_attack_time).clamp(0.0, 1.0)
+        }
     }
 }
