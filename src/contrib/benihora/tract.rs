@@ -351,7 +351,7 @@ impl Mouth {
         self.l[i + 2] += noise1 / 2.0;
     }
 
-    fn set_diameter(&mut self) {
+    pub fn set_diameter(&mut self) {
         const GRID_OFFSET: F = 1.7;
 
         let (tongue_index, tongue_diameter) = self.tongue;
@@ -367,6 +367,9 @@ impl Mouth {
                 curve *= 0.94;
             }
             self.rest_diameter[i] = 1.5 - curve;
+        }
+
+        for i in 0..self.length {
             self.target_diameter[i] = self.rest_diameter[i];
         }
 
