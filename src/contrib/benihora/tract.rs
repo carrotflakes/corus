@@ -2,7 +2,7 @@ use std::f64::consts::PI;
 
 use crate::contrib::rand::Rand;
 
-use super::{F, glottis::Glottis};
+use super::F;
 
 pub struct Tract {
     n: usize,
@@ -154,13 +154,13 @@ impl Tract {
         turbulence_noise: F,
         lambda: F,
         sample_rate: usize,
-        glottis: &mut Glottis,
+        noise_mod: F,
     ) -> F {
         let update_amplitudes = self.rand.next_f32() < 0.1;
 
         // mouth
         self.process_transients(sample_rate);
-        self.add_turbulence_noise(turbulence_noise, glottis);
+        self.add_turbulence_noise(turbulence_noise, noise_mod);
 
         //self.glottalReflection = -0.8 + 1.6 * Glottis.newTenseness;
         self.junction_output_r[0] = self.l[0] * self.glottal_reflection + glottal_output;
@@ -228,7 +228,7 @@ impl Tract {
         self.lip_output + self.nose_output
     }
 
-    pub fn finish_block(&mut self, block_time: F) {
+    pub fn update_block(&mut self, block_time: F) {
         self.reshape_tract(block_time);
         self.calculate_reflections()
     }
@@ -331,7 +331,7 @@ impl Tract {
         self.transients.retain(|t| t.life_time <= t.time_alive)
     }
 
-    fn add_turbulence_noise(&mut self, turbulence_noise: F, glottis: &mut Glottis) {
+    fn add_turbulence_noise(&mut self, turbulence_noise: F, noise_mod: F) {
         // for touch in touchesWithMouse {
         //     if (touch.index<2 || touch.index>Tract.n) continue;
         //     if (touch.diameter<=0) continue;
@@ -346,11 +346,11 @@ impl Tract {
         turbulence_noise: F,
         index: F,
         diameter: F,
-        glottis: &mut Glottis,
+        noise_mod: F,
     ) {
         let i = index.floor() as usize;
         let delta = index - i as F;
-        let turbulence_noise = turbulence_noise * glottis.get_noise_modulator();
+        let turbulence_noise = turbulence_noise * noise_mod;
 
         let thinness0 = (8.0 * (0.7 - diameter)).clamp(0.0, 1.0);
         let openness = (30.0 * (diameter - 0.3)).clamp(0.0, 1.0);

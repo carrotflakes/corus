@@ -36,6 +36,8 @@ pub struct Glottis {
     delta: F,
     te: F,
     omega: F,
+
+    auto_wobble: bool,
 }
 
 impl Glottis {
@@ -45,13 +47,15 @@ impl Glottis {
             new_frequency: 140.0,
             ui_frequency: 140.0,
             smooth_frequency: 140.0,
+
             old_tenseness: 0.6,
             new_tenseness: 0.6,
             ui_tenseness: 0.8, // 0.6
 
-            total_time: 0.0,
             vibrato_amount: 0.005,
             vibrato_frequency: 6.0,
+
+            total_time: 0.0,
             intensity: 0.0,
             loudness: 1.0,
             is_touched: false,
@@ -67,13 +71,11 @@ impl Glottis {
             delta: 0.0,
             te: 0.0,
             omega: 0.0,
-        };
-        glottis.init();
-        glottis
-    }
 
-    fn init(&mut self) {
-        self.setup_waveform(0.0);
+            auto_wobble: false,
+        };
+        glottis.setup_waveform(0.0);
+        glottis
     }
 
     pub fn run_step(&mut self, sample_rate: usize, lambda: F, input: F) -> F {
@@ -103,15 +105,13 @@ impl Glottis {
             + (1.0 - self.ui_tenseness * self.intensity) * 0.3
     }
 
-    pub fn finish_block(&mut self, block_time: F) {
+    pub fn update_block(&mut self, block_time: F) {
         let always_voice = true;
-        // todo!();
+
         let mut vibrato = self.vibrato_amount * (2.0 * PI * self.total_time * self.vibrato_frequency).sin();
         vibrato += 0.02 * simplex1(self.total_time * 4.07);
         vibrato += 0.04 * simplex1(self.total_time * 2.15);
-        if false
-        //auto_wobble)
-        {
+        if self.auto_wobble {
             vibrato += 0.2 * simplex1(self.total_time * 0.98);
             vibrato += 0.4 * simplex1(self.total_time * 0.5);
         }
