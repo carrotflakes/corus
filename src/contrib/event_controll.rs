@@ -5,7 +5,7 @@ use crate::{node::Node, proc_context::ProcContext};
 pub trait Event<T: 'static> {
     type Node: Node<T>;
 
-    fn dispatch(&self, node: &mut Self::Node);
+    fn dispatch(&self, time: f64, node: &mut Self::Node);
 }
 
 pub struct EventControll<T: 'static, E: Event<T>> {
@@ -41,7 +41,7 @@ impl<T: 'static, E: Event<T>> Node<T> for EventControll<T, E> {
             if ctx.time < e.0 {
                 break;
             }
-            e.1.dispatch(&mut self.node);
+            e.1.dispatch(e.0, &mut self.node);
             self.events.pop_front();
         }
         self.node.proc(ctx)

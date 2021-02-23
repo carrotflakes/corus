@@ -74,7 +74,7 @@ pub enum NoiseEvent {
 impl Event<C1f32> for NoiseEvent {
     type Node = Noise;
 
-    fn dispatch(&self, node: &mut Self::Node) {
+    fn dispatch(&self, _time: f64, node: &mut Self::Node) {
         match self {
             NoiseEvent::OriginalFreq(f1, f2) => {
                 node.freq = Noise::compute_freq(*f1, *f2);
