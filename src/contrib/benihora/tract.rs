@@ -8,6 +8,7 @@ const NOSE_OFFSET: F = 0.8;
 pub struct Tract {
     pub mouth: Mouth,
     pub nose: Nose,
+    pub other_constrictions: Vec<(F, F)>,
     pub movement_speed: F, // CM per second
     rand: Rand,            // for update max_amplitude
 }
@@ -28,16 +29,16 @@ impl Tract {
         let mut tract = Tract {
             mouth: Mouth::new(mouth_length),
             nose: Nose::new(nose_length, mouth_length),
+            other_constrictions: Vec::new(),
             movement_speed: 15.0,
-
             rand: Rand::new(0),
         };
 
         tract.mouth.calculate_reflections(&tract.nose);
         tract.nose.calculate_reflections();
         tract.nose.diameter[0] = tract.nose.velum_target;
+        tract.set_diameter();
 
-        tract.mouth.set_rest_diameter(12.9, 2.43);
         tract
     }
 
@@ -70,6 +71,17 @@ impl Tract {
             .reshape(block_time, &self.nose, self.movement_speed);
         self.nose.reshape(block_time, self.movement_speed);
         self.mouth.calculate_reflections(&self.nose);
+    }
+
+    pub fn set_diameter(&mut self) {
+        self.mouth.set_diameter(&self.other_constrictions);
+
+        let open_nose = self
+            .other_constrictions
+            .iter()
+            .find(|(index, diameter)| *index > self.nose.start as F && *diameter < -NOSE_OFFSET)
+            .is_some();
+        self.nose.velum_target = if open_nose { 0.4 } else { 0.01 };
     }
 }
 
@@ -109,6 +121,7 @@ pub struct Mouth {
     lip_output: F,
 
     transients: Vec<Transient>,
+    pub tongue: (F, F), // (index, diameter) // TODO index -> rate
 }
 
 impl Mouth {
@@ -152,6 +165,7 @@ impl Mouth {
             new_reflection_left: 0.0,
             new_reflection_right: 0.0,
             new_reflection_nose: 0.0,
+            tongue: (12.9, 2.43),
         }
     }
 
@@ -313,8 +327,10 @@ impl Mouth {
         self.l[i + 2] += noise1 / 2.0;
     }
 
-    pub fn set_rest_diameter(&mut self, tongue_index: F, tongue_diameter: F) {
+    pub fn set_diameter(&mut self, other_constrictions: &Vec<(F, F)>) {
         let grid_offset = 1.7; // ?
+
+        let (tongue_index, tongue_diameter) = self.tongue;
 
         for i in self.blade_start..self.lip_start {
             let t = 1.1 * PI * (tongue_index - i as F) / (self.tip_start - self.blade_start) as F;
@@ -329,45 +345,46 @@ impl Mouth {
             self.rest_diameter[i] = 1.5 - curve;
             self.target_diameter[i] = self.rest_diameter[i]; // ?
         }
-    }
 
-    pub fn set_other_diameter(&mut self, index: F, mut diameter: F) {
-        if diameter < -0.85 - NOSE_OFFSET {
-            return;
-        }
-        diameter -= 0.3;
-        if diameter < 0.0 {
-            diameter = 0.0;
-        }
+        for (index, mut diameter) in other_constrictions.iter().cloned() {
+            if diameter < -0.85 - NOSE_OFFSET {
+                return;
+            }
+            diameter -= 0.3;
+            if diameter < 0.0 {
+                diameter = 0.0;
+            }
 
-        let width = if index < 25.0 {
-            10.0
-        } else if index >= self.tip_start as F {
-            5.0
-        } else {
-            10.0 - 5.0 * (index - 25.0) / (self.tip_start as F - 25.0)
-        };
+            let width = if index < 25.0 {
+                10.0
+            } else if index >= self.tip_start as F {
+                5.0
+            } else {
+                10.0 - 5.0 * (index - 25.0) / (self.tip_start as F - 25.0)
+            };
 
-        if index >= 2.0 && index < self.length as F && diameter < 3.0 { // && y<tractCanvas.height
-            let int_index = index.round() as isize;
-            for i in -width.ceil() as isize - 1..width as isize + 1 {
-                let idx = int_index + i;
+            if index >= 2.0 && index < self.length as F && diameter < 3.0 {
+                // && y<tractCanvas.height
+                let int_index = index.round() as isize;
+                for i in -width.ceil() as isize - 1..width as isize + 1 {
+                    let idx = int_index + i;
 
-                if idx < 0 || idx >= self.length as isize {
-                    continue;
-                }
-                let idx = idx as usize;
-                let relpos = (idx as F - index).abs() - 0.5;
-                let shrink = if relpos <= 0.0 {
-                    0.0
-                } else if relpos > width {
-                    1.0
-                } else {
-                    0.5 * (1.0 - (PI * relpos / width).cos())
-                };
-                if diameter < self.target_diameter[idx] {
-                    self.target_diameter[idx] =
-                        diameter + (self.target_diameter[idx] - diameter) * shrink;
+                    if idx < 0 || idx >= self.length as isize {
+                        continue;
+                    }
+                    let idx = idx as usize;
+                    let relpos = (idx as F - index).abs() - 0.5;
+                    let shrink = if relpos <= 0.0 {
+                        0.0
+                    } else if relpos > width {
+                        1.0
+                    } else {
+                        0.5 * (1.0 - (PI * relpos / width).cos())
+                    };
+                    if diameter < self.target_diameter[idx] {
+                        self.target_diameter[idx] =
+                            diameter + (self.target_diameter[idx] - diameter) * shrink;
+                    }
                 }
             }
         }
@@ -466,14 +483,6 @@ impl Nose {
         for i in 1..self.length {
             self.reflection[i] = (self.a[i - 1] - self.a[i]) / (self.a[i - 1] + self.a[i]);
         }
-    }
-
-    pub fn set_other_diameter(&mut self, index: F, diameter: F) {
-        self.velum_target = if index > self.start as F && diameter < -NOSE_OFFSET {
-            0.4
-        } else {
-            0.01
-        };
     }
 }
 
