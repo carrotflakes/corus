@@ -37,18 +37,18 @@ impl Node<C1f64> for Benihora {
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
         if self.block_updated_time + self.block_time <= ctx.time {
             self.block_updated_time += self.block_time;
-            self.glottis.update_block(self.block_time);
+            self.glottis.update_block(ctx.time, self.block_time);
             self.tract.update_block(self.block_time);
         }
 
         let v = self.node.as_mut().proc(ctx);
-        let lambda1 = (ctx.time - self.block_updated_time) / self.block_time;
+        let lambda1 = (ctx.time - self.block_updated_time) / self.block_time; // TODO: lambdaなくしたい
         let lambda2 =
             (ctx.time - self.block_updated_time + 0.5 / ctx.sample_rate as f64) / self.block_time;
         let glottal_output = self
             .glottis
-            .run_step(ctx.sample_rate as usize, lambda1, v.0[0] as F);
-        let noise_mod = self.glottis.get_noise_modulator();
+            .run_step(ctx.time, ctx.sample_rate as usize, lambda1, v.0[0] as F);
+        let noise_mod = self.glottis.get_noise_modulator(lambda1);
         if self.twice {
             let mut vocal_out = 0.0;
             vocal_out += self.tract.run_step(
