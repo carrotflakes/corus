@@ -27,7 +27,7 @@ impl Glottis {
             total_time: 0.0,
             intensity: 0.0,
             loudness: 1.0,
-            is_touched: false,
+            is_touched: true,
             is_touching_somewhere: false,
 
             time_in_waveform: 0.0,
@@ -38,13 +38,16 @@ impl Glottis {
     pub fn run_step(&mut self, sample_rate: usize, lambda: F, input: F) -> F {
         self.tenseness.ui_tenseness = (self.total_time * 2.0).sin() * 0.5 + 0.5;
         self.loudness = self.tenseness.ui_tenseness.powf(0.25);
+        // self.is_touched = 1.0 < self.total_time % 2.0;
+
+        let tenseness = self.tenseness.get(lambda);
 
         let time_step = 1.0 / sample_rate as F;
         self.time_in_waveform += time_step;
         self.total_time += time_step;
         if self.waveform.length < self.time_in_waveform {
             self.time_in_waveform -= self.waveform.length;
-            self.waveform = Waveform::new(self.frequency.get(lambda), self.tenseness.get(lambda))
+            self.waveform = Waveform::new(self.frequency.get(lambda), tenseness)
         }
         let out = self.intensity
             * self.loudness
@@ -52,7 +55,7 @@ impl Glottis {
                 .waveform
                 .normalized_lf_waveform(self.time_in_waveform / self.waveform.length);
         let aspiration = self.intensity
-            * (1.0 - self.tenseness.ui_tenseness.sqrt())
+            * (1.0 - tenseness.sqrt())
             * self.get_noise_modulator()
             * input
             * (0.2 + 0.02 * simplex1(self.total_time * 1.99));
@@ -60,19 +63,21 @@ impl Glottis {
     }
 
     pub fn get_noise_modulator(&mut self) -> F {
+        let tenseness = self.tenseness.get(0.0); // ?
         let voiced =
             0.1 + 0.2 * 0.0f64.max((PI * 2.0 * self.time_in_waveform / self.waveform.length).sin());
-        self.tenseness.ui_tenseness * self.intensity * voiced
-            + (1.0 - self.tenseness.ui_tenseness * self.intensity) * 0.3
+        tenseness * self.intensity * voiced + (1.0 - tenseness * self.intensity) * 0.3
     }
 
     pub fn update_block(&mut self, block_time: F) {
-        let always_voice = true;
+        let always_voice = false;
+
+        let glottis_open = !self.is_touched && (always_voice || self.is_touching_somewhere);
 
         self.frequency.update(self.total_time);
         self.tenseness.update(
             self.total_time,
-            !self.is_touched && (always_voice || self.is_touching_somewhere),
+            glottis_open,
             self.intensity,
         );
 
@@ -148,12 +153,12 @@ impl TensenessCtrl {
         }
     }
 
-    fn update(&mut self, time: F, power: bool, intensity: F) {
+    fn update(&mut self, time: F, glottis_open: bool, intensity: F) {
         self.old_tenseness = self.new_tenseness;
         self.new_tenseness =
             self.ui_tenseness + 0.1 * simplex1(time * 0.46) + 0.05 * simplex1(time * 0.36);
 
-        if power {
+        if glottis_open {
             self.new_tenseness += (3.0 - self.ui_tenseness) * (1.0 - intensity)
         }
     }

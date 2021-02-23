@@ -59,23 +59,33 @@ impl Node<C1f64> for Benihora {
             .glottis
             .run_step(ctx.sample_rate as usize, lambda1, v.0[0] as F);
         let noise_mod = self.glottis.get_noise_modulator();
-        let mut vocal_out = 0.0;
-        vocal_out += self.tract.run_step(
-            glottal_output,
-            v.0[1] as F,
-            lambda1,
-            ctx.sample_rate as usize,
-            noise_mod,
-        );
-        vocal_out += self.tract.run_step(
-            glottal_output,
-            v.0[1] as F,
-            lambda2,
-            ctx.sample_rate as usize,
-            noise_mod,
-        );
+        if true {
+            let mut vocal_out = 0.0;
+            vocal_out += self.tract.run_step(
+                glottal_output,
+                v.0[1] as F,
+                lambda1,
+                ctx.sample_rate as usize * 2,
+                noise_mod,
+            );
+            vocal_out += self.tract.run_step(
+                glottal_output,
+                v.0[1] as F,
+                lambda2,
+                ctx.sample_rate as usize * 2,
+                noise_mod,
+            );
 
-        (vocal_out * 0.5).into()
+            (vocal_out * 0.5).into()
+        } else {
+            self.tract.run_step(
+                glottal_output,
+                v.0[1] as F,
+                lambda1,
+                ctx.sample_rate as usize * 2,
+                noise_mod,
+            ).into()
+        }
     }
 
     fn lock(&mut self) {
