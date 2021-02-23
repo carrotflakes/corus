@@ -2,7 +2,7 @@ mod benihora;
 mod glottis;
 mod tract;
 
-pub use benihora::Benihora;
+pub use benihora::{Benihora, BenihoraEvent};
 
 use crate::{
     node::{

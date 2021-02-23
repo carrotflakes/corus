@@ -90,3 +90,26 @@ impl AsMut<Self> for Benihora {
         self
     }
 }
+
+pub enum BenihoraEvent {
+    MoveTangue(F, F),
+    SetOtherConstrictions(Vec<(F, F)>),
+}
+
+impl crate::contrib::event_controll::Event<C1f64> for BenihoraEvent {
+    type Node = Benihora;
+
+    fn dispatch(&self, node: &mut Self::Node) {
+        match self {
+            BenihoraEvent::MoveTangue(index, diameter) => {
+                node.tract.mouth.tongue = (*index, *diameter);
+                node.tract.set_diameter();
+            }
+
+            BenihoraEvent::SetOtherConstrictions(other_constrictions) => {
+                node.tract.other_constrictions = other_constrictions.clone();
+                node.tract.set_diameter();
+            }
+        }
+    }
+}
