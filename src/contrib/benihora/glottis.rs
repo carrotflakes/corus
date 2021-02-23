@@ -1,19 +1,13 @@
 use std::f64::consts::PI;
 
-use super::{F, simplex1};
+use super::{simplex1, F};
 
 pub struct Glottis {
-    old_frequency: F,
-    new_frequency: F,
-    ui_frequency: F,
-    smooth_frequency: F,
+    pub frequency: FrequencyCtrl,
 
     old_tenseness: F,
     new_tenseness: F,
     ui_tenseness: F,
-
-    vibrato_amount: F,
-    vibrato_frequency: F,
 
     total_time: F,
     time_in_waveform: F,
@@ -28,7 +22,6 @@ pub struct Glottis {
     // touch: F,
     // x: F,
     // y: F,
-
     alpha: F,
     e0: F,
     epsilon: F,
@@ -36,24 +29,16 @@ pub struct Glottis {
     delta: F,
     te: F,
     omega: F,
-
-    auto_wobble: bool,
 }
 
 impl Glottis {
     pub fn new() -> Self {
         let mut glottis = Self {
-            old_frequency: 140.0,
-            new_frequency: 140.0,
-            ui_frequency: 140.0,
-            smooth_frequency: 140.0,
+            frequency: FrequencyCtrl::new(140.0, 0.005, 6.0, false),
 
             old_tenseness: 0.6,
             new_tenseness: 0.6,
             ui_tenseness: 0.8, // 0.6
-
-            vibrato_amount: 0.005,
-            vibrato_frequency: 6.0,
 
             total_time: 0.0,
             intensity: 0.0,
@@ -71,8 +56,6 @@ impl Glottis {
             delta: 0.0,
             te: 0.0,
             omega: 0.0,
-
-            auto_wobble: false,
         };
         glottis.setup_waveform(0.0);
         glottis
@@ -108,22 +91,7 @@ impl Glottis {
     pub fn update_block(&mut self, block_time: F) {
         let always_voice = true;
 
-        let mut vibrato = self.vibrato_amount * (2.0 * PI * self.total_time * self.vibrato_frequency).sin();
-        vibrato += 0.02 * simplex1(self.total_time * 4.07);
-        vibrato += 0.04 * simplex1(self.total_time * 2.15);
-        if self.auto_wobble {
-            vibrato += 0.2 * simplex1(self.total_time * 0.98);
-            vibrato += 0.4 * simplex1(self.total_time * 0.5);
-        }
-
-        if self.ui_frequency > self.smooth_frequency {
-            self.smooth_frequency = (self.smooth_frequency * 1.1).min(self.ui_frequency)
-        }
-        if self.ui_frequency < self.smooth_frequency {
-            self.smooth_frequency = (self.smooth_frequency / 1.1).max(self.ui_frequency)
-        }
-        self.old_frequency = self.new_frequency;
-        self.new_frequency = self.smooth_frequency * (1.0 + vibrato);
+        self.frequency.update(self.total_time);
 
         self.old_tenseness = self.new_tenseness;
         self.new_tenseness = self.ui_tenseness
@@ -143,7 +111,7 @@ impl Glottis {
     }
 
     fn setup_waveform(&mut self, lambda: F) {
-        let frequency = self.old_frequency * (1.0 - lambda) + self.new_frequency * lambda;
+        let frequency = self.frequency.get(lambda);
         let tenseness = self.old_tenseness * (1.0 - lambda) + self.new_tenseness * lambda;
         let rd = (3.0 * (1.0 - tenseness)).clamp(0.5, 2.7);
         self.waveform_length = 1.0 / frequency;
@@ -196,5 +164,60 @@ impl Glottis {
             } else {
                 self.e0 * (self.alpha * t).exp() * (self.omega * t).sin()
             }
+    }
+}
+
+pub struct FrequencyCtrl {
+    old_frequency: F,
+    new_frequency: F,
+    ui_frequency: F,
+    smooth_frequency: F,
+
+    pub vibrato_amount: F,
+    pub vibrato_frequency: F,
+
+    pub auto_wobble: bool,
+}
+
+impl FrequencyCtrl {
+    fn new(
+        frequency: F,
+        vibrato_amount: F,
+        vibrato_frequency: F,
+        auto_wobble: bool,
+    ) -> Self {
+        Self {
+            old_frequency: frequency,
+            new_frequency: frequency,
+            ui_frequency: frequency,
+            smooth_frequency: frequency,
+            vibrato_amount,
+            vibrato_frequency,
+            auto_wobble,
+        }
+    }
+
+    fn update(&mut self, time: F) {
+        let mut vibrato =
+            self.vibrato_amount * (2.0 * PI * time * self.vibrato_frequency).sin();
+        vibrato += 0.02 * simplex1(time * 4.07);
+        vibrato += 0.04 * simplex1(time * 2.15);
+        if self.auto_wobble {
+            vibrato += 0.2 * simplex1(time * 0.98);
+            vibrato += 0.4 * simplex1(time * 0.5);
+        }
+
+        if self.ui_frequency > self.smooth_frequency {
+            self.smooth_frequency = (self.smooth_frequency * 1.1).min(self.ui_frequency)
+        }
+        if self.ui_frequency < self.smooth_frequency {
+            self.smooth_frequency = (self.smooth_frequency / 1.1).max(self.ui_frequency)
+        }
+        self.old_frequency = self.new_frequency;
+        self.new_frequency = self.smooth_frequency * (1.0 + vibrato);
+    }
+
+    fn get(&self, lambda: F) -> F {
+        self.old_frequency * (1.0 - lambda) + self.new_frequency * lambda
     }
 }
