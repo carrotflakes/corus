@@ -1,9 +1,4 @@
-use corus::{
-    contrib::{buffer_playback::BufferPlayback, schroeder::schroeder_reverb},
-    node::Node,
-    proc_context::ProcContext,
-    signal::C1f32,
-};
+use corus::{contrib::{buffer_playback::BufferPlayback, schroeder::schroeder_reverb}, node::Node, proc_context::ProcContext, signal::{C1f64, Mono}};
 
 const SAMPLE_RATE: usize = 44100;
 
@@ -18,11 +13,11 @@ fn main() {
     let mut buf = Vec::new();
     while let Some(s) = samples.next() {
         samples.next();
-        buf.push(C1f32::from(s.unwrap() as f32 / std::i16::MAX as f32));
+        buf.push(C1f64::from(s.unwrap() as f64 / std::i16::MAX as f64));
     }
     let render_len = (buf.len() as f64 / SAMPLE_RATE as f64 + 0.1).ceil() as usize;
     let node = BufferPlayback::new(buf);
-    // let node = Impulse::new(C1f32::from(1.0));
+    // let node = Impulse::new(C1f64::from(1.0));
     // let node = CombFilter::new(node, 0.01, 0.99.into());
     // let node = AllPassFilter::new(node, 0.01, 0.99.into());
     // let node = Amp::new(node, Constant::from(0.3));
@@ -32,7 +27,7 @@ fn main() {
     println!("saved {:?}", &file);
 }
 
-pub fn write_to_file<N: Node<C1f32>, DN: AsMut<N>>(name: &str, len: usize, mut node: DN) {
+pub fn write_to_file<N: Node<C1f64>, DN: AsMut<N>>(name: &str, len: usize, mut node: DN) {
     let spec = hound::WavSpec {
         channels: 2,
         sample_rate: 44100,
@@ -44,10 +39,10 @@ pub fn write_to_file<N: Node<C1f32>, DN: AsMut<N>>(name: &str, len: usize, mut n
     node.as_mut().lock();
     for s in pc.into_iter(&mut node).take(SAMPLE_RATE as usize * len) {
         writer
-            .write_sample((s.0[0] * std::i16::MAX as f32) as i16)
+            .write_sample((s.get_m() * std::i16::MAX as f64) as i16)
             .unwrap();
         writer
-            .write_sample((s.0[0] * std::i16::MAX as f32) as i16)
+            .write_sample((s.get_m() * std::i16::MAX as f64) as i16)
             .unwrap();
     }
     node.as_mut().unlock();

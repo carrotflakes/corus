@@ -1,6 +1,6 @@
-use corus::{node::Node, proc_context::ProcContext, signal::C2f32};
+use corus::{node::Node, proc_context::ProcContext, signal::C2f64};
 
-pub fn write_to_file<N: Node<C2f32>, DN: AsMut<N>>(
+pub fn write_to_file<N: Node<C2f64>, DN: AsMut<N>>(
     name: &str,
     sample_rate: usize,
     len: f64,
@@ -21,10 +21,10 @@ pub fn write_to_file<N: Node<C2f32>, DN: AsMut<N>>(
         .take((sample_rate as f64 * len).ceil() as usize)
     {
         writer
-            .write_sample((s.0[0] * std::i16::MAX as f32) as i16)
+            .write_sample((s.0[0] * std::i16::MAX as f64) as i16)
             .unwrap();
         writer
-            .write_sample((s.0[1] * std::i16::MAX as f32) as i16)
+            .write_sample((s.0[1] * std::i16::MAX as f64) as i16)
             .unwrap();
     }
     node.as_mut().unlock();

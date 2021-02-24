@@ -1,4 +1,4 @@
-use corus::{contrib::poly_synth::{PolySynth, Voice}, node::{Node, accumulator::Accumulator, amp::Amp, constant::Constant, controllable::Controllable, param::Param, sine::Sine}, notenum_to_frequency, proc_context::ProcContext, signal::C1f32};
+use corus::{contrib::poly_synth::{PolySynth, Voice}, node::{Node, accumulator::Accumulator, amp::Amp, constant::Constant, controllable::Controllable, param::Param, sine::Sine}, notenum_to_frequency, proc_context::ProcContext, signal::{C1f64, Mono}};
 
 fn main() {
     let sample_rate = 44100;
@@ -6,7 +6,7 @@ fn main() {
     let builder = || {
         let freq_param = Controllable::new(Param::new());
         let mut freq_param_ctrl = freq_param.controller();
-        let acc = Controllable::new(Accumulator::new(freq_param, C1f32::from(1.0)));
+        let acc = Controllable::new(Accumulator::new(freq_param, C1f64::from(1.0)));
         let mut acc_ctrl = acc.controller();
         let saw = corus::node::add::Add::new(acc, Constant::from(-0.5));
         let env = Controllable::new(Param::new());
@@ -18,7 +18,7 @@ fn main() {
                 let mut env_ctrl = env_ctrl.clone();
                 move |time, notenum| {
                     freq_param_ctrl.lock().set_value_at_time(time, notenum_to_frequency(notenum as u32));
-                    acc_ctrl.lock().set_value_at_time(time, C1f32::from(0.5));
+                    acc_ctrl.lock().set_value_at_time(time, C1f64::from(0.5));
                     let mut env = env_ctrl.lock();
                     env.cancel_and_hold_at_time(time);
                     env.set_value_at_time(time, 0.001);
@@ -61,7 +61,7 @@ fn main() {
     let start = std::time::Instant::now();
     node.lock();
     for s in pc.into_iter(&mut node).take(sample_rate as usize * 3) {
-        writer.write(s.0[0], s.0[0]);
+        writer.write(s.get_m(), s.get_m());
     }
     node.unlock();
     println!("{:?} elapsed", start.elapsed());
@@ -81,12 +81,12 @@ impl Writer {
         Writer(hound::WavWriter::create(name, spec).unwrap())
     }
 
-    pub fn write(&mut self, sample1: f32, sample2: f32) {
+    pub fn write(&mut self, sample1: f64, sample2: f64) {
         self.0
-            .write_sample((sample1 * std::i16::MAX as f32) as i16)
+            .write_sample((sample1 * std::i16::MAX as f64) as i16)
             .unwrap();
         self.0
-            .write_sample((sample2 * std::i16::MAX as f32) as i16)
+            .write_sample((sample2 * std::i16::MAX as f64) as i16)
             .unwrap();
     }
 

@@ -31,7 +31,8 @@ use std::borrow::Borrow;
 
 use self::{proc_once_share::ProcOnceShare, ring_buffer_record::RingBufferRecord};
 
-impl<T, A, DA> Borrow<RingBuffer<T>> for ProcOnceShare<T, RingBufferRecord<T, A, DA>, RingBufferRecord<T, A, DA>>
+impl<T, A, DA> Borrow<RingBuffer<T>>
+    for ProcOnceShare<T, RingBufferRecord<T, A, DA>, RingBufferRecord<T, A, DA>>
 where
     T: 'static + Clone + Default,
     A: Node<T> + ?Sized,

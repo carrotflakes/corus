@@ -14,4 +14,9 @@ impl Rand {
     pub fn next_f32(&mut self) -> f32 {
         (self.next_u32() as f64 / std::u32::MAX as f64) as f32
     }
+
+    /// returns 0.0 - 1.0
+    pub fn next_f64(&mut self) -> f64 {
+        self.next_u32() as f64 / std::u32::MAX as f64
+    }
 }

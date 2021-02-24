@@ -17,26 +17,23 @@ pub use effects::*;
 pub use oscillators::*;
 pub use perlin_noise::*;
 
-use crate::{
-    node::{
+use crate::{node::{
         amp::Amp,
         controllable::{Controllable, Controller},
         pan::Pan,
         param::Param,
         Node,
-    },
-    signal::{C1f32, C2f32},
-};
+    }, signal::{C1f64, C2f64, Mono}};
 
 pub fn amp_pan<A, G, P, DA, DG, DP>(
     node: DA,
     gain: DG,
     pan: DP,
-) -> Pan<f32, C1f32, C1f32, C2f32, Amp<C1f32, A, G, DA, DG>, P, Amp<C1f32, A, G, DA, DG>, DP>
+) -> Pan<f64, C1f64, C1f64, C2f64, Amp<C1f64, A, G, DA, DG>, P, Amp<C1f64, A, G, DA, DG>, DP>
 where
-    A: Node<C1f32> + 'static,
-    G: Node<C1f32> + 'static,
-    P: Node<C1f32> + 'static,
+    A: Node<C1f64> + 'static,
+    G: Node<C1f64> + 'static,
+    P: Node<C1f64> + 'static,
     DA: AsMut<A>,
     DG: AsMut<G>,
     DP: AsMut<P>,
@@ -44,9 +41,9 @@ where
     Pan::new(Amp::new(node, gain), pan)
 }
 
-pub fn controllable_param(
-    initial_value: f32,
-) -> (Controllable<C1f32, Param>, Controller<C1f32, Param>) {
+pub fn controllable_param<T: Mono<f64>>(
+    initial_value: f64,
+) -> (Controllable<T, Param<f64, T>>, Controller<T, Param<f64, T>>) {
     let c = Controllable::new(Param::new());
     let mut ctrl = c.controller();
     ctrl.lock().set_value_at_time(0.0, initial_value);

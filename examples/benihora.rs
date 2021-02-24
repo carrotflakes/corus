@@ -6,9 +6,7 @@ use corus::{
         benihora::{make_noise_node, Benihora, BenihoraEvent},
         event_controll::EventControll,
     },
-    node::map::Map,
     notenum_to_frequency,
-    signal::C1f32,
 };
 
 use corus::node::{self};
@@ -98,13 +96,12 @@ fn main() {
     benihora.push_event(13.0, BenihoraEvent::SetStatus(false, false));
     benihora.push_event(14.0, BenihoraEvent::SetStatus(true, false));
 
-    benihora.push_event(15.0, BenihoraEvent::SetOtherConstrictions(vec![(12.0, 0.6)]));
+    benihora.push_event(
+        15.0,
+        BenihoraEvent::SetOtherConstrictions(vec![(12.0, 0.6)]),
+    );
     benihora.push_event(16.0, BenihoraEvent::SetOtherConstrictions(vec![]));
 
-    let node = amp_pan(
-        Map::new(benihora, |c| C1f32([c.0[0] as f32])),
-        Constant::from(1.0),
-        Constant::from(0.0),
-    );
+    let node = amp_pan(benihora, Constant::from(1.0), Constant::from(0.0));
     write_to_file::write_to_file("benihora.wav", SAMPLE_RATE, 20.0, node);
 }

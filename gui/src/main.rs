@@ -2,7 +2,13 @@ mod audio;
 
 use std::{thread, time::Duration};
 
-use corus::{node::{add::Add, amp::Amp, constant::Constant, controllable::Controllable, param::Param, proc_once_share::ProcOnceShare, sine::Sine}, notenum_to_frequency};
+use corus::{
+    node::{
+        add::Add, amp::Amp, constant::Constant, controllable::Controllable, param::Param,
+        proc_once_share::ProcOnceShare, sine::Sine,
+    },
+    notenum_to_frequency,
+};
 use sdl2::{
     audio::AudioSpecDesired, event::Event, keyboard::Keycode, pixels::Color, rect::Rect,
     render::Canvas, video::Window,
@@ -34,7 +40,7 @@ fn main() {
     osc_freq_ctrl.lock().set_value_at_time(0.0, 440.0);
 
     let mut device = audio_subsys
-    .open_playback(None, &desired_spec, move |spec| {
+        .open_playback(None, &desired_spec, move |spec| {
             let osc_freq = ProcOnceShare::new(osc_freq);
             audio::Audio::new(
                 spec.freq as u64,
@@ -163,15 +169,14 @@ fn main() {
                 }
                 Event::MouseButtonDown {
                     x, y, mouse_btn, ..
-                } => {
-                }
+                } => {}
                 Event::MouseMotion { x, y, .. } => {
                     mod_freq_rate_ctrl
                         .lock()
-                        .set_value_at_time(audio_time, y as f32 * 0.01);
+                        .set_value_at_time(audio_time, y as f64 * 0.01);
                     mod_gain_ctrl
                         .lock()
-                        .set_value_at_time(audio_time, x as f32 * 4.0);
+                        .set_value_at_time(audio_time, x as f64 * 4.0);
                 }
                 _ => {}
             }

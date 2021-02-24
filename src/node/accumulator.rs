@@ -1,13 +1,13 @@
 use std::ops::{Add, Mul};
 
-use crate::signal::{C1f32, Signal};
+use crate::signal::{C1f64, Signal};
 
 use super::{Node, ProcContext};
 
 #[derive(Debug, Clone)]
 pub struct Event<T>
 where
-    T: Signal + Mul<C1f32, Output = T> + Add<Output = T> + Default + Clone,
+    T: Signal + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
 {
     time: f64,
     value: T,
@@ -15,7 +15,7 @@ where
 
 pub struct Accumulator<T, A, DA>
 where
-    T: Signal + Mul<C1f32, Output = T> + Add<Output = T> + Default + Clone,
+    T: Signal + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
@@ -29,7 +29,7 @@ where
 
 impl<T, A, DA> Accumulator<T, A, DA>
 where
-    T: Signal + Mul<C1f32, Output = T> + Add<Output = T> + Default + Clone,
+    T: Signal + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
@@ -58,13 +58,13 @@ where
 
 impl<T, A, DA> Node<T> for Accumulator<T, A, DA>
 where
-    T: Signal<Float = f32> + Mul<C1f32, Output = T> + Add<Output = T> + Default + Clone,
+    T: Signal<Float = f64> + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
-        let d = self.node.as_mut().proc(ctx) * C1f32::from(1.0 / ctx.sample_rate as f32);
+        let d = self.node.as_mut().proc(ctx) * C1f64::from(1.0 / ctx.sample_rate as f64);
         self.value = self.value.clone() + d;
 
         while !self.events.is_empty() {
@@ -92,7 +92,7 @@ where
 
 impl<T, A, DA> AsMut<Self> for Accumulator<T, A, DA>
 where
-    T: Signal + Mul<C1f32, Output = T> + Add<Output = T> + Default + Clone,
+    T: Signal + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
@@ -104,8 +104,8 @@ where
 #[test]
 fn test() {
     let mut accumulator = Accumulator::new(
-        super::constant::Constant::new(C1f32::from(1.0)),
-        C1f32::from(4.0),
+        super::constant::Constant::new(C1f64::from(1.0)),
+        C1f64::from(4.0),
     );
     let mut pc = ProcContext::new(4);
 

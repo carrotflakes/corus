@@ -1,14 +1,9 @@
-use corus::{
-    contrib::{
+use corus::{contrib::{
         chip::Noise,
         controllable_param,
         envelope::{ArEnvelope, EnvelopeGenerator},
         retriggerable_sine,
-    },
-    node::{amp::Amp, mix::Mix},
-    proc_context::ProcContext,
-    signal::C1f32,
-};
+    }, node::{amp::Amp, mix::Mix}, proc_context::ProcContext, signal::{C1f64, Mono}};
 
 use corus::node::{constant::Constant, Node};
 
@@ -40,32 +35,32 @@ fn main() {
         note_on(2.0 / bps);
         note_on(3.0 / bps);
 
-        Box::new(node) as Box<dyn Node<C1f32>>
+        Box::new(node) as Box<dyn Node<C1f64>>
     };
 
     let snare = {
         let mut noise = Noise::new();
         noise.short_freq = true;
         noise.freq = 5000;
-        let (noise_env, mut note_on, _) = ArEnvelope { a: 0.01, r: 0.2 }.generate();
+        let (noise_env, mut note_on, _) = ArEnvelope::new(0.01, 0.2).generate();
         let node = Amp::new(noise, noise_env);
         // note_on(0.0 / bps);
         note_on(1.0 / bps);
         // note_on(2.0 / bps);
         note_on(3.0 / bps);
-        Box::new(node) as Box<dyn Node<C1f32>>
+        Box::new(node) as Box<dyn Node<C1f64>>
     };
 
     let hh = {
         let mut noise = Noise::new();
         noise.freq = 12000;
-        let (noise_env, mut note_on, _) = ArEnvelope { a: 0.01, r: 0.2 }.generate();
+        let (noise_env, mut note_on, _) = ArEnvelope::new(0.01, 0.2).generate();
         let node = Amp::new(noise, noise_env);
         note_on(0.5 / bps);
         note_on(1.5 / bps);
         note_on(2.5 / bps);
         note_on(3.5 / bps);
-        Box::new(node) as Box<dyn Node<C1f32>>
+        Box::new(node) as Box<dyn Node<C1f64>>
     };
 
     let node = Mix::new(vec![kick, snare, hh]);
@@ -73,7 +68,7 @@ fn main() {
     write_to_file("beats.wav", 4, node);
 }
 
-pub fn write_to_file<N: Node<C1f32>, DN: AsMut<N>>(name: &str, len: usize, mut node: DN) {
+pub fn write_to_file<N: Node<C1f64>, DN: AsMut<N>>(name: &str, len: usize, mut node: DN) {
     let spec = hound::WavSpec {
         channels: 2,
         sample_rate: 44100,
@@ -85,10 +80,10 @@ pub fn write_to_file<N: Node<C1f32>, DN: AsMut<N>>(name: &str, len: usize, mut n
     node.as_mut().lock();
     for s in pc.into_iter(&mut node).take(SAMPLE_RATE as usize * len) {
         writer
-            .write_sample((s.0[0] * std::i16::MAX as f32) as i16)
+            .write_sample((s.get_m() * std::i16::MAX as f64) as i16)
             .unwrap();
         writer
-            .write_sample((s.0[0] * std::i16::MAX as f32) as i16)
+            .write_sample((s.get_m() * std::i16::MAX as f64) as i16)
             .unwrap();
     }
     node.as_mut().unlock();

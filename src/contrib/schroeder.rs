@@ -57,7 +57,7 @@ pub fn schroeder_reverb<
         .map(|i| {
             Box::new(CombFilter::new(
                 node.clone(),
-                0.03 + 0.0041 * i as f32,
+                0.03 + 0.0041 * i as f64,
                 (0.6 + i as f64 * 0.02).into(),
             )) as Box<dyn Node<T>>
         })

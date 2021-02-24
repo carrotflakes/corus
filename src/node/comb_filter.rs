@@ -11,7 +11,7 @@ where
     DA: AsMut<A>,
 {
     node: DA,
-    pub delay: f32,
+    pub delay: f64,
     pub gain: T,
     buffer: RingBuffer<T>,
     _a: std::marker::PhantomData<A>,
@@ -23,7 +23,7 @@ where
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
-    pub fn new(node: DA, delay: f32, gain: T) -> Self {
+    pub fn new(node: DA, delay: f64, gain: T) -> Self {
         CombFilter {
             node,
             delay,
@@ -42,7 +42,7 @@ where
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
-        let delay_len = (self.delay * ctx.sample_rate as f32) as usize;
+        let delay_len = (self.delay * ctx.sample_rate as f64) as usize;
         let desire_buffer_len = delay_len + 1;
         if self.buffer.size() != desire_buffer_len {
             self.buffer.fast_resize(desire_buffer_len);

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::signal::{C1f32, C2f32, Signal};
+use crate::signal::{C1f64, C2f64, Mono, Signal, Stereo};
 
 use super::{Node, ProcContext};
 
@@ -9,9 +9,9 @@ where
     FT: BiquadFilterType,
     T: Clone + 'static + std::ops::Add<Output = T> + Signal + Default,
     N: Node<T> + ?Sized,
-    A: Node<C1f32> + ?Sized,
-    B: Node<C1f32> + ?Sized,
-    C: Node<C1f32> + ?Sized,
+    A: Node<C1f64> + ?Sized,
+    B: Node<C1f64> + ?Sized,
+    C: Node<C1f64> + ?Sized,
     DN: AsMut<N>,
     DA: AsMut<A>,
     DB: AsMut<B>,
@@ -37,9 +37,9 @@ where
     FT: BiquadFilterType,
     T: Clone + 'static + std::ops::Add<Output = T> + Signal + Default,
     N: Node<T> + ?Sized,
-    A: Node<C1f32> + ?Sized,
-    B: Node<C1f32> + ?Sized,
-    C: Node<C1f32> + ?Sized,
+    A: Node<C1f64> + ?Sized,
+    B: Node<C1f64> + ?Sized,
+    C: Node<C1f64> + ?Sized,
     DN: AsMut<N>,
     DA: AsMut<A>,
     DB: AsMut<B>,
@@ -59,35 +59,38 @@ where
 }
 
 // TODO: generic
-impl<FT, N, A, B, C, DN, DA, DB, DC> Node<C1f32>
-    for BiquadFilter<FT, C1f32, N, A, B, C, DN, DA, DB, DC>
+impl<FT, N, A, B, C, DN, DA, DB, DC> Node<C1f64>
+    for BiquadFilter<FT, C1f64, N, A, B, C, DN, DA, DB, DC>
 where
     FT: BiquadFilterType,
-    N: Node<C1f32> + ?Sized,
-    A: Node<C1f32> + ?Sized,
-    B: Node<C1f32> + ?Sized,
-    C: Node<C1f32> + ?Sized,
+    N: Node<C1f64> + ?Sized,
+    A: Node<C1f64> + ?Sized,
+    B: Node<C1f64> + ?Sized,
+    C: Node<C1f64> + ?Sized,
     DN: AsMut<N>,
     DA: AsMut<A>,
     DB: AsMut<B>,
     DC: AsMut<C>,
 {
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> C1f32 {
+    fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
         let frequency = self.frequency.as_mut().proc(ctx);
         let gain = self.gain.as_mut().proc(ctx);
         let q = self.q.as_mut().proc(ctx);
         let value = self.node.as_mut().proc(ctx);
-        let [a0, a1, a2, b0, b1, b2] =
-            self.filter_type
-                .compute_params(ctx.sample_rate, frequency.0[0], gain.0[0], q.0[0]);
+        let [a0, a1, a2, b0, b1, b2] = self.filter_type.compute_params(
+            ctx.sample_rate,
+            frequency.get_m(),
+            gain.get_m(),
+            q.get_m(),
+        );
 
-        let sample = ((b0 / a0) * value.0[0]
-            + (b1 / a0) * self.samples[0].0[0]
-            + (b2 / a0) * self.samples[1].0[0])
-            - (a1 / a0) * self.samples[2].0[0]
-            - (a2 / a0) * self.samples[3].0[0];
-        let sample = C1f32([sample]);
+        let sample = ((b0 / a0) * value.get_m()
+            + (b1 / a0) * self.samples[0].get_m()
+            + (b2 / a0) * self.samples[1].get_m())
+            - (a1 / a0) * self.samples[2].get_m()
+            - (a2 / a0) * self.samples[3].get_m();
+        let sample = C1f64::from_m(sample);
         self.samples[1] = self.samples[0];
         self.samples[0] = value;
         self.samples[3] = self.samples[2];
@@ -110,40 +113,43 @@ where
     }
 }
 
-impl<FT, N, A, B, C, DN, DA, DB, DC> Node<C2f32>
-    for BiquadFilter<FT, C2f32, N, A, B, C, DN, DA, DB, DC>
+impl<FT, N, A, B, C, DN, DA, DB, DC> Node<C2f64>
+    for BiquadFilter<FT, C2f64, N, A, B, C, DN, DA, DB, DC>
 where
     FT: BiquadFilterType,
-    N: Node<C2f32> + ?Sized,
-    A: Node<C1f32> + ?Sized,
-    B: Node<C1f32> + ?Sized,
-    C: Node<C1f32> + ?Sized,
+    N: Node<C2f64> + ?Sized,
+    A: Node<C1f64> + ?Sized,
+    B: Node<C1f64> + ?Sized,
+    C: Node<C1f64> + ?Sized,
     DN: AsMut<N>,
     DA: AsMut<A>,
     DB: AsMut<B>,
     DC: AsMut<C>,
 {
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> C2f32 {
+    fn proc(&mut self, ctx: &ProcContext) -> C2f64 {
         let frequency = self.frequency.as_mut().proc(ctx);
         let gain = self.gain.as_mut().proc(ctx);
         let q = self.q.as_mut().proc(ctx);
         let value = self.node.as_mut().proc(ctx);
-        let [a0, a1, a2, b0, b1, b2] =
-            self.filter_type
-                .compute_params(ctx.sample_rate, frequency.0[0], gain.0[0], q.0[0]);
+        let [a0, a1, a2, b0, b1, b2] = self.filter_type.compute_params(
+            ctx.sample_rate,
+            frequency.get_m(),
+            gain.get_m(),
+            q.get_m(),
+        );
 
-        let sample_l = ((b0 / a0) * value.0[0]
-            + (b1 / a0) * self.samples[0].0[0]
-            + (b2 / a0) * self.samples[1].0[0])
-            - (a1 / a0) * self.samples[2].0[0]
-            - (a2 / a0) * self.samples[3].0[0];
-        let sample_r = ((b0 / a0) * value.0[1]
-            + (b1 / a0) * self.samples[0].0[1]
-            + (b2 / a0) * self.samples[1].0[1])
-            - (a1 / a0) * self.samples[2].0[1]
-            - (a2 / a0) * self.samples[3].0[1];
-        let sample = C2f32([sample_l, sample_r]);
+        let sample_l = ((b0 / a0) * value.get_l()
+            + (b1 / a0) * self.samples[0].get_l()
+            + (b2 / a0) * self.samples[1].get_l())
+            - (a1 / a0) * self.samples[2].get_l()
+            - (a2 / a0) * self.samples[3].get_l();
+        let sample_r = ((b0 / a0) * value.get_r()
+            + (b1 / a0) * self.samples[0].get_r()
+            + (b2 / a0) * self.samples[1].get_r())
+            - (a1 / a0) * self.samples[2].get_r()
+            - (a2 / a0) * self.samples[3].get_r();
+        let sample = C2f64([sample_l, sample_r]);
         self.samples[1] = self.samples[0];
         self.samples[0] = value;
         self.samples[3] = self.samples[2];
@@ -172,9 +178,9 @@ where
     FT: BiquadFilterType,
     T: Clone + 'static + std::ops::Add<Output = T> + Signal + Default,
     N: Node<T> + ?Sized,
-    A: Node<C1f32> + ?Sized,
-    B: Node<C1f32> + ?Sized,
-    C: Node<C1f32> + ?Sized,
+    A: Node<C1f64> + ?Sized,
+    B: Node<C1f64> + ?Sized,
+    C: Node<C1f64> + ?Sized,
     DN: AsMut<N>,
     DA: AsMut<A>,
     DB: AsMut<B>,
@@ -186,7 +192,7 @@ where
 }
 
 pub trait BiquadFilterType {
-    fn compute_params(&self, sample_rate: u64, frequency: f32, gain: f32, q: f32) -> [f32; 6];
+    fn compute_params(&self, sample_rate: u64, frequency: f64, gain: f64, q: f64) -> [f64; 6];
 }
 
 #[derive(Debug, Clone)]
@@ -194,9 +200,9 @@ pub struct LowPass;
 
 impl BiquadFilterType for LowPass {
     #[inline]
-    fn compute_params(&self, sample_rate: u64, frequency: f32, _gain: f32, q: f32) -> [f32; 6] {
-        // let a = 10.0f32.powf(gain / 40.0);
-        let w0 = (2.0 * std::f32::consts::PI * frequency) / sample_rate as f32;
+    fn compute_params(&self, sample_rate: u64, frequency: f64, _gain: f64, q: f64) -> [f64; 6] {
+        // let a = 10.0f64.powf(gain / 40.0);
+        let w0 = (2.0 * std::f64::consts::PI * frequency) / sample_rate as f64;
         let (sin, cos) = w0.sin_cos();
         let alpha = sin / (2.0 * q);
         [
@@ -215,9 +221,9 @@ pub struct HighPass;
 
 impl BiquadFilterType for HighPass {
     #[inline]
-    fn compute_params(&self, sample_rate: u64, frequency: f32, _gain: f32, q: f32) -> [f32; 6] {
-        // let a = 10.0f32.powf(gain / 40.0);
-        let w0 = (2.0 * std::f32::consts::PI * frequency) / sample_rate as f32;
+    fn compute_params(&self, sample_rate: u64, frequency: f64, _gain: f64, q: f64) -> [f64; 6] {
+        // let a = 10.0f64.powf(gain / 40.0);
+        let w0 = (2.0 * std::f64::consts::PI * frequency) / sample_rate as f64;
         let (sin, cos) = w0.sin_cos();
         let alpha = sin / (2.0 * q);
         [
@@ -236,9 +242,9 @@ pub struct BandPass;
 
 impl BiquadFilterType for BandPass {
     #[inline]
-    fn compute_params(&self, sample_rate: u64, frequency: f32, _gain: f32, q: f32) -> [f32; 6] {
-        // let a = 10.0f32.powf(gain / 40.0);
-        let w0 = (2.0 * std::f32::consts::PI * frequency) / sample_rate as f32;
+    fn compute_params(&self, sample_rate: u64, frequency: f64, _gain: f64, q: f64) -> [f64; 6] {
+        // let a = 10.0f64.powf(gain / 40.0);
+        let w0 = (2.0 * std::f64::consts::PI * frequency) / sample_rate as f64;
         let (sin, cos) = w0.sin_cos();
         let alpha = sin / (2.0 * q);
         [
@@ -257,9 +263,9 @@ pub struct LowShelf;
 
 impl BiquadFilterType for LowShelf {
     #[inline]
-    fn compute_params(&self, sample_rate: u64, frequency: f32, gain: f32, q: f32) -> [f32; 6] {
-        let a = 10.0f32.powf(gain / 40.0);
-        let w0 = (2.0 * std::f32::consts::PI * frequency) / sample_rate as f32;
+    fn compute_params(&self, sample_rate: u64, frequency: f64, gain: f64, q: f64) -> [f64; 6] {
+        let a = 10.0f64.powf(gain / 40.0);
+        let w0 = (2.0 * std::f64::consts::PI * frequency) / sample_rate as f64;
         let (sin, cos) = w0.sin_cos();
         let alpha = sin / (2.0 * q);
         let x = a.sqrt() * 2.0 * alpha;
@@ -279,9 +285,9 @@ pub struct HighShelf;
 
 impl BiquadFilterType for HighShelf {
     #[inline]
-    fn compute_params(&self, sample_rate: u64, frequency: f32, gain: f32, q: f32) -> [f32; 6] {
-        let a = 10.0f32.powf(gain / 40.0);
-        let w0 = (2.0 * std::f32::consts::PI * frequency) / sample_rate as f32;
+    fn compute_params(&self, sample_rate: u64, frequency: f64, gain: f64, q: f64) -> [f64; 6] {
+        let a = 10.0f64.powf(gain / 40.0);
+        let w0 = (2.0 * std::f64::consts::PI * frequency) / sample_rate as f64;
         let (sin, cos) = w0.sin_cos();
         let alpha = sin / (2.0 * q);
         let x = a.sqrt() * 2.0 * alpha;
@@ -301,9 +307,9 @@ pub struct Peaking;
 
 impl BiquadFilterType for Peaking {
     #[inline]
-    fn compute_params(&self, sample_rate: u64, frequency: f32, gain: f32, q: f32) -> [f32; 6] {
-        let a = 10.0f32.powf(gain / 40.0);
-        let w0 = (2.0 * std::f32::consts::PI * frequency) / sample_rate as f32;
+    fn compute_params(&self, sample_rate: u64, frequency: f64, gain: f64, q: f64) -> [f64; 6] {
+        let a = 10.0f64.powf(gain / 40.0);
+        let w0 = (2.0 * std::f64::consts::PI * frequency) / sample_rate as f64;
         let (sin, cos) = w0.sin_cos();
         let alpha = sin / (2.0 * q);
         [
@@ -322,9 +328,9 @@ pub struct Notch;
 
 impl BiquadFilterType for Notch {
     #[inline]
-    fn compute_params(&self, sample_rate: u64, frequency: f32, _gain: f32, q: f32) -> [f32; 6] {
-        // let a = 10.0f32.powf(gain / 40.0);
-        let w0 = (2.0 * std::f32::consts::PI * frequency) / sample_rate as f32;
+    fn compute_params(&self, sample_rate: u64, frequency: f64, _gain: f64, q: f64) -> [f64; 6] {
+        // let a = 10.0f64.powf(gain / 40.0);
+        let w0 = (2.0 * std::f64::consts::PI * frequency) / sample_rate as f64;
         let (sin, cos) = w0.sin_cos();
         let alpha = sin / (2.0 * q);
         [1.0 + alpha, -2.0 * cos, 1.0 - alpha, 1.0, -2.0 * cos, 1.0]
@@ -336,9 +342,9 @@ pub struct AllPass;
 
 impl BiquadFilterType for AllPass {
     #[inline]
-    fn compute_params(&self, sample_rate: u64, frequency: f32, _gain: f32, q: f32) -> [f32; 6] {
-        // let a = 10.0f32.powf(gain / 40.0);
-        let w0 = (2.0 * std::f32::consts::PI * frequency) / sample_rate as f32;
+    fn compute_params(&self, sample_rate: u64, frequency: f64, _gain: f64, q: f64) -> [f64; 6] {
+        // let a = 10.0f64.powf(gain / 40.0);
+        let w0 = (2.0 * std::f64::consts::PI * frequency) / sample_rate as f64;
         let (sin, cos) = w0.sin_cos();
         let alpha = sin / (2.0 * q);
         [
@@ -366,7 +372,7 @@ pub enum BiquadFilterTypeDynamic {
 
 impl BiquadFilterType for BiquadFilterTypeDynamic {
     #[inline]
-    fn compute_params(&self, sample_rate: u64, frequency: f32, gain: f32, q: f32) -> [f32; 6] {
+    fn compute_params(&self, sample_rate: u64, frequency: f64, gain: f64, q: f64) -> [f64; 6] {
         match self {
             BiquadFilterTypeDynamic::LowPass => {
                 LowShelf::compute_params(&LowShelf, sample_rate, frequency, gain, q)
