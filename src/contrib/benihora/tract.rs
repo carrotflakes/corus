@@ -401,6 +401,22 @@ impl Mouth {
             }
         }
     }
+
+    pub fn tangue_clamp(&self, index: F, diameter: F) -> (F, F) {
+        const INNER_RADIUS: F = 2.05;
+        const OUTER_RADIUS: F = 3.5;
+        let lower_index_bound = self.blade_start as F + 2.0;
+        let upper_index_bound = self.tip_start as F - 3.0;
+        let index_center = (lower_index_bound + upper_index_bound) * 0.5;
+
+        let mut from_point = (OUTER_RADIUS - diameter) / (OUTER_RADIUS - INNER_RADIUS);
+        from_point = from_point.clamp(0.0, 1.0);
+        from_point = from_point.powf(0.58) - 0.2 * (from_point.powi(2) - from_point); // horrible kludge to fit curve to straight line
+        let diameter = diameter.clamp(INNER_RADIUS, OUTER_RADIUS);
+        let out = from_point * 0.5 * (upper_index_bound - lower_index_bound);
+        let index = index.clamp(index_center - out, index_center + out);
+        (index, diameter)
+    }
 }
 
 pub struct Nose {

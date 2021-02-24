@@ -110,7 +110,7 @@ impl crate::contrib::event_controll::Event<C1f64> for BenihoraEvent {
     fn dispatch(&self, time: f64, node: &mut Self::Node) {
         match self {
             BenihoraEvent::MoveTangue(index, diameter) => {
-                node.tract.mouth.tongue = (*index, *diameter);
+                node.tract.mouth.tongue = node.tract.mouth.tangue_clamp(*index, *diameter);
                 node.tract.set_diameter();
             }
             BenihoraEvent::SetOtherConstrictions(new_ocs) => {
