@@ -2,7 +2,7 @@ mod into_stereo;
 
 pub use into_stereo::IntoStereo;
 
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Neg};
 
 pub trait Signal: 'static + Sized {
     type Float;
@@ -100,6 +100,43 @@ impl Mul for C2f64 {
 }
 
 
+impl Neg for C1f32 {
+    type Output = Self;
+
+    #[inline]
+    fn neg(self) -> Self::Output {
+        Self([-self.0[0]])
+    }
+}
+
+impl Neg for C1f64 {
+    type Output = Self;
+
+    #[inline]
+    fn neg(self) -> Self::Output {
+        Self([-self.0[0]])
+    }
+}
+
+impl Neg for C2f32 {
+    type Output = Self;
+
+    #[inline]
+    fn neg(self) -> Self::Output {
+        Self([-self.0[0], -self.0[1]])
+    }
+}
+
+impl Neg for C2f64 {
+    type Output = Self;
+
+    #[inline]
+    fn neg(self) -> Self::Output {
+        Self([-self.0[0], -self.0[1]])
+    }
+}
+
+
 impl Mul<C1f32> for C2f32 {
     type Output = Self;
 
@@ -130,6 +167,20 @@ impl From<f64> for C1f64 {
     #[inline]
     fn from(v: f64) -> Self {
         C1f64([v])
+    }
+}
+
+impl From<f64> for C1f32 { // necessary?
+    #[inline]
+    fn from(v: f64) -> Self {
+        C1f32([v as f32])
+    }
+}
+
+impl From<f32> for C1f64 {
+    #[inline]
+    fn from(v: f32) -> Self {
+        C1f64([v as f64])
     }
 }
 

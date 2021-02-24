@@ -1,12 +1,12 @@
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Neg};
 
-use crate::{ring_buffer::RingBuffer, signal::C1f32};
+use crate::ring_buffer::RingBuffer;
 
 use super::{Node, ProcContext};
 
 pub struct AllPassFilter<T, A, DA>
 where
-    T: 'static + Clone + Default + Mul<Output = T> + Mul<C1f32, Output = T> + Add<Output = T>,
+    T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T> + Neg,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
@@ -19,7 +19,7 @@ where
 
 impl<T, A, DA> AllPassFilter<T, A, DA>
 where
-    T: 'static + Clone + Default + Mul<Output = T> + Mul<C1f32, Output = T> + Add<Output = T>,
+    T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
@@ -36,7 +36,7 @@ where
 
 impl<T, A, DA> Node<T> for AllPassFilter<T, A, DA>
 where
-    T: 'static + Clone + Default + Mul<Output = T> + Mul<C1f32, Output = T> + Add<Output = T>,
+    T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
@@ -51,9 +51,8 @@ where
         let delay_value = self.buffer.get(delay_len);
 
         let v = self.node.as_mut().proc(ctx) + delay_value.clone() * self.gain.clone();
-        self.buffer
-            .push(v.clone());
-        delay_value + v * self.gain.clone() * C1f32::from(-1.0)
+        self.buffer.push(v.clone());
+        delay_value + v * -self.gain.clone()
     }
 
     fn lock(&mut self) {
@@ -67,7 +66,7 @@ where
 
 impl<T, A, DA> AsMut<Self> for AllPassFilter<T, A, DA>
 where
-    T: 'static + Clone + Default + Mul<Output = T> + Mul<C1f32, Output = T> + Add<Output = T>,
+    T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
@@ -78,7 +77,7 @@ where
 
 impl<T, A, DA> std::borrow::Borrow<RingBuffer<T>> for AllPassFilter<T, A, DA>
 where
-    T: 'static + Clone + Default + Mul<Output = T> + Mul<C1f32, Output = T> + Add<Output = T>,
+    T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {

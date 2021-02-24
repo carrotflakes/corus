@@ -1,72 +1,55 @@
-use crate::{node::{Node, add::Add, all_pass_filter::AllPassFilter, amp::Amp, comb_filter::CombFilter, constant::Constant, mix::Mix, proc_once_share::ProcOnceShare}, signal::C1f32};
+use std::ops::{Mul, Neg};
 
-pub fn schroeder_reverb<N: Node<C1f32> + 'static, DN: AsMut<N> + 'static>(
+use crate::node::{
+    add::Add, all_pass_filter::AllPassFilter, amp::Amp, comb_filter::CombFilter,
+    constant::Constant, mix::Mix, proc_once_share::ProcOnceShare, Node,
+};
+
+pub fn schroeder_reverb<
+    T: Clone
+        + 'static
+        + Default
+        + Mul<Output = T>
+        + std::ops::Add<Output = T>
+        + Neg<Output = T>
+        + From<f64>,
+    N: Node<T> + 'static,
+    DN: AsMut<N> + 'static,
+>(
     node: DN,
 ) -> Add<
-    C1f32,
-    ProcOnceShare<C1f32, N, DN>,
+    T,
+    ProcOnceShare<T, N, DN>,
     Amp<
-        C1f32,
+        T,
         AllPassFilter<
-            C1f32,
-            AllPassFilter<
-                C1f32,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-            >,
-            AllPassFilter<
-                C1f32,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-            >,
+            T,
+            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
+            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
         >,
-        Constant<C1f32>,
+        Constant<T>,
         AllPassFilter<
-            C1f32,
-            AllPassFilter<
-                C1f32,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-            >,
-            AllPassFilter<
-                C1f32,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-            >,
+            T,
+            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
+            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
         >,
-        Constant<C1f32>,
+        Constant<T>,
     >,
-    ProcOnceShare<C1f32, N, DN>,
+    ProcOnceShare<T, N, DN>,
     Amp<
-        C1f32,
+        T,
         AllPassFilter<
-            C1f32,
-            AllPassFilter<
-                C1f32,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-            >,
-            AllPassFilter<
-                C1f32,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-            >,
+            T,
+            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
+            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
         >,
-        Constant<C1f32>,
+        Constant<T>,
         AllPassFilter<
-            C1f32,
-            AllPassFilter<
-                C1f32,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-            >,
-            AllPassFilter<
-                C1f32,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-                Mix<C1f32, Box<dyn Node<C1f32>>>,
-            >,
+            T,
+            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
+            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
         >,
-        Constant<C1f32>,
+        Constant<T>,
     >,
 > {
     let node = ProcOnceShare::new(node);
@@ -75,8 +58,8 @@ pub fn schroeder_reverb<N: Node<C1f32> + 'static, DN: AsMut<N> + 'static>(
             Box::new(CombFilter::new(
                 node.clone(),
                 0.03 + 0.0041 * i as f32,
-                (0.6 + i as f32 * 0.02).into(),
-            )) as Box<dyn Node<C1f32>>
+                (0.6 + i as f64 * 0.02).into(),
+            )) as Box<dyn Node<T>>
         })
         .collect();
     let mix = Mix::new(nodes);
