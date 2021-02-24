@@ -1,11 +1,7 @@
-use corus::{
-    contrib::{
+use corus::{contrib::{
         chip::{Noise, NoiseEvent},
         event_controll::EventControll,
-    },
-    proc_context::ProcContext,
-    signal::C1f32,
-};
+    }, proc_context::ProcContext, signal::{C1f64, Mono}};
 
 use corus::node::{self};
 use node::Node;
@@ -13,7 +9,7 @@ use node::Node;
 fn main() {
     let sample_rate = 44100;
 
-    let mut node: EventControll<C1f32, NoiseEvent> = EventControll::new(Noise::new());
+    let mut node: EventControll<C1f64, NoiseEvent> = EventControll::new(Noise::new());
     node.push_event(2.0 * 0.0, NoiseEvent::ShortFreq(false));
     node.push_event(2.0 * 0.1, NoiseEvent::OriginalFreq(1, 4));
     node.push_event(2.0 * 0.2, NoiseEvent::OriginalFreq(2, 4));
@@ -26,7 +22,7 @@ fn main() {
     let mut writer = Writer::new("chip_noise.wav");
     node.lock();
     for s in pc.into_iter(&mut node).take(sample_rate as usize * 3) {
-        writer.write(s.0[0], s.0[0]);
+        writer.write(s.get_m(), s.get_m());
     }
     node.unlock();
     writer.finish();
@@ -45,12 +41,12 @@ impl Writer {
         Writer(hound::WavWriter::create(name, spec).unwrap())
     }
 
-    pub fn write(&mut self, sample1: f32, sample2: f32) {
+    pub fn write(&mut self, sample1: f64, sample2: f64) {
         self.0
-            .write_sample((sample1 * std::i16::MAX as f32) as i16)
+            .write_sample((sample1 * std::i16::MAX as f64) as i16)
             .unwrap();
         self.0
-            .write_sample((sample2 * std::i16::MAX as f32) as i16)
+            .write_sample((sample2 * std::i16::MAX as f64) as i16)
             .unwrap();
     }
 

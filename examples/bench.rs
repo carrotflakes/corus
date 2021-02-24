@@ -2,7 +2,7 @@ use corus::{node::{
         add::Add, amp::Amp, ring_buffer_record::RingBufferRecord, ring_buffer_playback::RingBufferPlayback, constant::Constant,
         controllable::Controllable, mix::Mix, param::Param, placeholder::Placeholder,
         proc_once_share::ProcOnceShare, sine::Sine, Node,
-    }, proc_context::ProcContext, signal::C1f32};
+    }, proc_context::ProcContext, signal::{C1f64, Mono}};
 
 fn main() {
     let sample_rate = 44100;
@@ -13,14 +13,14 @@ fn main() {
     for i in 0..100 {
         let freq = Controllable::new(Param::new());
         let mut freq_ctrl = freq.controller();
-        let f = 440.0 * (i + 1) as f32;
+        let f = 440.0 * (i + 1) as f64;
         freq_ctrl.lock().set_value_at_time(0.0, f);
         freq_ctrl.lock().linear_ramp_to_value_at_time(1.0, f * 2.0);
         freq_ctrl.lock().exponential_ramp_to_value_at_time(2.0, f);
         nodes.push(Box::new(Amp::new(
             Sine::new(Add::new(freq, modulator.clone())),
-            Constant::from(1.0 / (i + 1) as f32),
-        )) as Box<dyn Node<C1f32>>);
+            Constant::from(1.0 / (i + 1) as f64),
+        )) as Box<dyn Node<C1f64>>);
     }
 
     let mix = Mix::new(nodes);
@@ -36,7 +36,7 @@ fn main() {
                     RingBufferPlayback::new(Constant::from(0.5), buffer.clone()),
                     Constant::from(0.5),
                 ),
-            )) as Box<dyn Node<C1f32>>);
+            )) as Box<dyn Node<C1f64>>);
         }
         buffer
     };
@@ -48,7 +48,7 @@ fn main() {
     let start = std::time::Instant::now();
     node.lock();
     for s in pc.into_iter(&mut node).take(sample_rate as usize * 4) {
-        writer.write(s.0[0], s.0[0]);
+        writer.write(s.get_m(), s.get_m());
     }
     node.unlock();
     println!("{:?} elapsed", start.elapsed());
@@ -68,12 +68,12 @@ impl Writer {
         Writer(hound::WavWriter::create(name, spec).unwrap())
     }
 
-    pub fn write(&mut self, sample1: f32, sample2: f32) {
+    pub fn write(&mut self, sample1: f64, sample2: f64) {
         self.0
-            .write_sample((sample1 * std::i16::MAX as f32) as i16)
+            .write_sample((sample1 * std::i16::MAX as f64) as i16)
             .unwrap();
         self.0
-            .write_sample((sample2 * std::i16::MAX as f32) as i16)
+            .write_sample((sample2 * std::i16::MAX as f64) as i16)
             .unwrap();
     }
 

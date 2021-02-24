@@ -3,38 +3,42 @@ use std::marker::PhantomData;
 use crate::{
     node::{controllable::Controllable, param::Param, Node},
     proc_context::ProcContext,
-    signal::C1f32,
+    signal::Mono,
 };
 
 use super::envelope::EnvelopeGenerator;
 
-type Env = (
-    Controllable<C1f32, Param>,
+type F = f64;
+
+type Env<T: Mono<F>> = (
+    Controllable<T, Param<F, T>>,
     Box<dyn FnMut(f64)>,
     Box<dyn FnMut(f64)>,
 );
 
-pub struct FmSynth<A, B, DA, DB>
+pub struct FmSynth<T, A, B, DA, DB>
 where
-    A: Node<C1f32> + ?Sized,
-    B: Node<C1f32> + ?Sized,
+    T: Mono<F>,
+    A: Node<T> + ?Sized,
+    B: Node<T> + ?Sized,
     DA: AsMut<A>,
     DB: AsMut<B>,
 {
-    pub oscillators: [(DA, DB, Env, f32, [bool; 5], f32); 4],
-    pub frequency: Param,
+    pub oscillators: [(DA, DB, Env<T>, F, [bool; 5], F); 4],
+    pub frequency: Param<F, T>,
     _t: (PhantomData<A>, PhantomData<B>),
 }
 
-impl<A, B, DA, DB> FmSynth<A, B, DA, DB>
+impl<T, A, B, DA, DB> FmSynth<T, A, B, DA, DB>
 where
-    A: Node<C1f32> + ?Sized,
-    B: Node<C1f32> + ?Sized,
+    T: Mono<F>,
+    A: Node<T> + ?Sized,
+    B: Node<T> + ?Sized,
     DA: AsMut<A>,
     DB: AsMut<B>,
 {
-    pub fn new<E: EnvelopeGenerator>(oscillators: [(DA, DB, E, f32, Vec<u8>); 4]) -> Self {
-        let f = |x: (DA, DB, E, f32, Vec<u8>)| {
+    pub fn new<E: EnvelopeGenerator<T>>(oscillators: [(DA, DB, E, F, Vec<u8>); 4]) -> Self {
+        let f = |x: (DA, DB, E, F, Vec<u8>)| {
             (
                 x.0,
                 x.1,
@@ -47,7 +51,7 @@ where
                     x.4.contains(&3),
                     x.4.contains(&4),
                 ],
-                0.0,
+                Default::default(),
             )
         };
         let [o0, o1, o2, o3] = oscillators;
@@ -59,7 +63,7 @@ where
         }
     }
 
-    pub fn note_on(&mut self, time: f64, frequency: f32) {
+    pub fn note_on(&mut self, time: f64, frequency: F) {
         self.frequency.set_value_at_time(time, frequency);
         for oscillator in &mut self.oscillators {
             (oscillator.2 .1)(time);
@@ -73,32 +77,33 @@ where
     }
 }
 
-impl<A, B, DA, DB> Node<C1f32> for FmSynth<A, B, DA, DB>
+impl<T, A, B, DA, DB> Node<T> for FmSynth<T, A, B, DA, DB>
 where
-    A: Node<C1f32> + ?Sized,
-    B: Node<C1f32> + ?Sized,
+    T: Mono<f64>,
+    A: Node<T> + ?Sized,
+    B: Node<T> + ?Sized,
     DA: AsMut<A>,
     DB: AsMut<B>,
 {
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> C1f32 {
+    fn proc(&mut self, ctx: &ProcContext) -> T {
         let mut outputs = [0.0; 5];
-        let dtime = 1.0 / ctx.sample_rate as f32;
-        let frequency = self.frequency.as_mut().proc(ctx).0[0];
+        let dtime = 1.0 / ctx.sample_rate as f64;
+        let frequency = self.frequency.as_mut().proc(ctx).get_m();
         for (i, oscillator) in self.oscillators.iter_mut().enumerate() {
-            let freq_rate = oscillator.0.as_mut().proc(ctx).0[0];
-            let freq_tune = oscillator.1.as_mut().proc(ctx).0[0];
-            let env = oscillator.2 .0.as_mut().proc(ctx).0[0];
-            oscillator.5 += (frequency * freq_rate + freq_tune + outputs[i]) * dtime;
+            let freq_rate = oscillator.0.as_mut().proc(ctx).get_m();
+            let freq_tune = oscillator.1.as_mut().proc(ctx).get_m();
+            let env = oscillator.2 .0.as_mut().proc(ctx).get_m();
+            oscillator.5 = oscillator.5 + (frequency * freq_rate + freq_tune + outputs[i]) * dtime;
             oscillator.5 = oscillator.5.fract();
-            let v = (oscillator.5 * std::f32::consts::PI * 2.0).sin() * oscillator.3 * env;
+            let v = (oscillator.5 * std::f64::consts::PI * 2.0).sin() * oscillator.3 * env;
             for (i, b) in oscillator.4.iter().enumerate() {
                 if *b {
                     outputs[i] += v;
                 }
             }
         }
-        outputs[4].into()
+        T::from_m(outputs[4])
     }
 
     fn lock(&mut self) {
@@ -120,10 +125,11 @@ where
     }
 }
 
-impl<A, B, DA, DB> AsMut<Self> for FmSynth<A, B, DA, DB>
+impl<T, A, B, DA, DB> AsMut<Self> for FmSynth<T, A, B, DA, DB>
 where
-    A: Node<C1f32> + ?Sized,
-    B: Node<C1f32> + ?Sized,
+    T: Mono<F>,
+    A: Node<T> + ?Sized,
+    B: Node<T> + ?Sized,
     DA: AsMut<A>,
     DB: AsMut<B>,
 {

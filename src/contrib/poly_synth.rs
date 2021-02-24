@@ -3,15 +3,15 @@ use std::marker::PhantomData;
 use crate::{
     node::Node,
     proc_context::ProcContext,
-    signal::C1f32,
+    signal::C1f64,
 };
 
-pub struct PolySynth<A: Node<C1f32> + ?Sized, DA: AsMut<A>> {
+pub struct PolySynth<A: Node<C1f64> + ?Sized, DA: AsMut<A>> {
     voices: Vec<Voice<A, DA>>,
     current: usize,
 }
 
-pub struct Voice<A: Node<C1f32> + ?Sized, DA: AsMut<A>> {
+pub struct Voice<A: Node<C1f64> + ?Sized, DA: AsMut<A>> {
     last_notenum: u8,
     node: DA,
     note_on: Box<dyn FnMut(f64, u8)>,
@@ -19,7 +19,7 @@ pub struct Voice<A: Node<C1f32> + ?Sized, DA: AsMut<A>> {
     _a: PhantomData<A>,
 }
 
-impl<A: Node<C1f32> + ?Sized, DA: AsMut<A>> Voice<A, DA> {
+impl<A: Node<C1f64> + ?Sized, DA: AsMut<A>> Voice<A, DA> {
     pub fn new(
         node: DA,
         note_on: Box<dyn FnMut(f64, u8)>,
@@ -35,7 +35,7 @@ impl<A: Node<C1f32> + ?Sized, DA: AsMut<A>> Voice<A, DA> {
     }
 }
 
-impl<A: Node<C1f32> + ?Sized, DA: AsMut<A>> PolySynth<A, DA> {
+impl<A: Node<C1f64> + ?Sized, DA: AsMut<A>> PolySynth<A, DA> {
     pub fn new(voice_builder: &dyn Fn() -> Voice<A, DA>, voice_num: usize) -> Self {
         Self {
             voices: (0..voice_num).map(|_| voice_builder()).collect(),
@@ -60,9 +60,9 @@ impl<A: Node<C1f32> + ?Sized, DA: AsMut<A>> PolySynth<A, DA> {
     }
 }
 
-impl<A: Node<C1f32> + ?Sized, DA: AsMut<A>> Node<C1f32> for PolySynth<A, DA> {
+impl<A: Node<C1f64> + ?Sized, DA: AsMut<A>> Node<C1f64> for PolySynth<A, DA> {
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> C1f32 {
+    fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
         let mut v = Default::default();
         for voice in &mut self.voices {
             v = v + voice.node.as_mut().proc(ctx);
@@ -83,7 +83,7 @@ impl<A: Node<C1f32> + ?Sized, DA: AsMut<A>> Node<C1f32> for PolySynth<A, DA> {
     }
 }
 
-impl<A: Node<C1f32> + ?Sized, DA: AsMut<A>> AsMut<Self> for PolySynth<A, DA> {
+impl<A: Node<C1f64> + ?Sized, DA: AsMut<A>> AsMut<Self> for PolySynth<A, DA> {
     fn as_mut(&mut self) -> &mut Self {
         self
     }

@@ -7,7 +7,7 @@ use super::{Node, ProcContext};
 pub struct RingBufferPlayback<T, A, DA, B>
 where
     T: 'static + Clone + Default,
-    A: Node<f32> + ?Sized,
+    A: Node<f64> + ?Sized,
     DA: AsMut<A>,
     B: Borrow<RingBuffer<T>>,
 {
@@ -20,7 +20,7 @@ where
 impl<T, A, DA, B> RingBufferPlayback<T, A, DA, B>
 where
     T: 'static + Clone + Default,
-    A: Node<f32> + ?Sized,
+    A: Node<f64> + ?Sized,
     DA: AsMut<A>,
     B: Borrow<RingBuffer<T>>,
 {
@@ -37,14 +37,14 @@ where
 impl<T, A, DA, B> Node<T> for RingBufferPlayback<T, A, DA, B>
 where
     T: 'static + Clone + Default,
-    A: Node<f32> + ?Sized,
+    A: Node<f64> + ?Sized,
     DA: AsMut<A>,
     B: Borrow<RingBuffer<T>>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         let t = self.node.as_mut().proc(ctx);
-        let i = (t * ctx.sample_rate as f32).round() as usize;
+        let i = (t * ctx.sample_rate as f64).round() as usize;
         self.buffer.borrow().get(i)
     }
 
@@ -60,7 +60,7 @@ where
 impl<T, A, DA, B> AsMut<Self> for RingBufferPlayback<T, A, DA, B>
 where
     T: 'static + Clone + Default,
-    A: Node<f32> + ?Sized,
+    A: Node<f64> + ?Sized,
     DA: AsMut<A>,
     B: Borrow<RingBuffer<T>>,
 {

@@ -1,4 +1,4 @@
-use crate::{node::Node, proc_context::ProcContext, signal::C1f32};
+use crate::{node::Node, proc_context::ProcContext, signal::{C1f64, Mono}};
 
 use super::event_controll::Event;
 
@@ -7,7 +7,7 @@ pub struct Noise {
     pub short_freq: bool,
     pub reg: u16,
     pub output: u16,
-    steps: f32,
+    steps: f64,
 }
 
 impl Noise {
@@ -31,9 +31,9 @@ impl Noise {
     }
 }
 
-impl Node<C1f32> for Noise {
-    fn proc(&mut self, ctx: &ProcContext) -> C1f32 {
-        self.steps += self.freq as f32 / ctx.sample_rate as f32;
+impl Node<C1f64> for Noise {
+    fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
+        self.steps += self.freq as f64 / ctx.sample_rate as f64;
         for _ in 0..self.steps as usize {
             if self.reg == 0 {
                 self.reg = 1;
@@ -50,7 +50,7 @@ impl Node<C1f32> for Noise {
             self.output ^= self.reg & 1;
         }
         self.steps = self.steps.fract();
-        C1f32([self.output as f32 * 2.0 - 1.0])
+        C1f64::from_m(self.output as f64 * 2.0 - 1.0)
     }
 
     fn lock(&mut self) {}
@@ -71,7 +71,7 @@ pub enum NoiseEvent {
     ResetReg,
 }
 
-impl Event<C1f32> for NoiseEvent {
+impl Event<C1f64> for NoiseEvent {
     type Node = Noise;
 
     fn dispatch(&self, _time: f64, node: &mut Self::Node) {

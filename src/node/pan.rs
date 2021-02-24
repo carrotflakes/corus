@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, ops::{Add, Mul}};
 
-use crate::signal::{C1f32, C1f64, IntoStereo, Signal};
+use crate::signal::{C1f64, IntoStereo, Signal};
 
 use super::{Node, ProcContext};
 
@@ -35,33 +35,6 @@ FP: Clone + 'static,
             b,
             _t: Default::default(),
         }
-    }
-}
-
-impl<T, O, A, B, DA, DB> Node<O> for Pan<f32, C1f32, T, O, A, B, DA, DB>
-where
-    T: Clone + 'static + Add<Output = T> + Mul<Output = T> + IntoStereo<f32, Output = O>,
-    O: Clone + 'static + Add<Output = O> + Mul<Output = O> + Signal<Float = f32>,
-    A: Node<T> + ?Sized,
-    B: Node<C1f32> + ?Sized,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
-{
-    #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> O {
-        let v: T = self.a.as_mut().proc(ctx);
-        let pan = self.b.as_mut().proc(ctx);
-        v.into_stereo_with_pan(pan.get(0))
-    }
-
-    fn lock(&mut self) {
-        self.a.as_mut().lock();
-        self.b.as_mut().lock();
-    }
-
-    fn unlock(&mut self) {
-        self.a.as_mut().unlock();
-        self.b.as_mut().unlock();
     }
 }
 

@@ -1,44 +1,59 @@
+use std::marker::PhantomData;
+
 use crate::{
     node::{controllable::Controllable, param::Param},
-    signal::C1f32,
+    signal::Mono,
 };
 
 use super::controllable_param;
 
-pub trait EnvelopeGenerator {
+type F = f64;
+
+pub trait EnvelopeGenerator<T: Mono<F>> {
     fn generate(
         &self,
     ) -> (
-        Controllable<C1f32, Param>,
+        Controllable<T, Param<F, T>>,
         Box<dyn FnMut(f64)>,
         Box<dyn FnMut(f64)>,
     );
 }
 
 #[derive(Debug, Clone)]
-pub struct AdsrEnvelope {
-    pub a: f32,
-    pub d: f32,
-    pub s: f32,
-    pub r: f32,
+pub struct AdsrEnvelope<F: 'static + Clone + Default, T: Mono<F>> {
+    pub a: f64,
+    pub d: F,
+    pub s: f64,
+    pub r: f64,
+    _t: PhantomData<T>,
 }
 
-impl AdsrEnvelope {
-    pub fn build(&self) -> (Controllable<C1f32, Param>, impl FnMut(f64), impl FnMut(f64)) {
-        let (env, env_ctrl) = controllable_param(0.0);
+impl<T: Mono<F>> AdsrEnvelope<F, T> {
+    pub fn new(a: f64, d: F, s: f64, r: f64) -> Self {
+        Self { a, d, s, r, _t: Default::default() }
+    }
+
+    pub fn build(
+        &self,
+    ) -> (
+        Controllable<T, Param<F, T>>,
+        impl FnMut(f64),
+        impl FnMut(f64),
+    ) {
+        let (env, env_ctrl) = controllable_param::<T>(Default::default());
         (
             env,
             {
                 let mut env_ctrl = env_ctrl.clone();
                 let a = self.a as f64;
-                let d = self.d;
+                let d = self.d.clone();
                 let a_s = a + self.s as f64;
                 move |time| {
                     let mut env = env_ctrl.lock();
                     env.cancel_and_hold_at_time(time);
-                    env.set_value_at_time(time, 0.001);
-                    env.exponential_ramp_to_value_at_time(time + a, 1.0);
-                    env.exponential_ramp_to_value_at_time(time + a_s, d);
+                    env.set_value_at_time(time, 0.001.into());
+                    env.exponential_ramp_to_value_at_time(time + a, 1.0.into());
+                    env.exponential_ramp_to_value_at_time(time + a_s, d.clone());
                 }
             },
             {
@@ -47,7 +62,7 @@ impl AdsrEnvelope {
                 move |time| {
                     let mut env = env_ctrl.lock();
                     env.cancel_and_hold_at_time(time);
-                    env.exponential_ramp_to_value_at_time(time + r, 0.001);
+                    env.exponential_ramp_to_value_at_time(time + r, 0.001.into());
                     // env.set_target_at_time(time, 0.0, r);
                 }
             },
@@ -56,14 +71,24 @@ impl AdsrEnvelope {
 }
 
 #[derive(Debug, Clone)]
-pub struct ArEnvelope {
-    pub a: f32,
-    pub r: f32,
+pub struct ArEnvelope<T: Mono<F>> {
+    pub a: f64,
+    pub r: f64,
+    _t: PhantomData<T>,
 }
 
-impl ArEnvelope {
-    pub fn build(&self) -> (Controllable<C1f32, Param>, impl FnMut(f64), impl FnMut(f64)) {
-        let (env, env_ctrl) = controllable_param(0.0);
+impl<T: Mono<F>> ArEnvelope<T> {
+    pub fn new(a: f64, r: f64) -> Self {
+        Self { a, r, _t: Default::default() }
+    }
+    pub fn build(
+        &self,
+    ) -> (
+        Controllable<T, Param<F, T>>,
+        impl FnMut(f64),
+        impl FnMut(f64),
+    ) {
+        let (env, env_ctrl) = controllable_param(Default::default());
         (
             env,
             {
@@ -73,9 +98,9 @@ impl ArEnvelope {
                 move |time| {
                     let mut env = env_ctrl.lock();
                     env.cancel_and_hold_at_time(time);
-                    env.set_value_at_time(time, 0.001);
-                    env.exponential_ramp_to_value_at_time(time + a, 1.0);
-                    env.exponential_ramp_to_value_at_time(time + a_r, 0.001);
+                    env.set_value_at_time(time, 0.001.into());
+                    env.exponential_ramp_to_value_at_time(time + a, 1.0.into());
+                    env.exponential_ramp_to_value_at_time(time + a_r, 0.001.into());
                 }
             },
             { move |_| {} },
@@ -83,11 +108,11 @@ impl ArEnvelope {
     }
 }
 
-impl EnvelopeGenerator for AdsrEnvelope {
+impl<T: Mono<F>> EnvelopeGenerator<T> for AdsrEnvelope<F, T> {
     fn generate(
         &self,
     ) -> (
-        Controllable<C1f32, Param>,
+        Controllable<T, Param<F, T>>,
         Box<dyn FnMut(f64)>,
         Box<dyn FnMut(f64)>,
     ) {
@@ -96,11 +121,11 @@ impl EnvelopeGenerator for AdsrEnvelope {
     }
 }
 
-impl EnvelopeGenerator for ArEnvelope {
+impl<T: Mono<F>> EnvelopeGenerator<T> for ArEnvelope<T> {
     fn generate(
         &self,
     ) -> (
-        Controllable<C1f32, Param>,
+        Controllable<T, Param<F, T>>,
         Box<dyn FnMut(f64)>,
         Box<dyn FnMut(f64)>,
     ) {
