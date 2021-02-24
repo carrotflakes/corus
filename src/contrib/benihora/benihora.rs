@@ -54,18 +54,16 @@ impl Node<C1f64> for Benihora {
             vocal_out += self.tract.run_step(
                 ctx.time,
                 glottal_output,
-                v.0[1] as F,
+                v.0[1] as F * noise_mod,
                 lambda1,
                 ctx.sample_rate as usize * 2,
-                noise_mod,
             );
             vocal_out += self.tract.run_step(
                 ctx.time + 0.5 / ctx.sample_rate as f64,
                 glottal_output,
-                v.0[1] as F,
+                v.0[1] as F * noise_mod,
                 lambda2,
                 ctx.sample_rate as usize * 2,
-                noise_mod,
             );
 
             (vocal_out * 0.5).into()
@@ -74,10 +72,9 @@ impl Node<C1f64> for Benihora {
                 .run_step(
                     ctx.time,
                     glottal_output,
-                    v.0[1] as F,
+                    v.0[1] as F * noise_mod,
                     lambda1,
                     ctx.sample_rate as usize,
-                    noise_mod,
                 )
                 .into()
         }

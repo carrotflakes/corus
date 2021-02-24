@@ -47,23 +47,21 @@ impl Tract {
         turbulence_noise: F,
         lambda: F,
         sample_rate: usize,
-        noise_mod: F,
     ) -> F {
         let update_amplitudes = self.rand.next_f32() < 0.1;
 
-        self.mouth.run_step(
+        let lip_output = self.mouth.run_step(
             &mut self.nose,
             time,
             glottal_output,
             turbulence_noise,
             lambda,
             sample_rate,
-            noise_mod,
             update_amplitudes,
         );
-        self.nose.run_step(&self.mouth, update_amplitudes);
+        let nose_out = self.nose.run_step(&self.mouth, update_amplitudes);
 
-        self.mouth.lip_output + self.nose.output
+        lip_output + nose_out
     }
 
     pub fn update_block(&mut self, block_time: F) {
@@ -76,7 +74,7 @@ impl Tract {
     pub fn set_diameter(&mut self) {
         self.mouth.set_diameter();
 
-        let open_nose = self
+        let open_velum = self
             .mouth
             .other_constrictions
             .iter()
@@ -86,7 +84,7 @@ impl Tract {
                     && constriction.end_time.is_none()
             })
             .is_some();
-        self.nose.velum_target = if open_nose { 0.4 } else { 0.01 };
+        self.nose.velum_target = if open_velum { 0.4 } else { 0.01 };
     }
 }
 
@@ -122,8 +120,6 @@ pub struct Mouth {
     lip_reflection: F,
 
     last_obstruction: usize,
-
-    lip_output: F,
 
     transients: Vec<Transient>,
     pub tongue: (F, F), // (index, diameter) // TODO index -> rate
@@ -162,7 +158,6 @@ impl Mouth {
             glottal_reflection: 0.75,
             lip_reflection: -0.85,
             last_obstruction: usize::MAX,
-            lip_output: 0.0,
             transients: Vec::new(),
 
             reflection_left: 0.0,
@@ -176,35 +171,6 @@ impl Mouth {
         }
     }
 
-    fn reshape(&mut self, amount: F, nose: &Nose) {
-        let mut new_last_obstruction = usize::MAX; // 閉塞フラグ
-        for i in 0..self.length {
-            if self.diameter[i] <= 0.0 {
-                new_last_obstruction = i;
-            }
-            let slow_return = if i < nose.start {
-                0.6
-            } else if i >= self.tip_start {
-                1.0
-            } else {
-                0.6 + 0.4 * (i as F - nose.start as F) / (self.tip_start as F - nose.start as F)
-            };
-            self.diameter[i] = move_towards(
-                self.diameter[i],
-                self.target_diameter[i],
-                slow_return * amount,
-                2.0 * amount,
-            );
-        }
-        if self.last_obstruction != usize::MAX
-            && new_last_obstruction == usize::MAX
-            && nose.a[0] < 0.05
-        {
-            self.add_transient(self.last_obstruction);
-        }
-        self.last_obstruction = new_last_obstruction;
-    }
-
     fn run_step(
         &mut self,
         nose: &mut Nose,
@@ -213,12 +179,11 @@ impl Mouth {
         turbulence_noise: F,
         lambda: F,
         sample_rate: usize,
-        noise_mod: F,
         update_amplitudes: bool,
-    ) {
+    ) -> F {
         // mouth
         self.process_transients(sample_rate);
-        self.add_turbulence_noise(time, turbulence_noise, noise_mod);
+        self.add_turbulence_noise(time, turbulence_noise);
 
         //self.glottalReflection = -0.8 + 1.6 * Glottis.newTenseness;
         self.junction_output_r[0] = self.l[0] * self.glottal_reflection + glottal_output;
@@ -254,7 +219,36 @@ impl Mouth {
             }
         }
 
-        self.lip_output = self.r[self.length - 1];
+        self.r[self.length - 1]
+    }
+
+    fn reshape(&mut self, amount: F, nose: &Nose) {
+        let mut new_last_obstruction = usize::MAX; // 閉塞フラグ
+        for i in 0..self.length {
+            if self.diameter[i] <= 0.0 {
+                new_last_obstruction = i;
+            }
+            let slow_return = if i < nose.start {
+                0.6
+            } else if i >= self.tip_start {
+                1.0
+            } else {
+                0.6 + 0.4 * (i as F - nose.start as F) / (self.tip_start as F - nose.start as F)
+            };
+            self.diameter[i] = move_towards(
+                self.diameter[i],
+                self.target_diameter[i],
+                slow_return * amount,
+                2.0 * amount,
+            );
+        }
+        if self.last_obstruction != usize::MAX
+            && new_last_obstruction == usize::MAX
+            && nose.a[0] < 0.05
+        {
+            self.add_transient(self.last_obstruction);
+        }
+        self.last_obstruction = new_last_obstruction;
     }
 
     fn calculate_reflections(&mut self, nose: &Nose) {
@@ -302,7 +296,7 @@ impl Mouth {
         self.transients.retain(|t| t.time_alive <= t.life_time)
     }
 
-    fn add_turbulence_noise(&mut self, time: f64, turbulence_noise: F, noise_mod: F) {
+    fn add_turbulence_noise(&mut self, time: f64, turbulence_noise: F) {
         for constriction in self.other_constrictions.clone() {
             if constriction.index < 2.0 || constriction.index > self.length as F {
                 continue;
@@ -318,7 +312,6 @@ impl Mouth {
                 0.66 * turbulence_noise * intensity,
                 constriction.index,
                 constriction.diameter,
-                noise_mod,
             );
         }
 
@@ -330,16 +323,9 @@ impl Mouth {
         });
     }
 
-    fn add_turbulence_noise_at_index(
-        &mut self,
-        turbulence_noise: F,
-        index: F,
-        diameter: F,
-        noise_mod: F,
-    ) {
+    fn add_turbulence_noise_at_index(&mut self, turbulence_noise: F, index: F, diameter: F) {
         let i = index.floor() as usize;
         let delta = index - i as F;
-        let turbulence_noise = turbulence_noise * noise_mod;
 
         let thinness0 = (8.0 * (0.7 - diameter)).clamp(0.0, 1.0);
         let openness = (30.0 * (diameter - 0.3)).clamp(0.0, 1.0);
@@ -432,8 +418,6 @@ pub struct Nose {
 
     pub fade: F, // 0.9999
     pub velum_target: F,
-
-    output: F,
 }
 
 impl Nose {
@@ -460,11 +444,10 @@ impl Nose {
             max_amplitude: vec![0.0; length],
             fade: 0.999,
             velum_target: 0.5, // 0.01
-            output: 0.0,
         }
     }
 
-    fn run_step(&mut self, mouth: &Mouth, update_amplitudes: bool) {
+    fn run_step(&mut self, mouth: &Mouth, update_amplitudes: bool) -> F {
         self.junction_output_l[self.length] = self.r[self.length - 1] * mouth.lip_reflection;
 
         for i in 1..self.length {
@@ -487,7 +470,7 @@ impl Nose {
             }
         }
 
-        self.output = self.r[self.length - 1];
+        self.r[self.length - 1]
     }
 
     fn reshape(&mut self, amount: F) {
