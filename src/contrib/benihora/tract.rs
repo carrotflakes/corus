@@ -514,9 +514,9 @@ impl Constriction {
     fn fricative_intensity(&self, time: f64) -> F {
         let fricative_attack_time = 0.1;
         if let Some(end_time) = self.end_time {
-            ((time - end_time) / fricative_attack_time).clamp(0.0, 1.0)
+            (1.0 - (time - end_time) / fricative_attack_time).clamp(0.0, 1.0)
         } else {
-            (1.0 - (time - self.start_time) / fricative_attack_time).clamp(0.0, 1.0)
+            ((time - self.start_time) / fricative_attack_time).clamp(0.0, 1.0)
         }
     }
 }
