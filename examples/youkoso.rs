@@ -27,63 +27,8 @@ fn main() {
         .next()
         .unwrap_or("./youkoso.mid".to_string());
 
-    let builder = || {
-        let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
-        let (acc, mut acc_reset) = resetable_acc(freq_param);
-        let saw = Add::new(acc, Constant::from(-0.5));
-        let (env, mut env_on, env_off) = AdsrEnvelope {
-            a: 0.01,
-            d: 0.5,
-            s: 0.2,
-            r: 0.3,
-        }
-        .build();
-        let node = Amp::new(saw, env);
-        Voice::new(
-            Box::new(node) as Box<dyn Node<C1f32>>,
-            Box::new(move |time, notenum| {
-                freq_param_ctrl
-                    .lock()
-                    .set_value_at_time(time, notenum_to_frequency(notenum as u32));
-                acc_reset(time, 0.5);
-                env_on(time);
-            }),
-            Box::new(env_off),
-        )
-    };
-    let builder2 = || {
-        let noise = Controllable::new(EventControll::new(Noise::new()));
-        let mut noise_ctrl = noise.controller();
-        let (env, mut env_on, env_off) = ArEnvelope { a: 0.01, r: 0.3 }.build();
-        let node = Amp::new(noise, Amp::new(env, Constant::from(0.25)));
-        Voice::new(
-            Box::new(node) as Box<dyn Node<C1f32>>,
-            Box::new(move |time, notenum| {
-                noise_ctrl.lock().push_event(time, NoiseEvent::ResetReg);
-                noise_ctrl.lock().push_event(
-                    time,
-                    NoiseEvent::OriginalFreq(notenum % 7, (15 * notenum as usize / 127) as u8),
-                );
-                env_on(time)
-            }),
-            Box::new(env_off),
-        )
-    };
-    let mut tracks: Vec<_> = (0..16)
-        .map(|i| {
-            let synth = if i == 9 {
-                Box::new(PolySynth::new(&builder2, 8))
-                    as Box<PolySynth<dyn Node<C1f32>, Box<dyn Node<C1f32>>>>
-            } else {
-                // Box::new(PolySynth::new(&|| builder3(i + 10), 8))
-                Box::new(PolySynth::new(&builder, 8))
-                    as Box<PolySynth<dyn Node<C1f32>, Box<dyn Node<C1f32>>>>
-            };
-            let gain = Param::with_value(1.0);
-            let pan = Param::with_value(0.0);
-            (synth, gain, pan)
-        })
-        .collect();
+    let mut tracks: Vec<_> = (0..16).map(|i| new_track(i, 0)).collect();
+    let mut used_tracks = Vec::new();
 
     let time = {
         let data = std::fs::read(&file).unwrap();
@@ -91,11 +36,6 @@ fn main() {
         let mut time = 0.0;
         for e in ezmid::Dispatcher::new(events) {
             time = e.time;
-
-            // mute drum part
-            // if e.event.channel == 9 {
-            //     continue;
-            // }
 
             let track = &mut tracks[e.event.channel as usize];
             match e.event.body {
@@ -105,6 +45,7 @@ fn main() {
                     raw_velocity: _,
                 } => {
                     track.0.note_on(e.time, notenum);
+                    track.3 = true;
                 }
                 ezmid::EventBody::NoteOff {
                     notenum,
@@ -124,19 +65,27 @@ fn main() {
                     raw_bend: _,
                 } => {}
                 ezmid::EventBody::Tempo { tempo: _ } => {}
-                ezmid::EventBody::ProgramChange { program: _ } => {}
+                ezmid::EventBody::ProgramChange { program } => {
+                    let mut track_ = new_track(e.event.channel as usize, program);
+                    std::mem::swap(track, &mut track_);
+                    used_tracks.push(track_);
+                }
                 _ => {}
             }
         }
         time + 1.0
     };
 
-    let mix = Mix::new(
-        tracks
-            .into_iter()
-            .map(|t| Box::new(amp_pan(t.0, t.1, t.2)) as Box<dyn Node<C2f32>>)
-            .collect(),
-    );
+    let synthes: Vec<_> = tracks
+        .into_iter()
+        .chain(used_tracks)
+        .filter(|t| t.3)
+        .map(|t| Box::new(amp_pan(t.0, t.1, t.2)) as Box<dyn Node<C2f32>>)
+        .collect();
+
+    println!("{} synthes", synthes.len());
+
+    let mix = Mix::new(synthes);
     let node = Amp::new(mix, Constant::new(C2f32([0.25, 0.25])));
     let node = delay_fx(node, SAMPLE_RATE as usize, 0.3, 0.3);
 
@@ -145,7 +94,73 @@ fn main() {
     println!("saved {:?}", &file);
 }
 
-fn builder3(seed: u32) -> Voice<dyn Node<C1f32>, Box<dyn Node<C1f32>>> {
+fn new_track(
+    track: usize,
+    program: u8,
+) -> (
+    Box<PolySynth<dyn Node<C1f32>, Box<dyn Node<C1f32>>>>,
+    Param,
+    Param,
+    bool,
+) {
+    let synth = if track == 9 {
+        Box::new(PolySynth::new(&noise_builder, 8))
+            as Box<PolySynth<dyn Node<C1f32>, Box<dyn Node<C1f32>>>>
+    } else {
+        // Box::new(PolySynth::new(&|| fm_synth_builder(program as u32), 8))
+        Box::new(PolySynth::new(&saw_builder, 8))
+            as Box<PolySynth<dyn Node<C1f32>, Box<dyn Node<C1f32>>>>
+    };
+    let gain = Param::with_value(1.0);
+    let pan = Param::with_value(0.0);
+    (synth, gain, pan, false)
+}
+
+fn saw_builder() -> Voice<dyn Node<C1f32>, Box<dyn Node<C1f32>>> {
+    let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
+    let (acc, mut acc_reset) = resetable_acc(freq_param);
+    let saw = Add::new(acc, Constant::from(-0.5));
+    let (env, mut env_on, env_off) = AdsrEnvelope {
+        a: 0.01,
+        d: 0.5,
+        s: 0.2,
+        r: 0.3,
+    }
+    .build();
+    let node = Amp::new(saw, env);
+    Voice::new(
+        Box::new(node) as Box<dyn Node<C1f32>>,
+        Box::new(move |time, notenum| {
+            freq_param_ctrl
+                .lock()
+                .set_value_at_time(time, notenum_to_frequency(notenum as u32));
+            acc_reset(time, 0.5);
+            env_on(time);
+        }),
+        Box::new(env_off),
+    )
+}
+
+fn noise_builder() -> Voice<dyn Node<C1f32>, Box<dyn Node<C1f32>>> {
+    let noise = Controllable::new(EventControll::new(Noise::new()));
+    let mut noise_ctrl = noise.controller();
+    let (env, mut env_on, env_off) = ArEnvelope { a: 0.01, r: 0.3 }.build();
+    let node = Amp::new(noise, Amp::new(env, Constant::from(0.25)));
+    Voice::new(
+        Box::new(node) as Box<dyn Node<C1f32>>,
+        Box::new(move |time, notenum| {
+            noise_ctrl.lock().push_event(time, NoiseEvent::ResetReg);
+            noise_ctrl.lock().push_event(
+                time,
+                NoiseEvent::OriginalFreq(notenum % 7, (15 * notenum as usize / 127) as u8),
+            );
+            env_on(time)
+        }),
+        Box::new(env_off),
+    )
+}
+
+fn fm_synth_builder(seed: u32) -> Voice<dyn Node<C1f32>, Box<dyn Node<C1f32>>> {
     let synth = Controllable::new(rand_fm_synth(seed));
     let mut ctrl1 = synth.controller();
     let mut ctrl2 = synth.controller();
