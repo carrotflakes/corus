@@ -124,6 +124,8 @@ fn main() {
                     raw_bend: _,
                 } => {}
                 ezmid::EventBody::Tempo { tempo: _ } => {}
+                ezmid::EventBody::ProgramChange { program: _ } => {}
+                _ => {}
             }
         }
         time + 1.0
