@@ -98,6 +98,9 @@ fn main() {
     benihora.push_event(13.0, BenihoraEvent::SetStatus(false, false));
     benihora.push_event(14.0, BenihoraEvent::SetStatus(true, false));
 
+    benihora.push_event(15.0, BenihoraEvent::SetOtherConstrictions(vec![(12.0, 0.6)]));
+    benihora.push_event(16.0, BenihoraEvent::SetOtherConstrictions(vec![]));
+
     let node = amp_pan(
         Map::new(benihora, |c| C1f32([c.0[0] as f32])),
         Constant::from(1.0),

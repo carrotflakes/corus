@@ -1,7 +1,7 @@
 use crate::{
     node::Node,
     proc_context::ProcContext,
-    signal::{C1f64, C2f32},
+    signal::{C1f64, C1f32},
 };
 
 use super::{
@@ -11,7 +11,7 @@ use super::{
 };
 
 pub struct Benihora {
-    node: Box<dyn Node<C2f32>>,
+    node: Box<dyn Node<C1f32>>,
     glottis: Glottis,
     tract: Tract,
     block_time: f64,         // sec
@@ -20,7 +20,7 @@ pub struct Benihora {
 }
 
 impl Benihora {
-    pub fn new(node: Box<dyn Node<C2f32>>) -> Self {
+    pub fn new(node: Box<dyn Node<C1f32>>) -> Self {
         Self {
             glottis: Glottis::new(),
             tract: Tract::new(),
@@ -49,19 +49,20 @@ impl Node<C1f64> for Benihora {
             .glottis
             .run_step(ctx.time, ctx.sample_rate as usize, lambda1, v.0[0] as F);
         let noise_mod = self.glottis.get_noise_modulator(lambda1);
+        let turbulence_noise = v.0[0] as F * noise_mod; // v.0[1] is better...
         if self.twice {
             let mut vocal_out = 0.0;
             vocal_out += self.tract.run_step(
                 ctx.time,
                 glottal_output,
-                v.0[1] as F * noise_mod,
+                turbulence_noise,
                 lambda1,
                 ctx.sample_rate as usize * 2,
             );
             vocal_out += self.tract.run_step(
                 ctx.time + 0.5 / ctx.sample_rate as f64,
                 glottal_output,
-                v.0[1] as F * noise_mod,
+                turbulence_noise,
                 lambda2,
                 ctx.sample_rate as usize * 2,
             );
@@ -72,7 +73,7 @@ impl Node<C1f64> for Benihora {
                 .run_step(
                     ctx.time,
                     glottal_output,
-                    v.0[1] as F * noise_mod,
+                    turbulence_noise,
                     lambda1,
                     ctx.sample_rate as usize,
                 )
