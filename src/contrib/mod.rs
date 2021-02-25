@@ -12,6 +12,7 @@ pub mod poly_synth;
 pub mod rand;
 pub mod rand_fm_synth;
 pub mod schroeder;
+pub mod smooth;
 
 pub use effects::*;
 pub use oscillators::*;
