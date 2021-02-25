@@ -24,7 +24,7 @@ pub fn delay_fx<A: Node<C2f64> + 'static>(
         Placeholder<C2f64, dyn Node<C2f64>, Box<dyn Node<C2f64>>>,
     >,
 > {
-    let mut p = Placeholder::new();
+    let mut p = Placeholder::new(None);
     let mut ps = p.setter();
     let buffer = ProcOnceShare::new(RingBufferRecord::new(p, sample_rate));
     unsafe {

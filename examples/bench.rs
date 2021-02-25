@@ -34,7 +34,7 @@ fn main() {
     let mix = Mix::new(nodes);
 
     let mix = {
-        let mut p = Placeholder::new();
+        let mut p = Placeholder::new(None);
         let mut ps = p.setter();
         let buffer = ProcOnceShare::new(RingBufferRecord::new(p, sample_rate as usize));
         unsafe {

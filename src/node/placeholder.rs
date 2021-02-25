@@ -32,9 +32,9 @@ where
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
-    pub fn new() -> Self {
+    pub fn new(node: Option<DA>) -> Self {
         Placeholder {
-            node: Box::new(None),
+            node: Box::new(node),
             _t: Default::default(),
             _a: Default::default(),
         }
