@@ -1,6 +1,6 @@
 use corus::{
-    node::Node,
-    proc_context::ProcContext,
+    Node,
+    ProcContext,
     signal::{C1f64, Mono},
 };
 use sdl2::audio::AudioCallback;
