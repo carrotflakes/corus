@@ -11,7 +11,7 @@ use corus::{
         rand_fm_synth::rand_fm_synth,
         resetable_acc,
     },
-    node::{
+    core::{
         add::Add, amp::Amp, constant::Constant, controllable::Controllable, mix::Mix, param::Param,
         Node,
     },

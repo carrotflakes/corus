@@ -5,7 +5,7 @@ mod tract;
 pub use benihora::{Benihora, BenihoraEvent};
 
 use crate::{
-    node::{
+    core::{
         add::Add,
         biquad_filter::{BandPass, BiquadFilter},
         constant::Constant,

@@ -1,7 +1,7 @@
 mod write_to_file;
 
 use corus::{
-    node::{
+    core::{
         add::Add, amp::Amp, constant::Constant, controllable::Controllable, mix::Mix, param::Param,
         placeholder::Placeholder, proc_once_share::ProcOnceShare,
         ring_buffer_playback::RingBufferPlayback, ring_buffer_record::RingBufferRecord, sine::Sine,

@@ -1,16 +1,10 @@
 mod write_to_file;
 
-use corus::{
-    contrib::{
+use corus::{contrib::{
         amp_pan,
         benihora::{make_noise_node, Benihora, BenihoraEvent},
         event_controll::EventControll,
-    },
-    notenum_to_frequency,
-};
-
-use corus::node::{self};
-use node::constant::Constant;
+    }, core::constant::Constant, notenum_to_frequency};
 
 const SAMPLE_RATE: usize = 44100;
 

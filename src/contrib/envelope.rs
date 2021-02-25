@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    node::{controllable::Controllable, param::Param},
+    core::{controllable::Controllable, param::Param},
     signal::Mono,
 };
 

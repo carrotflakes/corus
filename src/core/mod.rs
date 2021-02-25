@@ -18,16 +18,10 @@ pub mod ring_buffer_playback;
 pub mod ring_buffer_record;
 pub mod sine;
 
-use crate::proc_context::ProcContext;
-
-pub trait Node<T: 'static> {
-    fn proc(&mut self, ctx: &ProcContext) -> T;
-    fn lock(&mut self);
-    fn unlock(&mut self);
-}
-
 use crate::ring_buffer::RingBuffer;
 use std::borrow::Borrow;
+
+pub use crate::{Node, ProcContext};
 
 use self::{proc_once_share::ProcOnceShare, ring_buffer_record::RingBufferRecord};
 

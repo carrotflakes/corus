@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    node::{controllable::Controllable, param::Param, Node},
+    core::{controllable::Controllable, param::Param, Node},
     proc_context::ProcContext,
     signal::Mono,
 };

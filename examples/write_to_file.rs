@@ -1,4 +1,4 @@
-use corus::{node::Node, proc_context::ProcContext, signal::{Stereo, IntoStereo}};
+use corus::{Node, ProcContext, signal::{Stereo, IntoStereo}};
 
 pub fn write_to_file<T: IntoStereo<f64>, N: Node<T>, DN: AsMut<N>>(
     name: &str,

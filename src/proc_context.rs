@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::node::Node;
+use crate::Node;
 
 pub struct ProcContext {
     pub sample_rate: u64,

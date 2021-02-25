@@ -1,4 +1,4 @@
-use crate::{node::constant::Constant, signal::{C1f64, Mono}};
+use crate::{core::constant::Constant, signal::{C1f64, Mono}};
 
 use super::{envelope::AdsrEnvelope, fm_synth::FmSynth, rand::Rand};
 

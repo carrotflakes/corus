@@ -1,4 +1,4 @@
-use crate::node::{proc_once_share::ProcOnceShare, Node};
+use crate::core::{proc_once_share::ProcOnceShare, Node};
 
 use super::crossfader::{Crossfader, CrossfaderLevel};
 

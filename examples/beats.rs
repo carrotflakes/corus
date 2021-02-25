@@ -7,11 +7,11 @@ use corus::{
         envelope::{ArEnvelope, EnvelopeGenerator},
         retriggerable_sine,
     },
-    node::{amp::Amp, mix::Mix},
+    core::{amp::Amp, mix::Mix},
     signal::C1f64,
 };
 
-use corus::node::{constant::Constant, Node};
+use corus::core::{constant::Constant, Node};
 
 const SAMPLE_RATE: usize = 44100;
 

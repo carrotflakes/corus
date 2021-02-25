@@ -2,7 +2,7 @@ mod write_to_file;
 
 use corus::{
     contrib::poly_synth::{PolySynth, Voice},
-    node::{
+    core::{
         accumulator::Accumulator, amp::Amp, constant::Constant, controllable::Controllable,
         param::Param,
     },
@@ -18,7 +18,7 @@ fn main() {
         let mut freq_param_ctrl = freq_param.controller();
         let acc = Controllable::new(Accumulator::new(freq_param, C1f64::from(1.0)));
         let mut acc_ctrl = acc.controller();
-        let saw = corus::node::add::Add::new(acc, Constant::from(-0.5));
+        let saw = corus::core::add::Add::new(acc, Constant::from(-0.5));
         let env = Controllable::new(Param::new());
         let env_ctrl = env.controller();
         let node = Amp::new(saw, env);

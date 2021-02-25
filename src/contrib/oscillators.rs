@@ -1,5 +1,5 @@
 use crate::{
-    node::{accumulator::Accumulator, controllable::Controllable, map::Map, Node},
+    core::{accumulator::Accumulator, controllable::Controllable, map::Map, Node},
     signal::{C1f64, Mono},
 };
 

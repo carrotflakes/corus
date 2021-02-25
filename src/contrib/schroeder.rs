@@ -1,6 +1,6 @@
 use std::ops::{Mul, Neg};
 
-use crate::node::{
+use crate::core::{
     add::Add, all_pass_filter::AllPassFilter, amp::Amp, comb_filter::CombFilter,
     constant::Constant, mix::Mix, proc_once_share::ProcOnceShare, Node,
 };

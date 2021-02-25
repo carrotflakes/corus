@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 
-use crate::{node::Node, proc_context::ProcContext};
+use crate::{core::Node, proc_context::ProcContext};
 
 pub struct BufferPlayback<T, B>
 where

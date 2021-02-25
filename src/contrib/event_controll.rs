@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, marker::PhantomData};
 
-use crate::{node::Node, proc_context::ProcContext};
+use crate::{core::Node, proc_context::ProcContext};
 
 pub trait Event<T: 'static> {
     type Node: Node<T>;

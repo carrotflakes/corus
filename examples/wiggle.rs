@@ -2,12 +2,10 @@ mod write_to_file;
 
 use corus::{
     contrib::{fn_processor::FnProcessor, perlin_noise},
-    node::{add::Add, map::Map, pan::Pan, proc_once_share::ProcOnceShare},
+    core::{accumulator::Accumulator, constant::Constant},
+    core::{add::Add, map::Map, pan::Pan, proc_once_share::ProcOnceShare},
     signal::{C1f64, Mono},
 };
-
-use corus::node::{self};
-use node::{accumulator::Accumulator, constant::Constant};
 
 const SAMPLE_RATE: usize = 44100;
 
@@ -20,7 +18,10 @@ fn main() {
         }
     }));
 
-    let acc = Accumulator::new(Add::new(Constant::new(C1f64::from(440.0)), osc.clone()), 1.0.into());
+    let acc = Accumulator::new(
+        Add::new(Constant::new(C1f64::from(440.0)), osc.clone()),
+        1.0.into(),
+    );
     let node = Map::new(acc, |x| C1f64::from((x.get_m() + -0.5) * 0.5));
     let node = Pan::new(node, Constant::from(0.0));
 

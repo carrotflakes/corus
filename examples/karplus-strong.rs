@@ -2,7 +2,7 @@ mod write_to_file;
 
 use corus::{
     contrib::{amp_pan, chip::Noise},
-    node::{
+    core::{
         add::Add, amp::Amp, biquad_filter::BiquadFilter, constant::Constant, param::Param,
         placeholder::Placeholder, proc_once_share::ProcOnceShare,
         ring_buffer_playback::RingBufferPlayback, ring_buffer_record::RingBufferRecord, Node,
@@ -28,7 +28,7 @@ fn main() {
                 node,
                 Amp::new(
                     BiquadFilter::new(
-                        corus::node::biquad_filter::LowPass,
+                        corus::core::biquad_filter::LowPass,
                         RingBufferPlayback::new(Constant::from(0.01), buffer.clone()),
                         Constant::from(880.0),
                         Constant::from(1.0),

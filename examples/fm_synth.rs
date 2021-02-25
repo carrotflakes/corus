@@ -2,7 +2,7 @@ mod write_to_file;
 
 use corus::{
     contrib::{envelope::AdsrEnvelope, fm_synth::FmSynth},
-    node::constant::Constant,
+    core::constant::Constant,
 };
 
 fn main() {

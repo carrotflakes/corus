@@ -21,7 +21,7 @@ pub use oscillators::*;
 pub use perlin_noise::*;
 
 use crate::{
-    node::{
+    core::{
         amp::Amp,
         controllable::{Controllable, Controller},
         pan::Pan,

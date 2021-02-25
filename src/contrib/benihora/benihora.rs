@@ -1,4 +1,4 @@
-use crate::{node::Node, proc_context::ProcContext, signal::{C1f64, Mono}};
+use crate::{core::Node, proc_context::ProcContext, signal::{C1f64, Mono}};
 
 use super::{
     glottis::Glottis,
