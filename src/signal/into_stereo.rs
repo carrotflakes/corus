@@ -1,9 +1,9 @@
 use std::f64::consts::FRAC_PI_2;
 
-use super::{C1f64, C2f64, Signal};
+use super::{C1f64, C2f64, Signal, Stereo};
 
 pub trait IntoStereo<F>: Signal<Float = F> {
-    type Output: Signal<Float = F>;
+    type Output: Stereo<F>;
 
     fn into_stereo(&self) -> Self::Output;
     fn into_stereo_with_pan(&self, pan: F) -> Self::Output;

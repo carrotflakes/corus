@@ -1,5 +1,4 @@
 pub mod contrib;
-pub mod sample_iterator;
 pub mod node;
 pub mod proc_context;
 pub mod ring_buffer;

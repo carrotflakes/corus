@@ -1,9 +1,15 @@
-use corus::{contrib::{
+mod write_to_file;
+
+use corus::{
+    contrib::{
         chip::Noise,
         controllable_param,
         envelope::{ArEnvelope, EnvelopeGenerator},
         retriggerable_sine,
-    }, node::{amp::Amp, mix::Mix}, proc_context::ProcContext, signal::{C1f64, Mono}};
+    },
+    node::{amp::Amp, mix::Mix},
+    signal::C1f64,
+};
 
 use corus::node::{constant::Constant, Node};
 
@@ -65,27 +71,5 @@ fn main() {
 
     let node = Mix::new(vec![kick, snare, hh]);
     let node = Amp::new(node, Constant::from(0.2));
-    write_to_file("beats.wav", 4, node);
-}
-
-pub fn write_to_file<N: Node<C1f64>, DN: AsMut<N>>(name: &str, len: usize, mut node: DN) {
-    let spec = hound::WavSpec {
-        channels: 2,
-        sample_rate: 44100,
-        bits_per_sample: 16,
-        sample_format: hound::SampleFormat::Int,
-    };
-    let mut writer = hound::WavWriter::create(name, spec).unwrap();
-    let pc = ProcContext::new(SAMPLE_RATE as u64);
-    node.as_mut().lock();
-    for s in pc.into_iter(&mut node).take(SAMPLE_RATE as usize * len) {
-        writer
-            .write_sample((s.get_m() * std::i16::MAX as f64) as i16)
-            .unwrap();
-        writer
-            .write_sample((s.get_m() * std::i16::MAX as f64) as i16)
-            .unwrap();
-    }
-    node.as_mut().unlock();
-    writer.finalize().unwrap();
+    write_to_file::write_to_file("beats.wav", SAMPLE_RATE, 4.0, node);
 }

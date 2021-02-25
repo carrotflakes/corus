@@ -1,6 +1,6 @@
-use corus::{node::Node, proc_context::ProcContext, signal::C2f64};
+use corus::{node::Node, proc_context::ProcContext, signal::{Stereo, IntoStereo}};
 
-pub fn write_to_file<N: Node<C2f64>, DN: AsMut<N>>(
+pub fn write_to_file<T: IntoStereo<f64>, N: Node<T>, DN: AsMut<N>>(
     name: &str,
     sample_rate: usize,
     len: f64,
@@ -13,21 +13,20 @@ pub fn write_to_file<N: Node<C2f64>, DN: AsMut<N>>(
         sample_format: hound::SampleFormat::Int,
     };
     let mut writer = hound::WavWriter::create(name, spec).unwrap();
-    let pc = ProcContext::new(sample_rate as u64);
+    let mut pc = ProcContext::new(sample_rate as u64);
     let start = std::time::Instant::now();
-    node.as_mut().lock();
     for s in pc
-        .into_iter(&mut node)
+        .lock(&mut node)
         .take((sample_rate as f64 * len).ceil() as usize)
     {
+        let s = s.into_stereo();
         writer
-            .write_sample((s.0[0] * std::i16::MAX as f64) as i16)
+            .write_sample((s.get_l() * std::i16::MAX as f64) as i16)
             .unwrap();
         writer
-            .write_sample((s.0[1] * std::i16::MAX as f64) as i16)
+            .write_sample((s.get_r() * std::i16::MAX as f64) as i16)
             .unwrap();
     }
-    node.as_mut().unlock();
     writer.finalize().unwrap();
     println!("{:?} elapsed", start.elapsed());
 }
