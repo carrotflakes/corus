@@ -4,12 +4,12 @@ Primitive sound synthesis library.
 
 TODO:
 
+- interpolation
 - rich reverb
 - wavetable
 - pararell mix
 - chip
 - basic nodes
-- f64
 
 ## Author
 
