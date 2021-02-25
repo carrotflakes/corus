@@ -54,6 +54,7 @@ where
     A: Node<C1f64> + ?Sized,
     DA: AsMut<A>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
     }

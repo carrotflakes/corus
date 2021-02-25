@@ -43,6 +43,7 @@ impl<T> AsMut<Self> for Impulse<T>
 where
     T: Clone + 'static + Default,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Impulse<T> {
         self
     }

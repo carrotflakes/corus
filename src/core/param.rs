@@ -229,6 +229,7 @@ impl<T: Mono<f64>> Node<T> for Param<f64, T> {
 }
 
 impl<F: Float, T: Mono<F>> AsMut<Param<F, T>> for Param<F, T> {
+    #[inline]
     fn as_mut(&mut self) -> &mut Param<F, T> {
         self
     }

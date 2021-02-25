@@ -58,6 +58,7 @@ where
     A: Node<T> + ?Sized,
     DA: AsMut<A>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
     }

@@ -84,6 +84,7 @@ impl<A: Node<C1f64> + ?Sized, DA: AsMut<A>> Node<C1f64> for PolySynth<A, DA> {
 }
 
 impl<A: Node<C1f64> + ?Sized, DA: AsMut<A>> AsMut<Self> for PolySynth<A, DA> {
+    #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
     }

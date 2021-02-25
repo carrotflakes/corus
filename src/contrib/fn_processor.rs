@@ -40,6 +40,7 @@ where
     T: 'static + Clone,
     F: FnMut() -> T,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
     }

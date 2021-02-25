@@ -89,6 +89,7 @@ where
     DB: AsMut<B>,
     DC: AsMut<C>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Crossfader<F, T, A, B, C, DA, DB, DC> {
         self
     }

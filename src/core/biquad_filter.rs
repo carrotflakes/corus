@@ -186,6 +186,7 @@ where
     DB: AsMut<B>,
     DC: AsMut<C>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut BiquadFilter<FT, T, N, A, B, C, DN, DA, DB, DC> {
         self
     }

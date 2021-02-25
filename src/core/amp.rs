@@ -66,6 +66,7 @@ where
     DA: AsMut<A>,
     DB: AsMut<B>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Amp<T, A, B, DA, DB> {
         self
     }

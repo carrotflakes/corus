@@ -57,6 +57,7 @@ impl<T: 'static, E: Event<T>> Node<T> for EventControll<T, E> {
 }
 
 impl<T: 'static, E: Event<T>> AsMut<Self> for EventControll<T, E> {
+    #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
     }

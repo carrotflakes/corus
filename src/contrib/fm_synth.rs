@@ -133,6 +133,7 @@ where
     DA: AsMut<A>,
     DB: AsMut<B>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
     }

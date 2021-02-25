@@ -46,6 +46,7 @@ where
     T: 'static + Clone + Default,
     B: Borrow<Vec<T>>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
     }

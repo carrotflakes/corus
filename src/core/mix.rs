@@ -56,6 +56,7 @@ where
     T: Clone + 'static + Add<Output = T> + Default,
     DA: AsMut<dyn Node<T>>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Mix<T, DA> {
         self
     }

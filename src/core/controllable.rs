@@ -86,6 +86,7 @@ where
     T: 'static,
     A: Node<T>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
     }

@@ -87,6 +87,7 @@ impl Node<C1f64> for Benihora {
 }
 
 impl AsMut<Self> for Benihora {
+    #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
     }

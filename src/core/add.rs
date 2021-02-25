@@ -67,6 +67,7 @@ where
     DA: AsMut<A>,
     DB: AsMut<B>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Add<T, A, B, DA, DB> {
         self
     }

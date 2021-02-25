@@ -84,6 +84,7 @@ where
     DA: AsMut<A>,
     DB: AsMut<B>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Pan<F, FP, T, O, A, B, DA, DB> {
         self
     }

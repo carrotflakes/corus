@@ -59,6 +59,7 @@ impl Node<C1f64> for Noise {
 }
 
 impl AsMut<Self> for Noise {
+    #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
     }

@@ -64,6 +64,7 @@ where
     DA: AsMut<A>,
     B: Borrow<RingBuffer<T>>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
     }
