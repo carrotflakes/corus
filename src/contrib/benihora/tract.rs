@@ -35,7 +35,7 @@ impl Tract {
         tract.mouth.calculate_reflections(&tract.nose);
         tract.nose.calculate_reflections();
         tract.nose.diameter[0] = tract.nose.velum_target;
-        tract.set_diameter();
+        tract.calculate_diameter();
 
         tract
     }
@@ -71,8 +71,8 @@ impl Tract {
         self.mouth.calculate_reflections(&self.nose);
     }
 
-    pub fn set_diameter(&mut self) {
-        self.mouth.set_diameter();
+    pub fn calculate_diameter(&mut self) {
+        self.mouth.calculate_diameter();
 
         let open_velum = self
             .mouth
@@ -337,7 +337,7 @@ impl Mouth {
         self.l[i + 2] += noise1 / 2.0;
     }
 
-    pub fn set_diameter(&mut self) {
+    pub fn calculate_diameter(&mut self) {
         const GRID_OFFSET: F = 1.7;
 
         let (tongue_index, tongue_diameter) = self.tongue;

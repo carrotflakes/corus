@@ -107,7 +107,7 @@ impl crate::contrib::event_controll::Event<C1f64> for BenihoraEvent {
         match self {
             BenihoraEvent::MoveTangue(index, diameter) => {
                 node.tract.mouth.tongue = node.tract.mouth.tangue_clamp(*index, *diameter);
-                node.tract.set_diameter();
+                node.tract.calculate_diameter();
             }
             BenihoraEvent::SetOtherConstrictions(new_ocs) => {
                 let ocs = &mut node.tract.mouth.other_constrictions;
@@ -135,7 +135,7 @@ impl crate::contrib::event_controll::Event<C1f64> for BenihoraEvent {
                         c.end_time = Some(time);
                     }
                 }
-                node.tract.set_diameter();
+                node.tract.calculate_diameter();
             }
             BenihoraEvent::SetFrequency(frequency) => {
                 node.glottis.frequency.set(*frequency);
