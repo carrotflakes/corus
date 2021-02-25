@@ -1,6 +1,8 @@
 pub mod benihora;
 pub mod buffer_playback;
+pub mod bypass_fader;
 pub mod chip;
+pub mod crossfader;
 mod effects;
 pub mod envelope;
 pub mod event_controll;
@@ -18,13 +20,16 @@ pub use effects::*;
 pub use oscillators::*;
 pub use perlin_noise::*;
 
-use crate::{node::{
+use crate::{
+    node::{
         amp::Amp,
         controllable::{Controllable, Controller},
         pan::Pan,
         param::Param,
         Node,
-    }, signal::{C1f64, C2f64, Mono}};
+    },
+    signal::{C1f64, C2f64, Mono},
+};
 
 pub fn amp_pan<A, G, P, DA, DG, DP>(
     node: DA,
