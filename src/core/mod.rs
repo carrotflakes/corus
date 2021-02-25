@@ -36,14 +36,3 @@ where
         &self.get_ref().get_ref().borrow()
     }
 }
-
-#[test]
-fn test() {
-    let sine = sine::Sine::new(Box::new(constant::Constant::from(44.0)));
-    let mut amp = amp::Amp::new(Box::new(sine), Box::new(constant::Constant::from(0.9)));
-    let ctx = ProcContext::new(44100);
-    dbg!(amp.proc(&ctx));
-    dbg!(amp.proc(&ctx));
-    dbg!(amp.proc(&ctx));
-    dbg!(amp.proc(&ctx));
-}
