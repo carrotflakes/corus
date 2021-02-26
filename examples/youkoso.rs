@@ -1,7 +1,6 @@
 mod write_to_file;
 
-use corus::{
-    contrib::{
+use corus::{contrib::{
         amp_pan,
         chip::{Noise, NoiseEvent},
         controllable_param, delay_fx,
@@ -10,14 +9,7 @@ use corus::{
         generic_poly_synth::{Voice, NoteOff, NoteOn, PolySynth},
         rand_fm_synth::rand_fm_synth,
         resetable_acc,
-    },
-    core::{
-        add::Add, amp::Amp, constant::Constant, controllable::Controllable, mix::Mix, param::Param,
-        Node,
-    },
-    notenum_to_frequency,
-    signal::{C1f64, C2f64},
-};
+    }, core::{Node, add::Add, amp::Amp, constant::Constant, controllable::{Controllable, Controller}, mix::Mix, param::Param, proc_once_share::ProcOnceShare}, notenum_to_frequency, signal::{C1f64, C2f64}};
 
 const SAMPLE_RATE: usize = 44100;
 
@@ -60,10 +52,12 @@ fn main() {
                 ezmid::EventBody::Pan { pan, .. } => {
                     track.2.set_value_at_time(e.time, pan as f64);
                 }
-                ezmid::EventBody::PitchBend {
-                    bend: _,
+                ezmid::EventBody::PitchBend { // TODO remains pitchbend after program changes
+                    bend,
                     raw_bend: _,
-                } => {}
+                } => {
+                    track.4.lock().set_value_at_time(e.time, 2.0f64.powf(bend as f64 / 12.0));
+                }
                 ezmid::EventBody::Tempo { tempo: _ } => {}
                 ezmid::EventBody::ProgramChange { program } => {
                     let mut track_ = new_track(e.event.channel as usize, program);
@@ -104,22 +98,25 @@ fn new_track(
     Param<f64, f64>,
     Param<f64, f64>,
     bool,
+    Controller<f64, Param<f64, f64>>,
 ) {
+    let (pitch, pitch_ctrl) = controllable_param(1.0);
+    let pitch = ProcOnceShare::new(pitch);
     let synth = if track == 9 {
         PolySynth::new(&noise_builder, 8)
     } else {
         // Box::new(PolySynth::new(&|| fm_synth_builder(program as u32), 8))
-        PolySynth::new(&saw_builder, 8)
+        PolySynth::new(&|| saw_builder(pitch.clone()), 8)
     };
     let gain = Param::with_value(1.0f64);
     let pan = Param::with_value(0.0f64);
-    (synth, gain, pan, false)
+    (synth, gain, pan, false, pitch_ctrl)
 }
 
-fn saw_builder() -> MyVoice {
+fn saw_builder(pitch: ProcOnceShare<f64, Controllable<f64, Param<f64, f64>>, Controllable<f64, Param<f64, f64>>>) -> MyVoice {
     let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
     let (gain, mut gain_ctrl) = controllable_param(1.0);
-    let (acc, mut acc_reset) = resetable_acc(freq_param);
+    let (acc, mut acc_reset) = resetable_acc(Amp::new(freq_param, pitch));
     let saw = Add::new(acc, Constant::from(-0.5));
     let (env, mut env_on, mut env_off) = AdsrEnvelope::new(0.01, 0.5, 0.2, 0.3).build();
     let node = Amp::new(saw, Amp::new(env, gain));

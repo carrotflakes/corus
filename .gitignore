@@ -2,3 +2,4 @@
 Cargo.lock
 gui/target
 *.wav
+*.mid
