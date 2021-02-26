@@ -53,6 +53,12 @@ impl Mul<C1f64> for C2f64 {
     }
 }
 
+impl From<[f64; 2]> for C2f64 {
+    fn from(slice: [f64; 2]) -> Self {
+        C2f64(slice)
+    }
+}
+
 impl Signal for C1f64 {
     type Float = f64;
 

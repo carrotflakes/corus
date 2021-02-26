@@ -1,6 +1,6 @@
 use std::{collections::hash_map::DefaultHasher, hash::Hasher};
 
-use corus::{Node, ProcContext, signal::{IntoStereo, Stereo}};
+use corus::{Node, ProcContext, signal::{C2f64, IntoStereo, Stereo}};
 
 pub fn write_to_file<T: IntoStereo<f64>, N: Node<T>, DN: AsMut<N>>(
     name: &str,
@@ -41,6 +41,21 @@ pub fn write_to_file<T: IntoStereo<f64>, N: Node<T>, DN: AsMut<N>>(
     println!("{:?} elapsed", start.elapsed());
     println!("hash(f64): {:x}", f64hasher.finish());
     println!("hash(i16): {:x}", i16hasher.finish());
+}
+
+pub fn read_wav_file(file: &str) -> Vec<C2f64> {
+    let mut wav = hound::WavReader::open(&file).unwrap();
+    println!("spec: {:?}", wav.spec());
+    let mut samples = wav.samples::<i16>();
+    let mut buf = Vec::new();
+    while let Some(l) = samples.next() {
+        let r = samples.next().unwrap();
+        buf.push(C2f64::from([
+            l.unwrap() as f64 / std::i16::MAX as f64,
+            r.unwrap() as f64 / std::i16::MAX as f64,
+        ]));
+    }
+    buf
 }
 
 #[allow(dead_code)]
