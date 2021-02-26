@@ -5,7 +5,7 @@ use corus::{contrib::{
         chip::{Noise, NoiseEvent},
         controllable_param, delay_fx,
         envelope::{AdsrEnvelope, ArEnvelope},
-        event_controll::EventControll,
+        event_control::EventControl,
         generic_poly_synth::{Voice, NoteOff, NoteOn, PolySynth},
         rand_fm_synth::rand_fm_synth,
         resetable_acc,
@@ -136,7 +136,7 @@ fn saw_builder(pitch: ProcOnceShare<f64, Controllable<f64, Param<f64, f64>>, Con
 
 fn noise_builder() -> MyVoice {
     let (gain, mut gain_ctrl) = controllable_param(1.0);
-    let noise = Controllable::new(EventControll::new(Noise::new()));
+    let noise = Controllable::new(EventControl::new(Noise::new()));
     let mut noise_ctrl = noise.controller();
     let (env, mut env_on, mut env_off) = ArEnvelope::new(0.01, 0.3).build();
     let node = Amp::new(noise, Amp::new(env, gain));

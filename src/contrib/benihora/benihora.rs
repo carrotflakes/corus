@@ -101,7 +101,7 @@ pub enum BenihoraEvent {
     SetStatus(bool, bool),
 }
 
-impl crate::contrib::event_controll::Event<C1f64> for BenihoraEvent {
+impl crate::contrib::event_control::Event<C1f64> for BenihoraEvent {
     type Node = Benihora;
 
     fn dispatch(&self, time: f64, node: &mut Self::Node) {

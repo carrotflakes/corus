@@ -3,7 +3,7 @@ mod write_to_file;
 use corus::{contrib::{
         amp_pan,
         benihora::{make_noise_node, Benihora, BenihoraEvent},
-        event_controll::EventControll,
+        event_control::EventControl,
     }, core::constant::Constant, notenum_to_frequency};
 
 const SAMPLE_RATE: usize = 44100;
@@ -11,7 +11,7 @@ const SAMPLE_RATE: usize = 44100;
 fn main() {
     let mut benihora = Benihora::new(make_noise_node());
     benihora.twice = true;
-    let mut benihora = EventControll::new(benihora);
+    let mut benihora = EventControl::new(benihora);
     benihora.push_event(0.0, BenihoraEvent::MoveTangue(12.9, 2.43));
     benihora.push_event(1.0, BenihoraEvent::MoveTangue(19.4, 3.43));
     benihora.push_event(2.0, BenihoraEvent::MoveTangue(22.8, 2.05));

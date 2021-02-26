@@ -5,7 +5,7 @@ pub mod chip;
 pub mod crossfader;
 mod effects;
 pub mod envelope;
-pub mod event_controll;
+pub mod event_control;
 pub mod fm_synth;
 pub mod fn_processor;
 pub mod generic_poly_synth;

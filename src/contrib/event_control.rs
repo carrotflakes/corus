@@ -8,13 +8,13 @@ pub trait Event<T: 'static> {
     fn dispatch(&self, time: f64, node: &mut Self::Node);
 }
 
-pub struct EventControll<T: 'static, E: Event<T>> {
+pub struct EventControl<T: 'static, E: Event<T>> {
     node: E::Node,
     events: VecDeque<(f64, E)>,
     _t: PhantomData<T>,
 }
 
-impl<T: 'static, E: Event<T>> EventControll<T, E> {
+impl<T: 'static, E: Event<T>> EventControl<T, E> {
     pub fn new(node: E::Node) -> Self {
         Self {
             node,
@@ -34,7 +34,7 @@ impl<T: 'static, E: Event<T>> EventControll<T, E> {
     }
 }
 
-impl<T: 'static, E: Event<T>> Node<T> for EventControll<T, E> {
+impl<T: 'static, E: Event<T>> Node<T> for EventControl<T, E> {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         while let Some(e) = self.events.front_mut() {
@@ -56,7 +56,7 @@ impl<T: 'static, E: Event<T>> Node<T> for EventControll<T, E> {
     }
 }
 
-impl<T: 'static, E: Event<T>> AsMut<Self> for EventControll<T, E> {
+impl<T: 'static, E: Event<T>> AsMut<Self> for EventControl<T, E> {
     #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
