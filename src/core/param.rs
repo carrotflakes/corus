@@ -112,6 +112,7 @@ impl<F: Float, T: Mono<F>> Param<F, T> {
         }
     }
 
+    #[inline]
     pub fn compute_value(&self, time: f64) -> F {
         let mut before = Some(&self.first_event);
         let mut after = None;
