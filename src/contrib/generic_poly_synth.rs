@@ -117,6 +117,21 @@ impl<
     }
 }
 
+impl<
+        T: Clone,
+        P1,
+        P2,
+        A: Node<C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>> + Triggerable<T>,
+        ID: PartialEq + Default,
+    > Triggerable<T> for PolySynth<P1, P2, A, ID>
+{
+    fn bang(&mut self, time: f64, payload: T) {
+        for voice in &mut self.voices {
+            voice.voice.bang(time, payload.clone());
+        }
+    }
+}
+
 pub struct NoteOn<P>(pub P);
 pub struct NoteOff<P>(pub P);
 
