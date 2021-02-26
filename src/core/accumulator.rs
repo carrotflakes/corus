@@ -64,7 +64,8 @@ where
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
-        let d = self.node.as_mut().proc(ctx) * C1f64::from(1.0 / ctx.sample_rate as f64);
+        let sample_rate = ctx.sample_rate as f64;
+        let d = self.node.as_mut().proc(ctx).map(|f| f / sample_rate);
         self.value = self.value.clone() + d;
 
         while !self.events.is_empty() {
