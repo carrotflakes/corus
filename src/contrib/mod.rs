@@ -8,6 +8,7 @@ pub mod envelope;
 pub mod event_controll;
 pub mod fm_synth;
 pub mod fn_processor;
+pub mod generic_poly_synth;
 mod oscillators;
 mod perlin_noise;
 pub mod poly_synth;
@@ -15,6 +16,7 @@ pub mod rand;
 pub mod rand_fm_synth;
 pub mod schroeder;
 pub mod smooth;
+pub mod triggerable;
 
 pub use effects::*;
 pub use oscillators::*;
