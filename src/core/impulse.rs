@@ -1,3 +1,5 @@
+use crate::Event;
+
 use super::{Node, ProcContext};
 
 pub struct Impulse<T>
@@ -12,10 +14,10 @@ impl<T> Impulse<T>
 where
     T: Clone + 'static + Default,
 {
-    pub fn new(value: T) -> Self {
+    pub fn new(value: T, fired: bool) -> Self {
         Impulse {
             value,
-            fired: false,
+            fired,
         }
     }
 }
@@ -37,4 +39,24 @@ where
     fn lock(&mut self) {}
 
     fn unlock(&mut self) {}
+}
+
+pub enum ImpulseEvent<T: Clone + 'static + Default> {
+    Trigger,
+    SetValue(T),
+}
+
+impl<T: Clone + 'static + Default> Event for ImpulseEvent<T> {
+    type Target = Impulse<T>;
+
+    fn dispatch(&self, _time: f64, node: &mut Self::Target) {
+        match self {
+            ImpulseEvent::Trigger => {
+                node.fired = false;
+            }
+            ImpulseEvent::SetValue(value) => {
+                node.value = value.clone();
+            }
+        }
+    }
 }
