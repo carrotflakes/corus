@@ -3,6 +3,7 @@ pub mod buffer_playback;
 pub mod bypass_fader;
 pub mod chip;
 pub mod crossfader;
+pub mod down_sample;
 mod effects;
 pub mod envelope;
 pub mod fm_synth;
