@@ -123,7 +123,7 @@ fn new_track(
 ) {
     let (pitch, pitch_ctrl) = controllable_param(1.0);
     let pitch = ProcOnceShare::new(pitch);
-    let synth = if track == 0 || track == 3 {
+    let synth = if track == 0 || track == 2 || track == 3 {
         PolySynth::new(&|| benihora_builder(), 1)
     } else if track == 9 {
         PolySynth::new(&noise_builder, 8)
@@ -217,6 +217,7 @@ fn benihora_builder() -> MyVoice {
     Voice(
         Box::new(benihora) as Box<dyn Node<C1f64>>,
         Box::new(move |time, NoteOn((notenum, velocity))| {
+            let time = time - 0.05;
             ctrl1
                 .lock()
                 .push_event(time, BenihoraEvent::SetStatus(true, false));
@@ -236,6 +237,7 @@ fn benihora_builder() -> MyVoice {
             );
         }),
         Box::new(move |time, NoteOff(())| {
+            let time = time - 0.05;
             ctrl2
                 .lock()
                 .push_event(time, BenihoraEvent::SetStatus(false, false));
