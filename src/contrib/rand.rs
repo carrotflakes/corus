@@ -6,7 +6,7 @@ impl Rand {
     }
 
     pub fn next_u32(&mut self) -> u32 {
-        self.0 = 1103515245 * self.0 + 12345;
+        self.0 = self.0.overflowing_mul(1103515245).0.overflowing_add(12345).0;
         self.0
     }
 
