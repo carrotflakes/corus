@@ -130,9 +130,9 @@ impl Mouth {
     fn new(length: usize) -> Self {
         let diameter: Vec<_> = (0..length)
             .map(|i| {
-                if i < (7.0 * length as F / 44.0 - 0.5) as usize {
+                if (i as f64) < (7.0 * length as F / 44.0 - 0.5) {
                     0.6
-                } else if i < (12.0 * length as F / 44.0) as usize {
+                } else if (i as f64) < (12.0 * length as F / 44.0) {
                     1.1
                 } else {
                     1.5
