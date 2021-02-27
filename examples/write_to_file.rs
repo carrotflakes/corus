@@ -1,4 +1,4 @@
-use std::{collections::hash_map::DefaultHasher, hash::Hasher};
+use std::{collections::hash_map::DefaultHasher, hash::Hasher, io::Write};
 
 use corus::{Node, ProcContext, signal::{C2f64, IntoStereo, Stereo}};
 
@@ -10,7 +10,7 @@ pub fn write_to_file<T: IntoStereo<f64>, N: Node<T>, DN: AsMut<N>>(
 ) {
     let spec = hound::WavSpec {
         channels: 2,
-        sample_rate: 44100,
+        sample_rate: sample_rate as u32,
         bits_per_sample: 16,
         sample_format: hound::SampleFormat::Int,
     };
@@ -19,10 +19,17 @@ pub fn write_to_file<T: IntoStereo<f64>, N: Node<T>, DN: AsMut<N>>(
     let mut f64hasher = DefaultHasher::new();
     let mut i16hasher = DefaultHasher::new();
     let start = std::time::Instant::now();
+    let len_usize = (sample_rate as f64 * len).ceil() as usize;
+    let mut count = 0;
     for s in pc
         .lock(&mut node)
-        .take((sample_rate as f64 * len).ceil() as usize)
+        .take(len_usize)
     {
+        if count % 10000 == 0 {
+            print!("\r{:>4}/{}", count / 10000, len_usize / 10000);
+            std::io::stdout().flush().unwrap();
+        }
+        count += 1;
         let s = s.into_stereo();
         let l = (s.get_l() * std::i16::MAX as f64) as i16;
         let r = (s.get_r() * std::i16::MAX as f64) as i16;
@@ -38,6 +45,7 @@ pub fn write_to_file<T: IntoStereo<f64>, N: Node<T>, DN: AsMut<N>>(
             .unwrap();
     }
     writer.finalize().unwrap();
+    println!();
     println!("{:?} elapsed", start.elapsed());
     println!("hash(f64): {:x}", f64hasher.finish());
     println!("hash(i16): {:x}", i16hasher.finish());
