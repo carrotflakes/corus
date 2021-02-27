@@ -1,15 +1,30 @@
 mod write_to_file;
 
-use corus::{contrib::{
+use corus::{
+    contrib::{
         amp_pan,
         chip::{Noise, NoiseEvent},
         controllable_param, delay_fx,
         envelope::{AdsrEnvelope, ArEnvelope},
         event_control::EventControl,
-        generic_poly_synth::{Voice, NoteOff, NoteOn, PolySynth},
+        generic_poly_synth::{NoteOff, NoteOn, PolySynth, Voice},
+        rand::Rand,
         rand_fm_synth::rand_fm_synth,
         resetable_acc,
-    }, core::{Node, add::Add, amp::Amp, constant::Constant, controllable::{Controllable, Controller}, mix::Mix, param::Param, proc_once_share::ProcOnceShare}, notenum_to_frequency, signal::{C1f64, C2f64}};
+    },
+    core::{
+        add::Add,
+        amp::Amp,
+        constant::Constant,
+        controllable::{Controllable, Controller},
+        mix::Mix,
+        param::Param,
+        proc_once_share::ProcOnceShare,
+        Node,
+    },
+    notenum_to_frequency,
+    signal::{C1f64, C2f64},
+};
 
 const SAMPLE_RATE: usize = 44100;
 
@@ -36,7 +51,9 @@ fn main() {
                     velocity,
                     raw_velocity: _,
                 } => {
-                    track.0.note_on(e.time, Some(notenum), (notenum, velocity as f64));
+                    track
+                        .0
+                        .note_on(e.time, Some(notenum), (notenum, velocity as f64));
                     track.3 = true;
                 }
                 ezmid::EventBody::NoteOff {
@@ -52,11 +69,15 @@ fn main() {
                 ezmid::EventBody::Pan { pan, .. } => {
                     track.2.set_value_at_time(e.time, pan as f64);
                 }
-                ezmid::EventBody::PitchBend { // TODO remains pitchbend after program changes
+                ezmid::EventBody::PitchBend {
+                    // TODO remains pitchbend after program changes
                     bend,
                     raw_bend: _,
                 } => {
-                    track.4.lock().set_value_at_time(e.time, 2.0f64.powf(bend as f64 / 12.0));
+                    track
+                        .4
+                        .lock()
+                        .set_value_at_time(e.time, 2.0f64.powf(bend as f64 / 12.0));
                 }
                 ezmid::EventBody::Tempo { tempo: _ } => {}
                 ezmid::EventBody::ProgramChange { program } => {
@@ -102,7 +123,9 @@ fn new_track(
 ) {
     let (pitch, pitch_ctrl) = controllable_param(1.0);
     let pitch = ProcOnceShare::new(pitch);
-    let synth = if track == 9 {
+    let synth = if track == 0 || track == 3 {
+        PolySynth::new(&|| benihora_builder(), 1)
+    } else if track == 9 {
         PolySynth::new(&noise_builder, 8)
     } else {
         // Box::new(PolySynth::new(&|| fm_synth_builder(program as u32), 8))
@@ -113,7 +136,13 @@ fn new_track(
     (synth, gain, pan, false, pitch_ctrl)
 }
 
-fn saw_builder(pitch: ProcOnceShare<f64, Controllable<f64, Param<f64, f64>>, Controllable<f64, Param<f64, f64>>>) -> MyVoice {
+fn saw_builder(
+    pitch: ProcOnceShare<
+        f64,
+        Controllable<f64, Param<f64, f64>>,
+        Controllable<f64, Param<f64, f64>>,
+    >,
+) -> MyVoice {
     let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
     let (gain, mut gain_ctrl) = controllable_param(1.0);
     let (acc, mut acc_reset) = resetable_acc(Amp::new(freq_param, pitch));
@@ -171,6 +200,45 @@ fn fm_synth_builder(seed: u32) -> MyVoice {
         }),
         Box::new(move |time, NoteOff(())| {
             ctrl2.lock().note_off(time);
+        }),
+    )
+}
+
+fn benihora_builder() -> MyVoice {
+    use corus::contrib::benihora::{make_noise_node, Benihora, BenihoraEvent};
+    let benihora = Benihora::new(make_noise_node());
+    let benihora = Controllable::new(EventControl::new(benihora));
+    let mut ctrl1 = benihora.controller();
+    let mut ctrl2 = benihora.controller();
+    ctrl2
+        .lock()
+        .push_event(0.0, BenihoraEvent::SetStatus(false, false));
+    let mut rand = Rand::new(1);
+    Voice(
+        Box::new(benihora) as Box<dyn Node<C1f64>>,
+        Box::new(move |time, NoteOn((notenum, velocity))| {
+            ctrl1
+                .lock()
+                .push_event(time, BenihoraEvent::SetStatus(true, false));
+            ctrl1
+                .lock()
+                .push_event(time, BenihoraEvent::SetTenseness(velocity));
+            ctrl1.lock().push_event(
+                time,
+                BenihoraEvent::MoveTangue(
+                    rand.next_f64() * 38.0 + 3.0,
+                    rand.next_f64() * 2.5 + 0.3,
+                ),
+            );
+            ctrl1.lock().push_event(
+                time,
+                BenihoraEvent::SetFrequency(notenum_to_frequency(notenum as u32)),
+            );
+        }),
+        Box::new(move |time, NoteOff(())| {
+            ctrl2
+                .lock()
+                .push_event(time, BenihoraEvent::SetStatus(false, false));
         }),
     )
 }
