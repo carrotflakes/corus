@@ -3,9 +3,16 @@ mod write_to_file;
 use corus::{
     contrib::{amp_pan, chip::Noise},
     core::{
-        add::Add, amp::Amp, biquad_filter::BiquadFilter, constant::Constant, param::Param,
-        placeholder::Placeholder, proc_once_share::ProcOnceShare,
-        ring_buffer_playback::RingBufferPlayback, ring_buffer_record::RingBufferRecord, Node,
+        add::Add,
+        amp::Amp,
+        biquad_filter::{BiquadFilter, BiquadFilterParams},
+        constant::Constant,
+        param::Param,
+        placeholder::Placeholder,
+        proc_once_share::ProcOnceShare,
+        ring_buffer_playback::RingBufferPlayback,
+        ring_buffer_record::RingBufferRecord,
+        Node,
     },
     signal::C1f64,
 };
@@ -28,11 +35,13 @@ fn main() {
                 node,
                 Amp::new(
                     BiquadFilter::new(
-                        corus::core::biquad_filter::LowPass,
                         RingBufferPlayback::new(Constant::from(0.01), buffer.clone()),
-                        Constant::from(880.0),
-                        Constant::from(1.0),
-                        Constant::from(2.0),
+                        BiquadFilterParams::new(
+                            corus::core::biquad_filter::LowPass,
+                            Constant::from(880.0),
+                            Constant::from(1.0),
+                            Constant::from(2.0),
+                        ),
                     ),
                     Constant::from(0.5),
                 ),

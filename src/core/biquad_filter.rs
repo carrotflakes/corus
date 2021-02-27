@@ -2,66 +2,43 @@ use crate::signal::{C1f64, C2f64, Mono, Signal, Stereo};
 
 use super::{Node, ProcContext};
 
-pub struct BiquadFilter<FT, T, N, A, B, C>
+pub struct BiquadFilter<T, N, P>
 where
-    FT: BiquadFilterType,
     T: Clone + 'static + std::ops::Add<Output = T> + Signal + Default,
     N: Node<T>,
-    A: Node<C1f64>,
-    B: Node<C1f64>,
-    C: Node<C1f64>,
+    P: Node<[f64; 6]>,
 {
-    filter_type: FT,
     node: N,
-    frequency: A,
-    gain: B,
-    q: C,
+    params: P,
     samples: [T; 4],
 }
 
-impl<FT, T, N, A, B, C> BiquadFilter<FT, T, N, A, B, C>
+impl<T, N, P> BiquadFilter<T, N, P>
 where
-    FT: BiquadFilterType,
     T: Clone + 'static + std::ops::Add<Output = T> + Signal + Default,
     N: Node<T>,
-    A: Node<C1f64>,
-    B: Node<C1f64>,
-    C: Node<C1f64>,
+    P: Node<[f64; 6]>,
 {
-    pub fn new(filter_type: FT, node: N, frequency: A, gain: B, q: C) -> Self {
+    pub fn new(node: N, params: P) -> Self {
         BiquadFilter {
-            filter_type,
             node,
-            frequency,
-            gain,
-            q,
+            params,
             samples: Default::default(),
         }
     }
 }
 
 // TODO: generic
-impl<FT, N, A, B, C> Node<C1f64>
-    for BiquadFilter<FT, C1f64, N, A, B, C>
+impl<N, P> Node<C1f64>
+    for BiquadFilter<C1f64, N, P>
 where
-    FT: BiquadFilterType,
     N: Node<C1f64>,
-    A: Node<C1f64>,
-    B: Node<C1f64>,
-    C: Node<C1f64>,
+    P: Node<[f64; 6]>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
-        let frequency = self.frequency.proc(ctx);
-        let gain = self.gain.proc(ctx);
-        let q = self.q.proc(ctx);
+        let [a0, a1, a2, b0, b1, b2] = self.params.proc(ctx);
         let value = self.node.proc(ctx);
-        let [a0, a1, a2, b0, b1, b2] = self.filter_type.compute_params(
-            ctx.sample_rate,
-            frequency.get_m(),
-            gain.get_m(),
-            q.get_m(),
-        );
 
         let sample = ((b0 / a0) * value.get_m()
             + (b1 / a0) * self.samples[0].get_m()
@@ -77,41 +54,26 @@ where
     }
 
     fn lock(&mut self) {
+        self.params.lock();
         self.node.lock();
-        self.frequency.lock();
-        self.gain.lock();
-        self.q.lock();
     }
 
     fn unlock(&mut self) {
+        self.params.unlock();
         self.node.unlock();
-        self.frequency.unlock();
-        self.gain.unlock();
-        self.q.unlock();
     }
 }
 
-impl<FT, N, A, B, C> Node<C2f64>
-    for BiquadFilter<FT, C2f64, N, A, B, C>
+impl<N, P> Node<C2f64>
+    for BiquadFilter<C2f64, N, P>
 where
-    FT: BiquadFilterType,
     N: Node<C2f64>,
-    A: Node<C1f64>,
-    B: Node<C1f64>,
-    C: Node<C1f64>,
+    P: Node<[f64; 6]>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C2f64 {
-        let frequency = self.frequency.proc(ctx);
-        let gain = self.gain.proc(ctx);
-        let q = self.q.proc(ctx);
+        let [a0, a1, a2, b0, b1, b2] = self.params.proc(ctx);
         let value = self.node.proc(ctx);
-        let [a0, a1, a2, b0, b1, b2] = self.filter_type.compute_params(
-            ctx.sample_rate,
-            frequency.get_m(),
-            gain.get_m(),
-            q.get_m(),
-        );
 
         let sample_l = ((b0 / a0) * value.get_l()
             + (b1 / a0) * self.samples[0].get_l()
@@ -132,14 +94,65 @@ where
     }
 
     fn lock(&mut self) {
+        self.params.lock();
         self.node.lock();
+    }
+
+    fn unlock(&mut self) {
+        self.params.unlock();
+        self.node.unlock();
+    }
+}
+
+pub struct BiquadFilterParams<FT, A, B, C> where
+    FT: BiquadFilterType,
+    A: Node<C1f64>,
+    B: Node<C1f64>,
+    C: Node<C1f64>,
+{
+    filter_type: FT,
+    frequency: A,
+    gain: B,
+    q: C,
+}
+
+impl<FT, A, B, C> BiquadFilterParams<FT, A, B, C>
+where
+    FT: BiquadFilterType,
+    A: Node<C1f64>,
+    B: Node<C1f64>,
+    C: Node<C1f64>,
+{
+    pub fn new(filter_type: FT, frequency: A, gain: B, q: C) -> Self { Self { filter_type, frequency, gain, q } }
+}
+
+impl<FT, A, B, C> Node<[f64; 6]> for BiquadFilterParams<FT, A, B, C>
+where
+    FT: BiquadFilterType,
+    A: Node<C1f64>,
+    B: Node<C1f64>,
+    C: Node<C1f64>,
+{
+    #[inline]
+    fn proc(&mut self, ctx: &ProcContext) -> [f64; 6] {
+        let frequency = self.frequency.proc(ctx);
+        let gain = self.gain.proc(ctx);
+        let q = self.q.proc(ctx);
+        self.filter_type.compute_params(
+            ctx.sample_rate,
+            frequency.get_m(),
+            gain.get_m(),
+            q.get_m(),
+        )
+    }
+
+    fn lock(&mut self) {
         self.frequency.lock();
         self.gain.lock();
         self.q.lock();
     }
 
     fn unlock(&mut self) {
-        self.node.unlock();
         self.frequency.unlock();
         self.gain.unlock();
         self.q.unlock();

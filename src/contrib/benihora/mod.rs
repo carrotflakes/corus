@@ -7,7 +7,7 @@ pub use benihora::{Benihora, BenihoraEvent};
 use crate::{
     core::{
         add::Add,
-        biquad_filter::{BandPass, BiquadFilter},
+        biquad_filter::{BandPass, BiquadFilter, BiquadFilterParams},
         constant::Constant,
         Node,
     },
@@ -24,28 +24,28 @@ fn simplex1(x: F) -> F {
 
 pub fn make_noise_node() -> Box<dyn Node<C1f64>> {
     let node1 = BiquadFilter::new(
-        BandPass,
         {
             let mut rand = Rand::new(1);
-            FnProcessor::new(move || {
-                C1f64::from_m(rand.next_f64() * 2.0 - 1.0)
-            })
+            FnProcessor::new(move || C1f64::from_m(rand.next_f64() * 2.0 - 1.0))
         },
-        Constant::from(500.0),
-        Constant::from(0.0),
-        Constant::from(2.5),
+        BiquadFilterParams::new(
+            BandPass,
+            Constant::from(500.0),
+            Constant::from(0.0),
+            Constant::from(2.5),
+        ),
     ); // q 0.5
     let node2 = BiquadFilter::new(
-        BandPass,
         {
             let mut rand = Rand::new(1);
-            FnProcessor::new(move || {
-                C1f64::from_m(rand.next_f64() * 2.0 - 1.0)
-            })
+            FnProcessor::new(move || C1f64::from_m(rand.next_f64() * 2.0 - 1.0))
         },
-        Constant::from(1000.0),
-        Constant::from(0.0),
-        Constant::from(2.5),
+        BiquadFilterParams::new(
+            BandPass,
+            Constant::from(1000.0),
+            Constant::from(0.0),
+            Constant::from(2.5),
+        ),
     ); // q 0.5
     Box::new(Add::new(node1, node2))
 }
