@@ -15,7 +15,7 @@ fn main() {
     let mut eq = EventQueue::new();
     let mut benihora = Benihora::new(make_noise_node());
     benihora.twice = true;
-    let mut benihora = eq.bind(benihora);
+    let mut benihora = eq.wrap(benihora);
     // let mut benihora = EventControl::new(benihora);
     benihora.push(0.0, BenihoraEvent::MoveTangue(12.9, 2.43));
     benihora.push(1.0, BenihoraEvent::MoveTangue(19.4, 3.43));
@@ -102,5 +102,5 @@ fn main() {
     benihora.push(16.0, BenihoraEvent::SetOtherConstrictions(vec![]));
 
     let node = amp_pan(benihora, Constant::from(1.0), Constant::from(0.0));
-    write_to_file::write_to_file("benihora.wav", SAMPLE_RATE, 20.0, eq.wrap(node));
+    write_to_file::write_to_file("benihora.wav", SAMPLE_RATE, 20.0, eq.finish(node));
 }

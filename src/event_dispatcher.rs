@@ -19,7 +19,7 @@ impl EventQueue {
         }
     }
 
-    pub fn bind<E: Event>(&mut self, t: E::Target) -> EventControl<E> {
+    pub fn wrap<E: Event>(&mut self, t: E::Target) -> EventControl<E> {
         EventControl::new(self.events.clone(), Box::new(t))
     }
 
@@ -34,7 +34,7 @@ impl EventQueue {
         }
     }
 
-    pub fn wrap<T: 'static, N: Node<T>>(self, node: N) -> EventDispatchNode<T, N> {
+    pub fn finish<T: 'static, N: Node<T>>(self, node: N) -> EventDispatchNode<T, N> {
         EventDispatchNode {
             node,
             event_queue: self,
