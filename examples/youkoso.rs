@@ -1,18 +1,6 @@
 mod write_to_file;
 
-use corus::{
-    contrib::{
-        amp_pan,
-        chip::{Noise, NoiseEvent},
-        controllable_param, delay_fx,
-        envelope::{AdsrEnvelope, ArEnvelope},
-        event_control::EventControl,
-        generic_poly_synth::{NoteOff, NoteOn, PolySynth, Voice},
-        rand::Rand,
-        rand_fm_synth::rand_fm_synth,
-        resetable_acc,
-    },
-    core::{
+use corus::{contrib::{amp_pan, chip::{Noise, NoiseEvent}, controllable_param, delay_fx, envelope::{AdsrEnvelope, ArEnvelope}, event_control::EventControl, generic_poly_synth::{NoteOff, NoteOn, PolySynth, Voice}, perlin_noise, rand_fm_synth::rand_fm_synth, resetable_acc}, core::{
         add::Add,
         amp::Amp,
         constant::Constant,
@@ -21,10 +9,7 @@ use corus::{
         param::Param,
         proc_once_share::ProcOnceShare,
         Node,
-    },
-    notenum_to_frequency,
-    signal::{C1f64, C2f64},
-};
+    }, notenum_to_frequency, signal::{C1f64, C2f64}};
 
 const SAMPLE_RATE: usize = 44100;
 
@@ -212,7 +197,6 @@ fn benihora_builder() -> MyVoice {
     ctrl2
         .lock()
         .push_event(0.0, BenihoraEvent::SetStatus(false, false));
-    let mut rand = Rand::new(1);
     Voice(
         Box::new(benihora) as Box<dyn Node<C1f64>>,
         Box::new(move |time, NoteOn((notenum, velocity))| {
@@ -226,8 +210,8 @@ fn benihora_builder() -> MyVoice {
             ctrl1.lock().push_event(
                 time,
                 BenihoraEvent::MoveTangue(
-                    rand.next_f64() * 38.0 + 3.0,
-                    rand.next_f64() * 2.5 + 0.3,
+                    perlin_noise(time * 2.3, time * 0.11, 0.0) * 19.0 + 22.0,
+                    perlin_noise(time * 2.3, time * 0.11, 3.0) * 1.25 + 1.55,
                 ),
             );
             ctrl1.lock().push_event(
