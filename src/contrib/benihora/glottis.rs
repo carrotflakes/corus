@@ -9,6 +9,7 @@ pub struct Glottis {
     pub breath: bool,
     pub glottis_close: bool,
 
+    waveform_length: F,
     time_in_waveform: F,
 
     waveform: Waveform,
@@ -28,8 +29,9 @@ impl Glottis {
             breath: true,
             glottis_close: false,
 
+            waveform_length: 1.0 / 140.0,
             time_in_waveform: 0.0,
-            waveform: Waveform::new(140.0, 0.6),
+            waveform: Waveform::new(0.6),
         }
     }
 
@@ -45,15 +47,16 @@ impl Glottis {
         let tenseness = self.tenseness.get(lambda);
 
         self.time_in_waveform += 1.0 / sample_rate as F;
-        if self.waveform.length < self.time_in_waveform {
-            self.time_in_waveform -= self.waveform.length;
-            self.waveform = Waveform::new(self.frequency.get(lambda), tenseness)
+        if self.waveform_length < self.time_in_waveform {
+            self.time_in_waveform -= self.waveform_length;
+            self.waveform_length = 1.0 / self.frequency.get(lambda);
+            self.waveform = Waveform::new(tenseness)
         }
         let out = self.intensity
             * self.loudness
             * self
                 .waveform
-                .normalized_lf_waveform(self.time_in_waveform / self.waveform.length);
+                .normalized_lf_waveform(self.time_in_waveform / self.waveform_length);
         let aspiration = self.intensity
             * (1.0 - tenseness.sqrt())
             * self.get_noise_modulator(lambda)
@@ -65,7 +68,7 @@ impl Glottis {
     pub fn get_noise_modulator(&mut self, lambda: F) -> F {
         let tenseness = self.tenseness.get(lambda); // ?
         let voiced =
-            0.1 + 0.2 * 0.0f64.max((PI * 2.0 * self.time_in_waveform / self.waveform.length).sin());
+            0.1 + 0.2 * 0.0f64.max((PI * 2.0 * self.time_in_waveform / self.waveform_length).sin());
         tenseness * self.intensity * voiced + (1.0 - tenseness * self.intensity) * 0.3
     }
 
@@ -166,9 +169,8 @@ impl TensenessCtrl {
     }
 }
 
+/// Liljencrants-Fant waveform
 struct Waveform {
-    length: F,
-
     alpha: F,
     e0: F,
     epsilon: F,
@@ -179,9 +181,8 @@ struct Waveform {
 }
 
 impl Waveform {
-    fn new(frequency: F, tenseness: F) -> Self {
+    fn new(tenseness: F) -> Self {
         let rd = (3.0 * (1.0 - tenseness)).clamp(0.5, 2.7);
-        let waveform_length = 1.0 / frequency;
 
         let ra = -0.01 + 0.048 * rd;
         let rk = 0.224 + 0.118 * rd;
@@ -216,7 +217,6 @@ impl Waveform {
         let e0 = -1.0 / (s * (alpha * te).exp());
 
         Self {
-            length: waveform_length,
             alpha,
             e0,
             epsilon,
@@ -233,5 +233,6 @@ impl Waveform {
         } else {
             self.e0 * (self.alpha * t).exp() * (self.omega * t).sin()
         }
+        // - (PI * 2.0 * t).sin() * 0.5 // Fundamental tone canceling
     }
 }
