@@ -3,11 +3,15 @@ mod write_to_file;
 use corus::{
     contrib::poly_synth::{PolySynth, Voice},
     core::{
-        accumulator::Accumulator, amp::Amp, constant::Constant, controllable::Controllable,
+        accumulator::{Accumulator, SetValueAtTime},
+        amp::Amp,
+        constant::Constant,
+        controllable::Controllable,
         param::Param,
     },
     notenum_to_frequency,
     signal::C1f64,
+    EventControlInplace,
 };
 
 fn main() {
@@ -16,7 +20,10 @@ fn main() {
     let builder = || {
         let freq_param = Controllable::new(Param::new());
         let mut freq_param_ctrl = freq_param.controller();
-        let acc = Controllable::new(Accumulator::new(freq_param, C1f64::from(1.0)));
+        let acc = Controllable::new(EventControlInplace::new(Accumulator::new(
+            freq_param,
+            C1f64::from(1.0),
+        )));
         let mut acc_ctrl = acc.controller();
         let saw = corus::core::add::Add::new(acc, Constant::from(-0.5));
         let env = Controllable::new(Param::new());
@@ -30,7 +37,9 @@ fn main() {
                     freq_param_ctrl
                         .lock()
                         .set_value_at_time(time, notenum_to_frequency(notenum as u32));
-                    acc_ctrl.lock().set_value_at_time(time, C1f64::from(0.5));
+                    acc_ctrl
+                        .lock()
+                        .push_event(time, SetValueAtTime::new(C1f64::from(0.5)));
                     let mut env = env_ctrl.lock();
                     env.cancel_and_hold_at_time(time);
                     env.set_value_at_time(time, 0.001);
