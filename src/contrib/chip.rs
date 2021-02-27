@@ -72,10 +72,10 @@ pub enum NoiseEvent {
     ResetReg,
 }
 
-impl Event<C1f64> for NoiseEvent {
-    type Node = Noise;
+impl Event for NoiseEvent {
+    type Target = Noise;
 
-    fn dispatch(&self, _time: f64, node: &mut Self::Node) {
+    fn dispatch(&self, _time: f64, node: &mut Self::Target) {
         match self {
             NoiseEvent::OriginalFreq(f1, f2) => {
                 node.freq = Noise::compute_freq(*f1, *f2);

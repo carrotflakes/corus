@@ -101,10 +101,10 @@ pub enum BenihoraEvent {
     SetStatus(bool, bool),
 }
 
-impl crate::contrib::event_control::Event<C1f64> for BenihoraEvent {
-    type Node = Benihora;
+impl crate::contrib::event_control::Event for BenihoraEvent {
+    type Target = Benihora;
 
-    fn dispatch(&self, time: f64, node: &mut Self::Node) {
+    fn dispatch(&self, time: f64, node: &mut Self::Target) {
         match self {
             BenihoraEvent::MoveTangue(index, diameter) => {
                 node.tract.mouth.tongue = node.tract.mouth.tangue_clamp(*index, *diameter);

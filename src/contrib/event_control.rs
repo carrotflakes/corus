@@ -2,22 +2,22 @@ use std::{collections::VecDeque, marker::PhantomData};
 
 use crate::{core::Node, proc_context::ProcContext};
 
-pub trait Event<T: 'static> {
-    type Node: Node<T>;
+pub trait Event: 'static {
+    type Target: 'static;
 
-    fn dispatch(&self, time: f64, node: &mut Self::Node);
+    fn dispatch(&self, time: f64, target: &mut Self::Target);
 }
 
-pub struct EventControl<T: 'static, E: Event<T>> {
-    node: E::Node,
+pub struct EventControl<T: 'static, E: Event> {
+    target: E::Target,
     events: VecDeque<(f64, E)>,
     _t: PhantomData<T>,
 }
 
-impl<T: 'static, E: Event<T>> EventControl<T, E> {
-    pub fn new(node: E::Node) -> Self {
+impl<T: 'static, E: Event> EventControl<T, E> {
+    pub fn new(target: E::Target) -> Self {
         Self {
-            node,
+            target,
             events: Vec::new().into(),
             _t: Default::default(),
         }
@@ -34,29 +34,29 @@ impl<T: 'static, E: Event<T>> EventControl<T, E> {
     }
 }
 
-impl<T: 'static, E: Event<T>> Node<T> for EventControl<T, E> {
+impl<T: 'static, N: Node<T>, E: Event<Target = N>> Node<T> for EventControl<T, E> {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         while let Some(e) = self.events.front_mut() {
             if ctx.time < e.0 {
                 break;
             }
-            e.1.dispatch(e.0, &mut self.node);
+            e.1.dispatch(e.0, &mut self.target);
             self.events.pop_front();
         }
-        self.node.proc(ctx)
+        self.target.proc(ctx)
     }
 
     fn lock(&mut self) {
-        self.node.lock();
+        self.target.lock();
     }
 
     fn unlock(&mut self) {
-        self.node.unlock();
+        self.target.unlock();
     }
 }
 
-impl<T: 'static, E: Event<T>> AsMut<Self> for EventControl<T, E> {
+impl<T: 'static, E: Event> AsMut<Self> for EventControl<T, E> {
     #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
