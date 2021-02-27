@@ -1,10 +1,12 @@
 pub mod contrib;
 pub mod core;
+mod event_dispatcher;
 mod node;
 mod proc_context;
 pub mod ring_buffer;
 pub mod signal;
 
+pub use event_dispatcher::*;
 pub use node::*;
 pub use proc_context::*;
 
