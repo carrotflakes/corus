@@ -5,13 +5,12 @@ use corus::{
         chip::{Noise, NoiseEvent},
         event_control::EventControl,
     },
-    signal::C1f64,
 };
 
 fn main() {
     let sample_rate = 44100;
 
-    let mut node: EventControl<C1f64, NoiseEvent> = EventControl::new(Noise::new());
+    let mut node: EventControl<NoiseEvent> = EventControl::new(Noise::new());
     node.push_event(2.0 * 0.0, NoiseEvent::ShortFreq(false));
     node.push_event(2.0 * 0.1, NoiseEvent::OriginalFreq(1, 4));
     node.push_event(2.0 * 0.2, NoiseEvent::OriginalFreq(2, 4));
