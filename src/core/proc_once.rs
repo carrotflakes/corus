@@ -1,35 +1,31 @@
 use super::{Node, ProcContext};
 
-pub struct ProcOnce<T, A, DA>
+pub struct ProcOnce<T, A>
 where
     T: 'static + Clone + Default,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
-    node: DA,
+    node: A,
     time: f64,
     value: T,
     pub(crate) lock_count: u32,
-    _a: std::marker::PhantomData<A>,
 }
 
-impl<T, A, DA> ProcOnce<T, A, DA>
+impl<T, A> ProcOnce<T, A>
 where
     T: 'static + Clone + Default,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
-    pub fn new(node: DA) -> Self {
+    pub fn new(node: A) -> Self {
         ProcOnce {
             node,
             time: -1.0,
             value: Default::default(),
             lock_count: 0,
-            _a: Default::default(),
         }
     }
 
-    pub(crate) fn get_ref(&self) -> &DA {
+    pub(crate) fn get_ref(&self) -> &A {
         &self.node
     }
 
@@ -38,17 +34,16 @@ where
     // }
 }
 
-impl<T, A, DA> Node<T> for ProcOnce<T, A, DA>
+impl<T, A> Node<T> for ProcOnce<T, A>
 where
     T: 'static + Clone + Default,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         if self.time != ctx.time {
             self.time = ctx.time;
-            self.value = self.node.as_mut().proc(ctx);
+            self.value = self.node.proc(ctx);
         }
         self.value.clone()
     }
@@ -56,26 +51,14 @@ where
     fn lock(&mut self) {
         self.lock_count += 1;
         if self.lock_count == 1 {
-            self.node.as_mut().lock();
+            self.node.lock();
         }
     }
 
     fn unlock(&mut self) {
         self.lock_count -= 1;
         if self.lock_count == 0 {
-            self.node.as_mut().unlock();
+            self.node.unlock();
         }
-    }
-}
-
-impl<T, A, DA> AsMut<Self> for ProcOnce<T, A, DA>
-where
-    T: 'static + Clone + Default,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
-{
-    #[inline]
-    fn as_mut(&mut self) -> &mut Self {
-        self
     }
 }

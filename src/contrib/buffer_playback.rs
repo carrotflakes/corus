@@ -40,14 +40,3 @@ where
 
     fn unlock(&mut self) {}
 }
-
-impl<T, B> AsMut<Self> for BufferPlayback<T, B>
-where
-    T: 'static + Clone + Default,
-    B: Borrow<Vec<T>>,
-{
-    #[inline]
-    fn as_mut(&mut self) -> &mut Self {
-        self
-    }
-}

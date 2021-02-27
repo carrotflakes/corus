@@ -2,11 +2,11 @@ use std::{collections::hash_map::DefaultHasher, hash::Hasher, io::Write};
 
 use corus::{Node, ProcContext, signal::{C2f64, IntoStereo, Stereo}};
 
-pub fn write_to_file<T: IntoStereo<f64>, N: Node<T>, DN: AsMut<N>>(
+pub fn write_to_file<T: IntoStereo<f64>, N: Node<T> + 'static>(
     name: &str,
     sample_rate: usize,
     len: f64,
-    mut node: DN,
+    mut node: N,
 ) {
     let spec = hound::WavSpec {
         channels: 2,

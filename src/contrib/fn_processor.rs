@@ -34,14 +34,3 @@ where
 
     fn unlock(&mut self) {}
 }
-
-impl<T, F> AsMut<Self> for FnProcessor<T, F>
-where
-    T: 'static + Clone,
-    F: FnMut() -> T,
-{
-    #[inline]
-    fn as_mut(&mut self) -> &mut Self {
-        self
-    }
-}

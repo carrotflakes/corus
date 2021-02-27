@@ -6,22 +6,21 @@ use crate::{
     signal::C1f64,
 };
 
-pub struct PolySynth<A: Node<C1f64> + ?Sized, DA: AsMut<A>> {
-    voices: Vec<Voice<A, DA>>,
+pub struct PolySynth<A: Node<C1f64>> {
+    voices: Vec<Voice<A>>,
     current: usize,
 }
 
-pub struct Voice<A: Node<C1f64> + ?Sized, DA: AsMut<A>> {
+pub struct Voice<A: Node<C1f64>> {
     last_notenum: u8,
-    node: DA,
+    node: A,
     note_on: Box<dyn FnMut(f64, u8)>,
     note_off: Box<dyn FnMut(f64)>,
-    _a: PhantomData<A>,
 }
 
-impl<A: Node<C1f64> + ?Sized, DA: AsMut<A>> Voice<A, DA> {
+impl<A: Node<C1f64>> Voice<A> {
     pub fn new(
-        node: DA,
+        node: A,
         note_on: Box<dyn FnMut(f64, u8)>,
         note_off: Box<dyn FnMut(f64)>,
     ) -> Self {
@@ -30,13 +29,12 @@ impl<A: Node<C1f64> + ?Sized, DA: AsMut<A>> Voice<A, DA> {
             node,
             note_on,
             note_off,
-            _a: Default::default(),
         }
     }
 }
 
-impl<A: Node<C1f64> + ?Sized, DA: AsMut<A>> PolySynth<A, DA> {
-    pub fn new(voice_builder: &dyn Fn() -> Voice<A, DA>, voice_num: usize) -> Self {
+impl<A: Node<C1f64>> PolySynth<A> {
+    pub fn new(voice_builder: &dyn Fn() -> Voice<A>, voice_num: usize) -> Self {
         Self {
             voices: (0..voice_num).map(|_| voice_builder()).collect(),
             current: 0,
@@ -60,32 +58,25 @@ impl<A: Node<C1f64> + ?Sized, DA: AsMut<A>> PolySynth<A, DA> {
     }
 }
 
-impl<A: Node<C1f64> + ?Sized, DA: AsMut<A>> Node<C1f64> for PolySynth<A, DA> {
+impl<A: Node<C1f64>> Node<C1f64> for PolySynth<A> {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
         let mut v = Default::default();
         for voice in &mut self.voices {
-            v = v + voice.node.as_mut().proc(ctx);
+            v = v + voice.node.proc(ctx);
         }
         v
     }
 
     fn lock(&mut self) {
         for voice in &mut self.voices {
-            voice.node.as_mut().lock();
+            voice.node.lock();
         }
     }
 
     fn unlock(&mut self) {
         for voice in &mut self.voices {
-            voice.node.as_mut().unlock();
+            voice.node.unlock();
         }
-    }
-}
-
-impl<A: Node<C1f64> + ?Sized, DA: AsMut<A>> AsMut<Self> for PolySynth<A, DA> {
-    #[inline]
-    fn as_mut(&mut self) -> &mut Self {
-        self
     }
 }

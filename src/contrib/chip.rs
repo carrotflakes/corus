@@ -58,13 +58,6 @@ impl Node<C1f64> for Noise {
     fn unlock(&mut self) {}
 }
 
-impl AsMut<Self> for Noise {
-    #[inline]
-    fn as_mut(&mut self) -> &mut Self {
-        self
-    }
-}
-
 pub enum NoiseEvent {
     OriginalFreq(u8, u8),
     Freq(u32),

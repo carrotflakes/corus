@@ -1,73 +1,49 @@
 use super::{Node, ProcContext};
 
-pub struct Amp<T, A, B, DA, DB>
+pub struct Amp<T, A, B>
 where
     T: Clone + 'static + std::ops::Mul<Output = T>,
-    A: Node<T> + ?Sized,
-    B: Node<T> + ?Sized,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
+    A: Node<T>,
+    B: Node<T>,
 {
-    input: DA,
-    gain: DB,
+    input: A,
+    gain: B,
     _t: std::marker::PhantomData<T>,
-    _a: std::marker::PhantomData<A>,
-    _b: std::marker::PhantomData<B>,
 }
 
-impl<T, A, B, DA, DB> Amp<T, A, B, DA, DB>
+impl<T, A, B> Amp<T, A, B>
 where
     T: Clone + 'static + std::ops::Mul<Output = T>,
-    A: Node<T> + ?Sized,
-    B: Node<T> + ?Sized,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
+    A: Node<T>,
+    B: Node<T>,
 {
-    pub fn new(input: DA, gain: DB) -> Self {
+    pub fn new(input: A, gain: B) -> Self {
         Amp {
             input,
             gain,
             _t: Default::default(),
-            _a: Default::default(),
-            _b: Default::default(),
         }
     }
 }
 
-impl<T, A, B, DA, DB> Node<T> for Amp<T, A, B, DA, DB>
+impl<T, A, B> Node<T> for Amp<T, A, B>
 where
     T: Clone + 'static + std::ops::Mul<Output = T>,
-    A: Node<T> + ?Sized,
-    B: Node<T> + ?Sized,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
+    A: Node<T>,
+    B: Node<T>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
-        self.input.as_mut().proc(ctx) * self.gain.as_mut().proc(ctx)
+        self.input.proc(ctx) * self.gain.proc(ctx)
     }
 
     fn lock(&mut self) {
-        self.input.as_mut().lock();
-        self.gain.as_mut().lock();
+        self.input.lock();
+        self.gain.lock();
     }
 
     fn unlock(&mut self) {
-        self.input.as_mut().unlock();
-        self.gain.as_mut().unlock();
-    }
-}
-
-impl<T, A, B, DA, DB> AsMut<Self> for Amp<T, A, B, DA, DB>
-where
-    T: Clone + 'static + std::ops::Mul<Output = T>,
-    A: Node<T> + ?Sized,
-    B: Node<T> + ?Sized,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
-{
-    #[inline]
-    fn as_mut(&mut self) -> &mut Amp<T, A, B, DA, DB> {
-        self
+        self.input.unlock();
+        self.gain.unlock();
     }
 }

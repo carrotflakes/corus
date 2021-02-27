@@ -91,12 +91,6 @@ impl<T: 'static, N: Node<T>, E: Event<Target = N>> Node<T> for EventControl<E> {
     }
 }
 
-impl<E: Event> AsMut<Self> for EventControl<E> {
-    #[inline]
-    fn as_mut(&mut self) -> &mut Self {
-        self
-    }
-}
 
 pub struct EventDispatchNode<T: 'static, N: Node<T>> {
     node: N,
@@ -117,12 +111,5 @@ impl<T: 'static, N: Node<T>> Node<T> for EventDispatchNode<T, N> {
 
     fn unlock(&mut self) {
         self.node.unlock();
-    }
-}
-
-impl<T: 'static, N: Node<T>> AsMut<Self> for EventDispatchNode<T, N> {
-    #[inline]
-    fn as_mut(&mut self) -> &mut Self {
-        self
     }
 }

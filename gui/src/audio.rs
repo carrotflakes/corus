@@ -23,10 +23,9 @@ impl AudioCallback for Audio {
     type Channel = f32;
 
     fn callback(&mut self, out: &mut [f32]) {
-        self.node.lock();
+        let mut s = self.ctx.lock(&mut self.node);
         for x in out.iter_mut() {
-            *x = self.ctx.sample(&mut self.node).get_m() as f32;
+            *x = s.next().unwrap().get_m() as f32;
         }
-        self.node.unlock();
     }
 }

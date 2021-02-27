@@ -1,74 +1,49 @@
 use super::{Node, ProcContext};
 
-pub struct Add<T, A, B, DA, DB>
+pub struct Add<T, A, B>
 where
     T: Clone + 'static + std::ops::Add<Output = T>,
-    A: Node<T> + ?Sized,
-    B: Node<T> + ?Sized,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
+    A: Node<T>,
+    B: Node<T>,
 {
-    a: DA,
-    b: DB,
+    a: A,
+    b: B,
     _t: std::marker::PhantomData<T>,
-    _a: std::marker::PhantomData<A>,
-    _b: std::marker::PhantomData<B>,
 }
 
-impl<T, A, B, DA, DB> Add<T, A, B, DA, DB>
+impl<T, A, B> Add<T, A, B>
 where
     T: Clone + 'static + std::ops::Add<Output = T>,
-    A: Node<T> + ?Sized,
-    B: Node<T> + ?Sized,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
+    A: Node<T>,
+    B: Node<T>,
 {
-    pub fn new(a: DA, b: DB) -> Self {
+    pub fn new(a: A, b: B) -> Self {
         Add {
             a,
             b,
             _t: Default::default(),
-            _a: Default::default(),
-            _b: Default::default(),
         }
     }
 }
 
-impl<T, A, B, DA, DB> Node<T> for Add<T, A, B, DA, DB>
+impl<T, A, B> Node<T> for Add<T, A, B>
 where
     T: Clone + 'static + std::ops::Add<Output = T>,
-    A: Node<T> + ?Sized,
-    B: Node<T> + ?Sized,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
+    A: Node<T>,
+    B: Node<T>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
-        self.a.as_mut().proc(ctx) + self.b.as_mut().proc(ctx)
+        self.a.proc(ctx) + self.b.proc(ctx)
     }
 
     fn lock(&mut self) {
-        self.a.as_mut().lock();
-        self.b.as_mut().lock();
+        self.a.lock();
+        self.b.lock();
     }
 
     fn unlock(&mut self) {
-        self.a.as_mut().unlock();
-        self.b.as_mut().unlock();
-    }
-}
-
-
-impl<T, A, B, DA, DB> AsMut<Self> for Add<T, A, B, DA, DB>
-where
-    T: Clone + 'static + std::ops::Add<Output = T>,
-    A: Node<T> + ?Sized,
-    B: Node<T> + ?Sized,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
-{
-    #[inline]
-    fn as_mut(&mut self) -> &mut Add<T, A, B, DA, DB> {
-        self
+        self.a.unlock();
+        self.b.unlock();
     }
 }

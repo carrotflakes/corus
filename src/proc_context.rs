@@ -16,30 +16,30 @@ impl ProcContext {
     }
 
     #[inline]
-    pub fn sample<T: 'static, N: Node<T> + ?Sized>(&mut self, mut node: impl AsMut<N>) -> T {
-        let r = node.as_mut().proc(self);
+    pub fn sample<T: 'static, N: Node<T> + ?Sized>(&mut self, node: &mut N) -> T {
+        let r = node.proc(self);
         self.time += 1.0 / self.sample_rate as f64;
         r
     }
 
     #[inline]
-    pub fn lock<'a, T: 'static, A: Node<T> + ?Sized, DA: AsMut<A>>(
+    pub fn lock<'a, T: 'static, A: Node<T> + ?Sized>(
         &'a mut self,
-        node: DA,
-    ) -> ProcGuard<'a, T, A, DA> {
+        node: &'a mut A,
+    ) -> ProcGuard<'a, T, A> {
         ProcGuard::new(self, node)
     }
 }
 
-pub struct ProcGuard<'a, T: 'static, A: Node<T> + ?Sized, DA: AsMut<A>> {
+pub struct ProcGuard<'a, T: 'static, A: Node<T> + ?Sized> {
     context: &'a mut ProcContext,
-    node: DA,
-    _t: (PhantomData<T>, PhantomData<A>),
+    node: &'a mut A,
+    _t: PhantomData<T>,
 }
 
-impl<'a, T: 'static, A: Node<T> + ?Sized, DA: AsMut<A>> ProcGuard<'a, T, A, DA> {
-    fn new(context: &'a mut ProcContext, mut node: DA) -> Self {
-        node.as_mut().lock();
+impl<'a, T: 'static, A: Node<T> + ?Sized> ProcGuard<'a, T, A> {
+    fn new(context: &'a mut ProcContext, node: &'a mut A) -> Self {
+        node.lock();
         Self {
             context,
             node,
@@ -49,19 +49,19 @@ impl<'a, T: 'static, A: Node<T> + ?Sized, DA: AsMut<A>> ProcGuard<'a, T, A, DA> 
 
     #[inline]
     pub fn sample(&mut self) -> T {
-        let r = self.node.as_mut().proc(self.context);
+        let r = self.node.proc(self.context);
         self.context.time += 1.0 / self.context.sample_rate as f64;
         r
     }
 }
 
-impl<'a, T: 'static, A: Node<T> + ?Sized, DA: AsMut<A>> Drop for ProcGuard<'a, T, A, DA> {
+impl<'a, T: 'static, A: Node<T> + ?Sized> Drop for ProcGuard<'a, T, A> {
     fn drop(&mut self) {
-        self.node.as_mut().unlock();
+        self.node.unlock();
     }
 }
 
-impl<'a, T: 'static, A: Node<T> + ?Sized, DA: AsMut<A>> Iterator for ProcGuard<'a, T, A, DA> {
+impl<'a, T: 'static, A: Node<T> + ?Sized> Iterator for ProcGuard<'a, T, A> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {

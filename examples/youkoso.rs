@@ -140,7 +140,6 @@ fn saw_builder(
     pitch: ProcOnceShare<
         f64,
         Controllable<f64, Param<f64, f64>>,
-        Controllable<f64, Param<f64, f64>>,
     >,
 ) -> MyVoice {
     let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);

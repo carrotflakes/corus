@@ -106,18 +106,6 @@ impl<
 }
 
 impl<
-        P1,
-        P2,
-        A: Node<C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
-        ID: PartialEq + Default,
-    > AsMut<Self> for PolySynth<P1, P2, A, ID>
-{
-    fn as_mut(&mut self) -> &mut Self {
-        self
-    }
-}
-
-impl<
         T: Clone,
         P1,
         P2,
@@ -164,11 +152,5 @@ impl<A: Node<f64>, P1, P2> Triggerable<NoteOn<P1>> for Voice<A, P1, P2> {
 impl<A: Node<f64>, P1, P2> Triggerable<NoteOff<P2>> for Voice<A, P1, P2> {
     fn bang(&mut self, time: f64, payload: NoteOff<P2>) {
         self.2(time, payload);
-    }
-}
-
-impl<A: Node<f64>, P1, P2> AsMut<Self> for Voice<A, P1, P2> {
-    fn as_mut(&mut self) -> &mut Self {
-        self
     }
 }

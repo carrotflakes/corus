@@ -33,18 +33,15 @@ use crate::{
     signal::{C1f64, C2f64, Mono},
 };
 
-pub fn amp_pan<A, G, P, DA, DG, DP>(
-    node: DA,
-    gain: DG,
-    pan: DP,
-) -> Pan<f64, C1f64, C1f64, C2f64, Amp<C1f64, A, G, DA, DG>, P, Amp<C1f64, A, G, DA, DG>, DP>
+pub fn amp_pan<A, G, P>(
+    node: A,
+    gain: G,
+    pan: P,
+) -> Pan<f64, C1f64, C1f64, C2f64, Amp<C1f64, A, G>, P>
 where
-    A: Node<C1f64> + 'static,
-    G: Node<C1f64> + 'static,
-    P: Node<C1f64> + 'static,
-    DA: AsMut<A>,
-    DG: AsMut<G>,
-    DP: AsMut<P>,
+    A: Node<C1f64>,
+    G: Node<C1f64>,
+    P: Node<C1f64>,
 {
     Pan::new(Amp::new(node, gain), pan)
 }

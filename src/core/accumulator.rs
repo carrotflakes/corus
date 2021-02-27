@@ -13,34 +13,28 @@ where
     value: T,
 }
 
-pub struct Accumulator<T, A, DA>
+pub struct Accumulator<T, A>
 where
     T: Signal + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
     events: Vec<Event<T>>,
-    node: DA,
+    node: A,
     value: T,
     upper: T,
-    _t: std::marker::PhantomData<T>,
-    _a: std::marker::PhantomData<A>,
 }
 
-impl<T, A, DA> Accumulator<T, A, DA>
+impl<T, A> Accumulator<T, A>
 where
     T: Signal + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
-    pub fn new(node: DA, upper: T) -> Self {
+    pub fn new(node: A, upper: T) -> Self {
         Accumulator {
             events: vec![],
             node,
             value: Default::default(),
             upper,
-            _t: Default::default(),
-            _a: Default::default(),
         }
     }
 
@@ -56,16 +50,15 @@ where
     }
 }
 
-impl<T, A, DA> Node<T> for Accumulator<T, A, DA>
+impl<T, A> Node<T> for Accumulator<T, A>
 where
     T: Signal<Float = f64> + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         let sample_rate = ctx.sample_rate as f64;
-        let d = self.node.as_mut().proc(ctx).map(|f| f / sample_rate);
+        let d = self.node.proc(ctx).map(|f| f / sample_rate);
         self.value = self.value.clone() + d;
 
         while !self.events.is_empty() {
@@ -83,23 +76,11 @@ where
     }
 
     fn lock(&mut self) {
-        self.node.as_mut().lock();
+        self.node.lock();
     }
 
     fn unlock(&mut self) {
-        self.node.as_mut().unlock();
-    }
-}
-
-impl<T, A, DA> AsMut<Self> for Accumulator<T, A, DA>
-where
-    T: Signal + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
-{
-    #[inline]
-    fn as_mut(&mut self) -> &mut Self {
-        self
+        self.node.unlock();
     }
 }
 

@@ -2,20 +2,17 @@ use crate::core::{proc_once_share::ProcOnceShare, Node};
 
 use super::crossfader::{Crossfader, CrossfaderLevel};
 
-pub fn bypass_fader<F, T, A, B, C, DA, DB, DC>(
-    node: ProcOnceShare<T, A, DA>,
-    wrapper: &dyn Fn(ProcOnceShare<T, A, DA>) -> DB,
-    level: DC,
-) -> Crossfader<F, T, ProcOnceShare<T, A, DA>, B, C, ProcOnceShare<T, A, DA>, DB, DC>
+pub fn bypass_fader<F, T, A, B, C>(
+    node: ProcOnceShare<T, A>,
+    wrapper: &dyn Fn(ProcOnceShare<T, A>) -> B,
+    level: C,
+) -> Crossfader<F, T, ProcOnceShare<T, A>, B, C>
 where
     F: 'static,
     T: CrossfaderLevel<F>,
-    A: Node<T> + 'static,
-    B: Node<T> + 'static,
-    C: Node<F> + 'static,
-    DA: AsMut<A> + 'static,
-    DB: AsMut<B> + 'static,
-    DC: AsMut<C> + 'static,
+    A: Node<T>,
+    B: Node<T>,
+    C: Node<F>,
 {
     Crossfader::new(node.clone(), wrapper(node), level)
 }

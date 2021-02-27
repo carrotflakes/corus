@@ -2,73 +2,57 @@ use std::sync::Arc;
 
 use super::{proc_once::ProcOnce, Node, ProcContext};
 
-pub struct ProcOnceShare<T, A, DA>
+pub struct ProcOnceShare<T, A>
 where
     T: 'static + Clone + Default,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
-    proc_once: Arc<ProcOnce<T, A, DA>>,
+    proc_once: Arc<ProcOnce<T, A>>,
 }
 
-impl<T, A, DA> ProcOnceShare<T, A, DA>
+impl<T, A> ProcOnceShare<T, A>
 where
     T: 'static + Clone + Default,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
-    pub fn new(node: DA) -> Self {
+    pub fn new(node: A) -> Self {
         ProcOnceShare {
             proc_once: Arc::new(ProcOnce::new(node)),
         }
     }
 
-    pub(crate) fn get_ref(&self) -> &ProcOnce<T, A, DA> {
-        unsafe { std::mem::transmute::<_, &ProcOnce<T, A, DA>>(Arc::as_ptr(&self.proc_once)) }
+    pub(crate) fn get_ref(&self) -> &ProcOnce<T, A> {
+        unsafe { std::mem::transmute::<_, &ProcOnce<T, A>>(Arc::as_ptr(&self.proc_once)) }
     }
 
-    fn get_mut(&mut self) -> &mut ProcOnce<T, A, DA> {
-        unsafe { std::mem::transmute::<_, &mut ProcOnce<T, A, DA>>(Arc::as_ptr(&mut self.proc_once)) }
+    fn get_mut(&mut self) -> &mut ProcOnce<T, A> {
+        unsafe { std::mem::transmute::<_, &mut ProcOnce<T, A>>(Arc::as_ptr(&mut self.proc_once)) }
     }
 }
 
-impl<T, A, DA> Node<T> for ProcOnceShare<T, A, DA>
+impl<T, A> Node<T> for ProcOnceShare<T, A>
 where
     T: 'static + Clone + Default,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
-        self.get_mut().as_mut().proc(ctx)
+        self.get_mut().proc(ctx)
     }
 
     fn lock(&mut self) {
-        self.get_mut().as_mut().lock();
+        self.get_mut().lock();
     }
 
     fn unlock(&mut self) {
-        self.get_mut().as_mut().unlock();
+        self.get_mut().unlock();
     }
 }
 
-impl<T, A, DA> AsMut<Self> for ProcOnceShare<T, A, DA>
+impl<T, A> Clone for ProcOnceShare<T, A>
 where
     T: 'static + Clone + Default,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
-{
-    #[inline]
-    fn as_mut(&mut self) -> &mut Self {
-        self
-    }
-}
-
-impl<T, A, DA> Clone for ProcOnceShare<T, A, DA>
-where
-    T: 'static + Clone + Default,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
     fn clone(&self) -> Self {
         Self {

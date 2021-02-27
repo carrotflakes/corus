@@ -81,17 +81,6 @@ where
     }
 }
 
-impl<T, A> AsMut<Self> for Controllable<T, A>
-where
-    T: 'static,
-    A: Node<T>,
-{
-    #[inline]
-    fn as_mut(&mut self) -> &mut Self {
-        self
-    }
-}
-
 impl<T, A> Controller<T, A>
 where
     T: 'static,

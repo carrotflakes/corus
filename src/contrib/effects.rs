@@ -7,23 +7,11 @@ use crate::{
 };
 
 pub fn delay_fx<A: Node<C2f64> + 'static>(
-    node: impl AsMut<A> + 'static,
+    node: A,
     sample_rate: usize,
     delay: f64,
     feedback: f64,
-) -> ProcOnceShare<
-    C2f64,
-    RingBufferRecord<
-        C2f64,
-        Placeholder<C2f64, dyn Node<C2f64>, Box<dyn Node<C2f64>>>,
-        Placeholder<C2f64, dyn Node<C2f64>, Box<dyn Node<C2f64>>>,
-    >,
-    RingBufferRecord<
-        C2f64,
-        Placeholder<C2f64, dyn Node<C2f64>, Box<dyn Node<C2f64>>>,
-        Placeholder<C2f64, dyn Node<C2f64>, Box<dyn Node<C2f64>>>,
-    >,
-> {
+) -> ProcOnceShare<C2f64, RingBufferRecord<C2f64, Placeholder<C2f64, Box<dyn Node<C2f64>>>>> {
     let mut p = Placeholder::new(None);
     let mut ps = p.setter();
     let buffer = ProcOnceShare::new(RingBufferRecord::new(p, sample_rate));

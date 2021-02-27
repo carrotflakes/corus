@@ -229,13 +229,6 @@ impl<T: Mono<f64>> Node<T> for Param<f64, T> {
     fn unlock(&mut self) {}
 }
 
-impl<F: Float, T: Mono<F>> AsMut<Param<F, T>> for Param<F, T> {
-    #[inline]
-    fn as_mut(&mut self) -> &mut Param<F, T> {
-        self
-    }
-}
-
 pub trait Float: 'static + Clone + Default + From<f64> + Into<f64> {
     fn linear_interpolate(&self, other: Self, r: f64) -> Self;
     fn exponential_interpolate(&self, other: Self, r: f64) -> Self;

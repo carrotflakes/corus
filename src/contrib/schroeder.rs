@@ -14,40 +14,16 @@ pub fn schroeder_reverb<
         + Neg<Output = T>
         + From<f64>,
     N: Node<T> + 'static,
-    DN: AsMut<N> + 'static,
 >(
-    node: DN,
+    node: N,
 ) -> Add<
     T,
-    ProcOnceShare<T, N, DN>,
+    ProcOnceShare<T, N>,
     Amp<
         T,
         AllPassFilter<
             T,
-            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
-            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
-        >,
-        Constant<T>,
-        AllPassFilter<
-            T,
-            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
-            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
-        >,
-        Constant<T>,
-    >,
-    ProcOnceShare<T, N, DN>,
-    Amp<
-        T,
-        AllPassFilter<
-            T,
-            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
-            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
-        >,
-        Constant<T>,
-        AllPassFilter<
-            T,
-            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
-            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>, Mix<T, Box<dyn Node<T>>>>,
+            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>>,
         >,
         Constant<T>,
     >,

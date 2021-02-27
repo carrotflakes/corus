@@ -13,7 +13,7 @@ fn main() {
     let buf = write_to_file::read_wav_file(&file);
 
     let acc = Accumulator::new(Constant::from(-1.0), 100.0);
-    let node = Map::new(acc, |f| {
+    let node = Map::new(acc, move |f| {
         buf[((f * SAMPLE_RATE as f64) as usize).rem_euclid(buf.len())]
     });
     let file = format!("{}-reversed.wav", file[..file.len() - 4].to_string());

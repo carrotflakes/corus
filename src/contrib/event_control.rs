@@ -53,10 +53,3 @@ impl<T: 'static, N: Node<T>, E: Event<Target = N>> Node<T> for EventControl<E> {
         self.target.unlock();
     }
 }
-
-impl<E: Event> AsMut<Self> for EventControl<E> {
-    #[inline]
-    fn as_mut(&mut self) -> &mut Self {
-        self
-    }
-}

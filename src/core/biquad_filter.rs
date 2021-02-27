@@ -1,51 +1,34 @@
-use std::marker::PhantomData;
-
 use crate::signal::{C1f64, C2f64, Mono, Signal, Stereo};
 
 use super::{Node, ProcContext};
 
-pub struct BiquadFilter<FT, T, N, A, B, C, DN, DA, DB, DC>
+pub struct BiquadFilter<FT, T, N, A, B, C>
 where
     FT: BiquadFilterType,
     T: Clone + 'static + std::ops::Add<Output = T> + Signal + Default,
-    N: Node<T> + ?Sized,
-    A: Node<C1f64> + ?Sized,
-    B: Node<C1f64> + ?Sized,
-    C: Node<C1f64> + ?Sized,
-    DN: AsMut<N>,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
-    DC: AsMut<C>,
+    N: Node<T>,
+    A: Node<C1f64>,
+    B: Node<C1f64>,
+    C: Node<C1f64>,
 {
     filter_type: FT,
-    node: DN,
-    frequency: DA,
-    gain: DB,
-    q: DC,
+    node: N,
+    frequency: A,
+    gain: B,
+    q: C,
     samples: [T; 4],
-    _t: (
-        PhantomData<T>,
-        PhantomData<N>,
-        PhantomData<A>,
-        PhantomData<B>,
-        PhantomData<C>,
-    ),
 }
 
-impl<FT, T, N, A, B, C, DN, DA, DB, DC> BiquadFilter<FT, T, N, A, B, C, DN, DA, DB, DC>
+impl<FT, T, N, A, B, C> BiquadFilter<FT, T, N, A, B, C>
 where
     FT: BiquadFilterType,
     T: Clone + 'static + std::ops::Add<Output = T> + Signal + Default,
-    N: Node<T> + ?Sized,
-    A: Node<C1f64> + ?Sized,
-    B: Node<C1f64> + ?Sized,
-    C: Node<C1f64> + ?Sized,
-    DN: AsMut<N>,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
-    DC: AsMut<C>,
+    N: Node<T>,
+    A: Node<C1f64>,
+    B: Node<C1f64>,
+    C: Node<C1f64>,
 {
-    pub fn new(filter_type: FT, node: DN, frequency: DA, gain: DB, q: DC) -> Self {
+    pub fn new(filter_type: FT, node: N, frequency: A, gain: B, q: C) -> Self {
         BiquadFilter {
             filter_type,
             node,
@@ -53,31 +36,26 @@ where
             gain,
             q,
             samples: Default::default(),
-            _t: Default::default(),
         }
     }
 }
 
 // TODO: generic
-impl<FT, N, A, B, C, DN, DA, DB, DC> Node<C1f64>
-    for BiquadFilter<FT, C1f64, N, A, B, C, DN, DA, DB, DC>
+impl<FT, N, A, B, C> Node<C1f64>
+    for BiquadFilter<FT, C1f64, N, A, B, C>
 where
     FT: BiquadFilterType,
-    N: Node<C1f64> + ?Sized,
-    A: Node<C1f64> + ?Sized,
-    B: Node<C1f64> + ?Sized,
-    C: Node<C1f64> + ?Sized,
-    DN: AsMut<N>,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
-    DC: AsMut<C>,
+    N: Node<C1f64>,
+    A: Node<C1f64>,
+    B: Node<C1f64>,
+    C: Node<C1f64>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
-        let frequency = self.frequency.as_mut().proc(ctx);
-        let gain = self.gain.as_mut().proc(ctx);
-        let q = self.q.as_mut().proc(ctx);
-        let value = self.node.as_mut().proc(ctx);
+        let frequency = self.frequency.proc(ctx);
+        let gain = self.gain.proc(ctx);
+        let q = self.q.proc(ctx);
+        let value = self.node.proc(ctx);
         let [a0, a1, a2, b0, b1, b2] = self.filter_type.compute_params(
             ctx.sample_rate,
             frequency.get_m(),
@@ -99,39 +77,35 @@ where
     }
 
     fn lock(&mut self) {
-        self.node.as_mut().lock();
-        self.frequency.as_mut().lock();
-        self.gain.as_mut().lock();
-        self.q.as_mut().lock();
+        self.node.lock();
+        self.frequency.lock();
+        self.gain.lock();
+        self.q.lock();
     }
 
     fn unlock(&mut self) {
-        self.node.as_mut().unlock();
-        self.frequency.as_mut().unlock();
-        self.gain.as_mut().unlock();
-        self.q.as_mut().unlock();
+        self.node.unlock();
+        self.frequency.unlock();
+        self.gain.unlock();
+        self.q.unlock();
     }
 }
 
-impl<FT, N, A, B, C, DN, DA, DB, DC> Node<C2f64>
-    for BiquadFilter<FT, C2f64, N, A, B, C, DN, DA, DB, DC>
+impl<FT, N, A, B, C> Node<C2f64>
+    for BiquadFilter<FT, C2f64, N, A, B, C>
 where
     FT: BiquadFilterType,
-    N: Node<C2f64> + ?Sized,
-    A: Node<C1f64> + ?Sized,
-    B: Node<C1f64> + ?Sized,
-    C: Node<C1f64> + ?Sized,
-    DN: AsMut<N>,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
-    DC: AsMut<C>,
+    N: Node<C2f64>,
+    A: Node<C1f64>,
+    B: Node<C1f64>,
+    C: Node<C1f64>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C2f64 {
-        let frequency = self.frequency.as_mut().proc(ctx);
-        let gain = self.gain.as_mut().proc(ctx);
-        let q = self.q.as_mut().proc(ctx);
-        let value = self.node.as_mut().proc(ctx);
+        let frequency = self.frequency.proc(ctx);
+        let gain = self.gain.proc(ctx);
+        let q = self.q.proc(ctx);
+        let value = self.node.proc(ctx);
         let [a0, a1, a2, b0, b1, b2] = self.filter_type.compute_params(
             ctx.sample_rate,
             frequency.get_m(),
@@ -158,37 +132,17 @@ where
     }
 
     fn lock(&mut self) {
-        self.node.as_mut().lock();
-        self.frequency.as_mut().lock();
-        self.gain.as_mut().lock();
-        self.q.as_mut().lock();
+        self.node.lock();
+        self.frequency.lock();
+        self.gain.lock();
+        self.q.lock();
     }
 
     fn unlock(&mut self) {
-        self.node.as_mut().unlock();
-        self.frequency.as_mut().unlock();
-        self.gain.as_mut().unlock();
-        self.q.as_mut().unlock();
-    }
-}
-
-impl<FT, T, N, A, B, C, DN, DA, DB, DC> AsMut<Self>
-    for BiquadFilter<FT, T, N, A, B, C, DN, DA, DB, DC>
-where
-    FT: BiquadFilterType,
-    T: Clone + 'static + std::ops::Add<Output = T> + Signal + Default,
-    N: Node<T> + ?Sized,
-    A: Node<C1f64> + ?Sized,
-    B: Node<C1f64> + ?Sized,
-    C: Node<C1f64> + ?Sized,
-    DN: AsMut<N>,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
-    DC: AsMut<C>,
-{
-    #[inline]
-    fn as_mut(&mut self) -> &mut BiquadFilter<FT, T, N, A, B, C, DN, DA, DB, DC> {
-        self
+        self.node.unlock();
+        self.frequency.unlock();
+        self.gain.unlock();
+        self.q.unlock();
     }
 }
 

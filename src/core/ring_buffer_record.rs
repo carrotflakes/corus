@@ -2,24 +2,22 @@ use crate::ring_buffer::RingBuffer;
 
 use super::{Node, ProcContext};
 
-pub struct RingBufferRecord<T, A, DA>
+pub struct RingBufferRecord<T, A>
 where
     T: 'static + Clone + Default,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
-    node: DA,
+    node: A,
     buffer: RingBuffer<T>,
     _a: std::marker::PhantomData<A>,
 }
 
-impl<T, A, DA> RingBufferRecord<T, A, DA>
+impl<T, A> RingBufferRecord<T, A>
 where
     T: 'static + Clone + Default,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
-    pub fn new(node: DA, size: usize) -> Self {
+    pub fn new(node: A, size: usize) -> Self {
         RingBufferRecord {
             node,
             buffer: RingBuffer::new(size),
@@ -36,45 +34,31 @@ where
     }
 }
 
-impl<T, A, DA> Node<T> for RingBufferRecord<T, A, DA>
+impl<T, A> Node<T> for RingBufferRecord<T, A>
 where
     T: 'static + Clone + Default,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
-        let v = self.node.as_mut().proc(ctx);
+        let v = self.node.proc(ctx);
         self.buffer.push(v.clone());
         v
     }
 
     fn lock(&mut self) {
-        self.node.as_mut().lock();
+        self.node.lock();
     }
 
     fn unlock(&mut self) {
-        self.node.as_mut().unlock();
+        self.node.unlock();
     }
 }
 
-impl<T, A, DA> AsMut<Self> for RingBufferRecord<T, A, DA>
+impl<T, A> std::borrow::Borrow<RingBuffer<T>> for RingBufferRecord<T, A>
 where
     T: 'static + Clone + Default,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
-{
-    #[inline]
-    fn as_mut(&mut self) -> &mut Self {
-        self
-    }
-}
-
-impl<T, A, DA> std::borrow::Borrow<RingBuffer<T>> for RingBufferRecord<T, A, DA>
-where
-    T: 'static + Clone + Default,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
     fn borrow(&self) -> &RingBuffer<T> {
         &self.buffer

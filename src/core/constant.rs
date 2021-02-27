@@ -25,10 +25,3 @@ impl<T: Clone + 'static> Node<T> for Constant<T> {
 
     fn unlock(&mut self) {}
 }
-
-impl<T: Clone + 'static> AsMut<Constant<T>> for Constant<T> {
-    #[inline]
-    fn as_mut(&mut self) -> &mut Constant<T> {
-        self
-    }
-}

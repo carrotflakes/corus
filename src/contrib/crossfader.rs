@@ -4,41 +4,32 @@ use crate::proc_context::ProcContext;
 
 use super::Node;
 
-pub struct Crossfader<F, T, A, B, C, DA, DB, DC>
+pub struct Crossfader<F, T, A, B, C>
 where
     F: 'static,
     T: CrossfaderLevel<F>,
-    A: Node<T> + ?Sized,
-    B: Node<T> + ?Sized,
-    C: Node<F> + ?Sized,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
-    DC: AsMut<C>,
+    A: Node<T>,
+    B: Node<T>,
+    C: Node<F>,
 {
-    a: DA,
-    b: DB,
-    level: DC,
+    a: A,
+    b: B,
+    level: C,
     _t: (
         PhantomData<F>,
         PhantomData<T>,
-        PhantomData<A>,
-        PhantomData<B>,
-        PhantomData<C>,
     ),
 }
 
-impl<F, T, A, B, C, DA, DB, DC> Crossfader<F, T, A, B, C, DA, DB, DC>
+impl<F, T, A, B, C> Crossfader<F, T, A, B, C>
 where
     F: 'static,
     T: CrossfaderLevel<F>,
-    A: Node<T> + ?Sized,
-    B: Node<T> + ?Sized,
-    C: Node<F> + ?Sized,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
-    DC: AsMut<C>,
+    A: Node<T>,
+    B: Node<T>,
+    C: Node<F>,
 {
-    pub fn new(a: DA, b: DB, level: DC) -> Self {
+    pub fn new(a: A, b: B, level: C) -> Self {
         Crossfader {
             a,
             b,
@@ -48,50 +39,30 @@ where
     }
 }
 
-impl<F, T, A, B, C, DA, DB, DC> Node<T> for Crossfader<F, T, A, B, C, DA, DB, DC>
+impl<F, T, A, B, C> Node<T> for Crossfader<F, T, A, B, C>
 where
     F: 'static,
     T: CrossfaderLevel<F>,
-    A: Node<T> + ?Sized,
-    B: Node<T> + ?Sized,
-    C: Node<F> + ?Sized,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
-    DC: AsMut<C>,
+    A: Node<T>,
+    B: Node<T>,
+    C: Node<F>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
-        let a = self.a.as_mut().proc(ctx);
-        let b = self.b.as_mut().proc(ctx);
-        let level = self.level.as_mut().proc(ctx);
+        let a = self.a.proc(ctx);
+        let b = self.b.proc(ctx);
+        let level = self.level.proc(ctx);
         a.lerp(b, level)
     }
 
     fn lock(&mut self) {
-        self.a.as_mut().lock();
-        self.b.as_mut().lock();
+        self.a.lock();
+        self.b.lock();
     }
 
     fn unlock(&mut self) {
-        self.a.as_mut().unlock();
-        self.b.as_mut().unlock();
-    }
-}
-
-impl<F, T, A, B, C, DA, DB, DC> AsMut<Self> for Crossfader<F, T, A, B, C, DA, DB, DC>
-where
-    F: 'static,
-    T: CrossfaderLevel<F>,
-    A: Node<T> + ?Sized,
-    B: Node<T> + ?Sized,
-    C: Node<F> + ?Sized,
-    DA: AsMut<A>,
-    DB: AsMut<B>,
-    DC: AsMut<C>,
-{
-    #[inline]
-    fn as_mut(&mut self) -> &mut Crossfader<F, T, A, B, C, DA, DB, DC> {
-        self
+        self.a.unlock();
+        self.b.unlock();
     }
 }
 

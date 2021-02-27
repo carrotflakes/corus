@@ -4,41 +4,36 @@ use crate::ring_buffer::RingBuffer;
 
 use super::{Node, ProcContext};
 
-pub struct AllPassFilter<T, A, DA>
+pub struct AllPassFilter<T, A>
 where
     T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T> + Neg,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
-    node: DA,
+    node: A,
     pub delay: f32,
     pub gain: T,
     buffer: RingBuffer<T>,
-    _a: std::marker::PhantomData<A>,
 }
 
-impl<T, A, DA> AllPassFilter<T, A, DA>
+impl<T, A> AllPassFilter<T, A>
 where
     T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
-    pub fn new(node: DA, delay: f32, gain: T) -> Self {
+    pub fn new(node: A, delay: f32, gain: T) -> Self {
         AllPassFilter {
             node,
             delay,
             gain,
             buffer: RingBuffer::new(0),
-            _a: Default::default(),
         }
     }
 }
 
-impl<T, A, DA> Node<T> for AllPassFilter<T, A, DA>
+impl<T, A> Node<T> for AllPassFilter<T, A>
 where
     T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
@@ -50,37 +45,24 @@ where
 
         let delay_value = self.buffer.get(delay_len);
 
-        let v = self.node.as_mut().proc(ctx) + delay_value.clone() * self.gain.clone();
+        let v = self.node.proc(ctx) + delay_value.clone() * self.gain.clone();
         self.buffer.push(v.clone());
         delay_value + v * -self.gain.clone()
     }
 
     fn lock(&mut self) {
-        self.node.as_mut().lock();
+        self.node.lock();
     }
 
     fn unlock(&mut self) {
-        self.node.as_mut().unlock();
+        self.node.unlock();
     }
 }
 
-impl<T, A, DA> AsMut<Self> for AllPassFilter<T, A, DA>
+impl<T, A> std::borrow::Borrow<RingBuffer<T>> for AllPassFilter<T, A>
 where
     T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
-{
-    #[inline]
-    fn as_mut(&mut self) -> &mut Self {
-        self
-    }
-}
-
-impl<T, A, DA> std::borrow::Borrow<RingBuffer<T>> for AllPassFilter<T, A, DA>
-where
-    T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
-    A: Node<T> + ?Sized,
-    DA: AsMut<A>,
+    A: Node<T>,
 {
     fn borrow(&self) -> &RingBuffer<T> {
         &self.buffer
