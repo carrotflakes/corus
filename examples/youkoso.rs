@@ -1,6 +1,17 @@
 mod write_to_file;
 
-use corus::{contrib::{amp_pan, chip::{Noise, NoiseEvent}, controllable_param, delay_fx, envelope::{AdsrEnvelope, ArEnvelope}, event_control::EventControl, generic_poly_synth::{NoteOff, NoteOn, PolySynth, Voice}, perlin_noise, rand_fm_synth::rand_fm_synth, resetable_acc}, core::{
+use corus::{
+    contrib::{
+        amp_pan,
+        chip::{Noise, NoiseEvent},
+        controllable_param, delay_fx,
+        envelope::{AdsrEnvelope, ArEnvelope},
+        generic_poly_synth::{NoteOff, NoteOn, PolySynth, Voice},
+        perlin_noise,
+        rand_fm_synth::rand_fm_synth,
+        resetable_acc,
+    },
+    core::{
         add::Add,
         amp::Amp,
         constant::Constant,
@@ -9,7 +20,11 @@ use corus::{contrib::{amp_pan, chip::{Noise, NoiseEvent}, controllable_param, de
         param::Param,
         proc_once_share::ProcOnceShare,
         Node,
-    }, notenum_to_frequency, signal::{C1f64, C2f64}};
+    },
+    notenum_to_frequency,
+    signal::{C1f64, C2f64},
+    EventControlInplace,
+};
 
 const SAMPLE_RATE: usize = 44100;
 
@@ -121,12 +136,7 @@ fn new_track(
     (synth, gain, pan, false, pitch_ctrl)
 }
 
-fn saw_builder(
-    pitch: ProcOnceShare<
-        f64,
-        Controllable<f64, Param<f64, f64>>,
-    >,
-) -> MyVoice {
+fn saw_builder(pitch: ProcOnceShare<f64, Controllable<f64, Param<f64, f64>>>) -> MyVoice {
     let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
     let (gain, mut gain_ctrl) = controllable_param(1.0);
     let (acc, mut acc_reset) = resetable_acc(Amp::new(freq_param, pitch));
@@ -149,7 +159,7 @@ fn saw_builder(
 
 fn noise_builder() -> MyVoice {
     let (gain, mut gain_ctrl) = controllable_param(1.0);
-    let noise = Controllable::new(EventControl::new(Noise::new()));
+    let noise = Controllable::new(EventControlInplace::new(Noise::new()));
     let mut noise_ctrl = noise.controller();
     let (env, mut env_on, mut env_off) = ArEnvelope::new(0.01, 0.3).build();
     let node = Amp::new(noise, Amp::new(env, gain));
@@ -191,7 +201,7 @@ fn fm_synth_builder(seed: u32) -> MyVoice {
 fn benihora_builder() -> MyVoice {
     use corus::contrib::benihora::{make_noise_node, Benihora, BenihoraEvent};
     let benihora = Benihora::new(make_noise_node());
-    let benihora = Controllable::new(EventControl::new(benihora));
+    let benihora = Controllable::new(EventControlInplace::new(benihora));
     let mut ctrl1 = benihora.controller();
     let mut ctrl2 = benihora.controller();
     ctrl2

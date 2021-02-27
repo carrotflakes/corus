@@ -1,6 +1,4 @@
-use crate::{core::Node, proc_context::ProcContext, signal::{C1f64, Mono}};
-
-use super::event_control::Event;
+use crate::{Event, core::Node, proc_context::ProcContext, signal::{C1f64, Mono}};
 
 pub struct Noise {
     pub freq: u32,

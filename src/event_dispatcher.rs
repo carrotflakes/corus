@@ -2,7 +2,11 @@ use std::{cell::RefCell, collections::VecDeque, marker::PhantomData, rc::Rc};
 
 use crate::{core::Node, proc_context::ProcContext};
 
-pub use crate::contrib::event_control::Event;
+pub trait Event: 'static {
+    type Target: 'static;
+
+    fn dispatch(&self, time: f64, target: &mut Self::Target);
+}
 
 fn caller<E: Event>(event: E, target: &'static mut E::Target) -> Box<dyn FnMut(f64)> {
     Box::new(move |time: f64| event.dispatch(time, target))
@@ -111,5 +115,51 @@ impl<T: 'static, N: Node<T>> Node<T> for EventDispatchNode<T, N> {
 
     fn unlock(&mut self) {
         self.node.unlock();
+    }
+}
+
+pub struct EventControlInplace<E: Event> {
+    target: E::Target,
+    events: VecDeque<(f64, E)>,
+}
+
+impl<E: Event> EventControlInplace<E> {
+    pub fn new(target: E::Target) -> Self {
+        Self {
+            target,
+            events: Vec::new().into(),
+        }
+    }
+
+    pub fn push_event(&mut self, time: f64, event: E) {
+        for (i, e) in self.events.iter().enumerate() {
+            if time < e.0 {
+                self.events.insert(i, (time, event));
+                return;
+            }
+        }
+        self.events.push_back((time, event));
+    }
+}
+
+impl<T: 'static, N: Node<T>, E: Event<Target = N>> Node<T> for EventControlInplace<E> {
+    #[inline]
+    fn proc(&mut self, ctx: &ProcContext) -> T {
+        while let Some(e) = self.events.front_mut() {
+            if ctx.time < e.0 {
+                break;
+            }
+            e.1.dispatch(e.0, &mut self.target);
+            self.events.pop_front();
+        }
+        self.target.proc(ctx)
+    }
+
+    fn lock(&mut self) {
+        self.target.lock();
+    }
+
+    fn unlock(&mut self) {
+        self.target.unlock();
     }
 }

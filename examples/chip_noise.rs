@@ -1,16 +1,14 @@
 mod write_to_file;
 
 use corus::{
-    contrib::{
-        chip::{Noise, NoiseEvent},
-        event_control::EventControl,
-    },
+    contrib::chip::{Noise, NoiseEvent},
+    EventControlInplace,
 };
 
 fn main() {
     let sample_rate = 44100;
 
-    let mut node: EventControl<NoiseEvent> = EventControl::new(Noise::new());
+    let mut node = EventControlInplace::new(Noise::new());
     node.push_event(2.0 * 0.0, NoiseEvent::ShortFreq(false));
     node.push_event(2.0 * 0.1, NoiseEvent::OriginalFreq(1, 4));
     node.push_event(2.0 * 0.2, NoiseEvent::OriginalFreq(2, 4));
