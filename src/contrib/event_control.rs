@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, marker::PhantomData};
+use std::collections::VecDeque;
 
 use crate::{core::Node, proc_context::ProcContext};
 
@@ -8,18 +8,16 @@ pub trait Event: 'static {
     fn dispatch(&self, time: f64, target: &mut Self::Target);
 }
 
-pub struct EventControl<T: 'static, E: Event> {
+pub struct EventControl<E: Event> {
     target: E::Target,
     events: VecDeque<(f64, E)>,
-    _t: PhantomData<T>,
 }
 
-impl<T: 'static, E: Event> EventControl<T, E> {
+impl<E: Event> EventControl<E> {
     pub fn new(target: E::Target) -> Self {
         Self {
             target,
             events: Vec::new().into(),
-            _t: Default::default(),
         }
     }
 
@@ -34,7 +32,7 @@ impl<T: 'static, E: Event> EventControl<T, E> {
     }
 }
 
-impl<T: 'static, N: Node<T>, E: Event<Target = N>> Node<T> for EventControl<T, E> {
+impl<T: 'static, N: Node<T>, E: Event<Target = N>> Node<T> for EventControl<E> {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         while let Some(e) = self.events.front_mut() {
@@ -56,7 +54,7 @@ impl<T: 'static, N: Node<T>, E: Event<Target = N>> Node<T> for EventControl<T, E
     }
 }
 
-impl<T: 'static, E: Event> AsMut<Self> for EventControl<T, E> {
+impl<E: Event> AsMut<Self> for EventControl<E> {
     #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
