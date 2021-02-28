@@ -1,5 +1,7 @@
+mod into_mono;
 mod into_stereo;
 
+pub use into_mono::IntoMono;
 pub use into_stereo::IntoStereo;
 
 use std::ops::{Add, Mul, Neg};
