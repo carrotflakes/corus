@@ -12,10 +12,13 @@ use corus::{
         resetable_acc,
     },
     core::{
+        accumulator::Accumulator,
         add::Add,
         amp::Amp,
+        biquad_filter::{BiquadFilter, BiquadFilterParams, LowPass},
         constant::Constant,
         controllable::{Controllable, Controller},
+        map::Map,
         mix::Mix,
         param::Param,
         proc_once_share::ProcOnceShare,
@@ -23,7 +26,7 @@ use corus::{
     },
     notenum_to_frequency,
     signal::{C1f64, C2f64},
-    EventControlInplace,
+    EventControlInplace, ProcContext,
 };
 
 const SAMPLE_RATE: usize = 44100;
@@ -200,15 +203,21 @@ fn fm_synth_builder(seed: u32) -> MyVoice {
 
 fn benihora_builder() -> MyVoice {
     use corus::contrib::benihora::{make_noise_node, Benihora, BenihoraEvent};
-    let benihora = Benihora::new(make_noise_node());
+    let benihora = Benihora::new(make_noise_node(), 2);
     let benihora = Controllable::new(EventControlInplace::new(benihora));
     let mut ctrl1 = benihora.controller();
     let mut ctrl2 = benihora.controller();
     ctrl2
         .lock()
         .push_event(0.0, BenihoraEvent::SetStatus(false, false));
+    let benihora = corus::contrib::simple_comp::SimpleComp::new(
+        benihora,
+        Constant::from(0.2),
+        Constant::from(0.5),
+        Constant::from(1.4),
+    );
     Voice(
-        Box::new(benihora) as Box<dyn Node<C1f64>>,
+        Box::new(Amp::new(benihora, Constant::from(1.5))) as Box<dyn Node<C1f64>>,
         Box::new(move |time, NoteOn((notenum, velocity))| {
             let time = time - 0.05;
             ctrl1
@@ -236,4 +245,47 @@ fn benihora_builder() -> MyVoice {
                 .push_event(time, BenihoraEvent::SetStatus(false, false));
         }),
     )
+}
+
+fn wavetable_builder(pitch: ProcOnceShare<f64, Controllable<f64, Param<f64, f64>>>) -> MyVoice {
+    let wavetable = make_wavetable();
+    let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
+    let (gain, mut gain_ctrl) = controllable_param(1.0);
+    let (acc, mut acc_reset) = resetable_acc(Amp::new(freq_param, pitch));
+    let node = Map::new(acc, move |x| {
+        wavetable[((x * wavetable.len() as f64) as usize).rem_euclid(wavetable.len())]
+    });
+    let (env, mut env_on, mut env_off) = AdsrEnvelope::new(0.01, 0.5, 0.2, 0.3).build();
+    let node = Amp::new(node, Amp::new(env, gain));
+    Voice(
+        Box::new(node) as Box<dyn Node<C1f64>>,
+        Box::new(move |time, NoteOn((notenum, velocity))| {
+            freq_param_ctrl
+                .lock()
+                .set_value_at_time(time, notenum_to_frequency(notenum as u32));
+            gain_ctrl.lock().set_value_at_time(time, velocity);
+            acc_reset(time, 0.5);
+            env_on(time);
+        }),
+        Box::new(move |time, NoteOff(())| env_off(time)),
+    )
+}
+
+fn make_wavetable() -> Vec<f64> {
+    let buf = vec![0.0, 0.2, 0.5, 0.3, 0.4, 0.3, 0.3, 0.1, 0.1, 0.1, -1.0];
+    let acc = Accumulator::new(Constant::from(-1.0), 1.0);
+    let node = Map::new(acc, move |f| {
+        buf[((f * buf.len() as f64) as usize).rem_euclid(buf.len())]
+    });
+    let mut node = BiquadFilter::new(
+        node,
+        BiquadFilterParams::new(
+            LowPass,
+            Constant::from(500.0),
+            Constant::from(0.0),
+            Constant::from(1.0),
+        ),
+    );
+    let buf: Vec<_> = ProcContext::new(1000).lock(&mut node).take(1000).collect();
+    buf
 }

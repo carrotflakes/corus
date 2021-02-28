@@ -12,18 +12,18 @@ pub struct Benihora {
     tract: Tract,
     block_time: f64,         // sec
     block_updated_time: f64, // sec
-    pub twice: bool,
+    proc_num: usize,
 }
 
 impl Benihora {
-    pub fn new(node: Box<dyn Node<C1f64>>) -> Self {
+    pub fn new(node: Box<dyn Node<C1f64>>, proc_num: usize) -> Self {
         Self {
             glottis: Glottis::new(),
             tract: Tract::new(),
             node,
             block_time: 0.04,
             block_updated_time: 0.0,
-            twice: true,
+            proc_num,
         }
     }
 }
@@ -46,35 +46,17 @@ impl Node<C1f64> for Benihora {
             .run_step(ctx.time, ctx.sample_rate as usize, lambda1, v.get_m() as F);
         let noise_mod = self.glottis.get_noise_modulator(lambda1);
         let turbulence_noise = v.get_m() as F * noise_mod; // v.0[1] is better...
-        if self.twice {
-            let mut vocal_out = 0.0;
+        let mut vocal_out = 0.0;
+        for i in 0..self.proc_num {
             vocal_out += self.tract.run_step(
-                ctx.time,
+                ctx.time + (i as f64 / self.proc_num as f64) / ctx.sample_rate as f64,
                 glottal_output,
                 turbulence_noise,
                 lambda1,
-                ctx.sample_rate as usize * 2,
+                ctx.sample_rate as usize * self.proc_num,
             );
-            vocal_out += self.tract.run_step(
-                ctx.time + 0.5 / ctx.sample_rate as f64,
-                glottal_output,
-                turbulence_noise,
-                lambda2,
-                ctx.sample_rate as usize * 2,
-            );
-
-            (vocal_out * 0.5).into()
-        } else {
-            self.tract
-                .run_step(
-                    ctx.time,
-                    glottal_output,
-                    turbulence_noise,
-                    lambda1,
-                    ctx.sample_rate as usize,
-                )
-                .into()
         }
+        (vocal_out / self.proc_num as f64).into()
     }
 
     fn lock(&mut self) {
