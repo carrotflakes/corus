@@ -51,6 +51,7 @@ pub fn write_to_file<T: IntoStereo<f64>, N: Node<T> + 'static>(
     println!("hash(i16): {:x}", i16hasher.finish());
 }
 
+#[allow(dead_code)]
 pub fn read_wav_file(file: &str) -> Vec<C2f64> {
     let mut wav = hound::WavReader::open(&file).unwrap();
     println!("spec: {:?}", wav.spec());

@@ -89,7 +89,7 @@ where
 {
     type Target = Accumulator<T, A>;
 
-    fn dispatch(&self, time: f64, target: &mut Self::Target) {
+    fn dispatch(&self, _time: f64, target: &mut Self::Target) {
         target.value = self.value.clone();
     }
 }
