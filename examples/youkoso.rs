@@ -1,7 +1,6 @@
 mod write_to_file;
 
-use corus::{
-    contrib::{
+use corus::{EventControlInplace, ProcContext, contrib::{
         amp_pan,
         chip::{Noise, NoiseEvent},
         controllable_param, delay_fx,
@@ -10,8 +9,7 @@ use corus::{
         perlin_noise,
         rand_fm_synth::rand_fm_synth,
         resetable_acc,
-    },
-    core::{
+    }, core::{
         accumulator::Accumulator,
         add::Add,
         amp::Amp,
@@ -23,13 +21,10 @@ use corus::{
         param::Param,
         proc_once_share::ProcOnceShare,
         Node,
-    },
-    notenum_to_frequency,
-    signal::{C1f64, C2f64},
-    EventControlInplace, ProcContext,
-};
+    }, db_to_amp, notenum_to_frequency, signal::{C1f64, C2f64}};
 
 const SAMPLE_RATE: usize = 44100;
+const DB_MIN: f64 = 24.0;
 
 fn main() {
     let file = std::env::args()
@@ -67,7 +62,7 @@ fn main() {
                     track.0.note_off(e.time, Some(notenum), ());
                 }
                 ezmid::EventBody::Volume { volume, .. } => {
-                    track.1.set_value_at_time(e.time, volume as f64);
+                    track.1.set_value_at_time(e.time, db_to_amp((volume as f64 - 1.0) * DB_MIN));
                 }
                 ezmid::EventBody::Pan { pan, .. } => {
                     track.2.set_value_at_time(e.time, pan as f64);
@@ -103,8 +98,8 @@ fn main() {
 
     println!("{} synthes", synthes.len());
 
-    let mix = Mix::new(synthes);
-    let node = Amp::new(mix, Constant::new(C2f64([0.25, 0.25])));
+    let node = Mix::new(synthes);
+    // let node = Amp::new(node, Constant::new(C2f64([0.25, 0.25])));
     let node = delay_fx(node, SAMPLE_RATE as usize, 0.3, 0.3);
 
     let file = format!("{}.wav", file[..file.len() - 4].to_string());
@@ -152,7 +147,7 @@ fn saw_builder(pitch: ProcOnceShare<f64, Controllable<f64, Param<f64, f64>>>) ->
             freq_param_ctrl
                 .lock()
                 .set_value_at_time(time, notenum_to_frequency(notenum as u32));
-            gain_ctrl.lock().set_value_at_time(time, velocity);
+            gain_ctrl.lock().set_value_at_time(time, db_to_amp((velocity - 1.0) * DB_MIN));
             acc_reset(time, 0.5);
             env_on(time);
         }),
@@ -174,7 +169,7 @@ fn noise_builder() -> MyVoice {
                 time,
                 NoiseEvent::OriginalFreq(notenum % 7, (15 * notenum as usize / 127) as u8),
             );
-            gain_ctrl.lock().set_value_at_time(time, velocity * 0.25);
+            gain_ctrl.lock().set_value_at_time(time, db_to_amp((velocity * 0.25 - 1.0) * DB_MIN));
             env_on(time)
         }),
         Box::new(move |time, NoteOff(())| env_off(time)),
@@ -214,7 +209,7 @@ fn benihora_builder() -> MyVoice {
         benihora,
         Constant::from(0.2),
         Constant::from(0.5),
-        Constant::from(1.4),
+        Constant::from(0.75),
     );
     Voice(
         Box::new(Amp::new(benihora, Constant::from(1.5))) as Box<dyn Node<C1f64>>,
@@ -225,7 +220,7 @@ fn benihora_builder() -> MyVoice {
                 .push_event(time, BenihoraEvent::SetStatus(true, false));
             ctrl1
                 .lock()
-                .push_event(time, BenihoraEvent::SetTenseness(velocity));
+                .push_event(time, BenihoraEvent::SetTenseness(db_to_amp((velocity - 1.0) * DB_MIN)));
             ctrl1.lock().push_event(
                 time,
                 BenihoraEvent::MoveTangue(
@@ -263,7 +258,7 @@ fn wavetable_builder(pitch: ProcOnceShare<f64, Controllable<f64, Param<f64, f64>
             freq_param_ctrl
                 .lock()
                 .set_value_at_time(time, notenum_to_frequency(notenum as u32));
-            gain_ctrl.lock().set_value_at_time(time, velocity);
+            gain_ctrl.lock().set_value_at_time(time, db_to_amp((velocity - 1.0) * DB_MIN));
             acc_reset(time, 0.5);
             env_on(time);
         }),
