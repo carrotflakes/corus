@@ -32,6 +32,7 @@ use crate::{
         Node,
     },
     signal::{C1f64, C2f64, Mono},
+    ProcContext,
 };
 
 pub fn amp_pan<A, G, P>(
@@ -54,4 +55,15 @@ pub fn controllable_param<T: Mono<f64>>(
     let mut ctrl = c.controller();
     ctrl.lock().set_value_at_time(0.0, initial_value);
     (c, ctrl)
+}
+
+pub fn render_to_buffer<T: 'static, N: Node<T>>(
+    sample_rate: u64,
+    length: f64,
+    node: &mut N,
+) -> Vec<T> {
+    ProcContext::new(sample_rate)
+        .lock(node)
+        .take((sample_rate as f64 * length).round() as usize) // round?
+        .collect()
 }
