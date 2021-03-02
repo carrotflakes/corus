@@ -1,4 +1,10 @@
-use std::{cell::RefCell, collections::VecDeque, marker::PhantomData, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::VecDeque,
+    marker::PhantomData,
+    rc::Rc,
+    sync::{Arc, Weak},
+};
 
 use crate::{core::Node, proc_context::ProcContext};
 
@@ -23,8 +29,8 @@ impl EventQueue {
         }
     }
 
-    pub fn wrap<E: Event>(&mut self, t: E::Target) -> EventControl<E> {
-        EventControl::new(self.events.clone(), Box::new(t))
+    pub fn get_controller<E: Event>(&mut self, arc: &Arc<E::Target>) -> EventControl<E> {
+        EventControl::new(self.events.clone(), Arc::downgrade(arc))
     }
 
     pub fn dispatch(&mut self, ctx: &ProcContext) {
@@ -47,16 +53,17 @@ impl EventQueue {
     }
 }
 
+#[derive(Clone)]
 pub struct EventControl<E: Event> {
     events: Rc<RefCell<VecDeque<(f64, Box<dyn FnMut(f64)>)>>>,
-    target: Box<E::Target>,
+    target: Weak<E::Target>,
     _t: PhantomData<E>,
 }
 
 impl<E: Event> EventControl<E> {
     fn new(
         events: Rc<RefCell<VecDeque<(f64, Box<dyn FnMut(f64)>)>>>,
-        target: Box<E::Target>,
+        target: Weak<E::Target>,
     ) -> Self {
         Self {
             events,
@@ -67,8 +74,7 @@ impl<E: Event> EventControl<E> {
 
     pub fn push(&mut self, time: f64, event: E) {
         let target =
-            unsafe { std::mem::transmute::<_, &'static mut E::Target>(self.target.as_mut()) };
-        // let event = Box::new((event, target));
+            unsafe { std::mem::transmute::<_, &'static mut E::Target>(self.target.as_ptr()) };
         let mut events = self.events.borrow_mut();
         for (i, e) in events.iter().enumerate() {
             if time < e.0 {
@@ -79,22 +85,6 @@ impl<E: Event> EventControl<E> {
         events.push_back((time, caller(event, target)));
     }
 }
-
-impl<T: 'static, N: Node<T>, E: Event<Target = N>> Node<T> for EventControl<E> {
-    #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
-        self.target.proc(ctx)
-    }
-
-    fn lock(&mut self) {
-        self.target.lock();
-    }
-
-    fn unlock(&mut self) {
-        self.target.unlock();
-    }
-}
-
 
 pub struct EventDispatchNode<T: 'static, N: Node<T>> {
     node: N,

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::proc_context::ProcContext;
 
 pub trait Node<T: 'static> {
@@ -19,4 +21,35 @@ impl<T: 'static, N: Node<T> + ?Sized> Node<T> for Box<N> {
     fn unlock(&mut self) {
         self.as_mut().unlock();
     }
+}
+
+impl<T, A> Node<T> for Arc<A>
+where
+    T: 'static + Clone + Default,
+    A: Node<T> + ?Sized,
+{
+    #[inline]
+    fn proc(&mut self, ctx: &ProcContext) -> T {
+        get_mut(self).proc(ctx)
+    }
+
+    fn lock(&mut self) {
+        if Arc::strong_count(self) != 1 {
+            panic!("Cloned Arc<Node<_>> cannot be proc!");
+        }
+        get_mut(self).lock();
+    }
+
+    fn unlock(&mut self) {
+        get_mut(self).unlock();
+    }
+}
+
+#[inline]
+fn get_mut<T, A>(arc: &mut Arc<A>) -> &mut A
+where
+    T: 'static + Clone + Default,
+    A: Node<T> + ?Sized,
+{
+    unsafe { std::mem::transmute::<_, &mut A>(Arc::as_ptr(arc)) }
 }

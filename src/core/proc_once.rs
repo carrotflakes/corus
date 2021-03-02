@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use super::{Node, ProcContext};
 
 pub struct ProcOnce<T, A>
@@ -60,5 +62,44 @@ where
         if self.lock_count == 0 {
             self.node.unlock();
         }
+    }
+}
+
+use crate::Event;
+
+pub struct ProcOnceEvent<T, A, E>
+where
+    T: 'static + Clone + Default,
+    A: 'static + Node<T>,
+    E: Event<Target = A>,
+{
+    event: E,
+    _t: PhantomData<T>,
+}
+
+impl<T, A, E> ProcOnceEvent<T, A, E>
+where
+    T: 'static + Clone + Default,
+    A: 'static + Node<T>,
+    E: Event<Target = A>,
+{
+    pub fn new(event: E) -> Self {
+        Self {
+            event,
+            _t: Default::default(),
+        }
+    }
+}
+
+impl<T, A, E> Event for ProcOnceEvent<T, A, E>
+where
+    T: 'static + Clone + Default,
+    A: 'static + Node<T>,
+    E: Event<Target = A>,
+{
+    type Target = A;
+
+    fn dispatch(&self, time: f64, target: &mut Self::Target) {
+        self.event.dispatch(time, target)
     }
 }

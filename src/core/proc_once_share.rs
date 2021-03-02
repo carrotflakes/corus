@@ -61,3 +61,13 @@ where
         }
     }
 }
+
+impl<T, A> From<Arc<ProcOnce<T, A>>> for ProcOnceShare<T, A>
+where
+    T: 'static + Clone + Default,
+    A: Node<T>,
+{
+    fn from(node: Arc<ProcOnce<T, A>>) -> Self {
+        ProcOnceShare { proc_once: node }
+    }
+}
