@@ -25,6 +25,7 @@ where
         unsafe { std::mem::transmute::<_, &ProcOnce<T, A>>(Arc::as_ptr(&self.proc_once)) }
     }
 
+    #[inline]
     fn get_mut(&mut self) -> &mut ProcOnce<T, A> {
         unsafe { std::mem::transmute::<_, &mut ProcOnce<T, A>>(Arc::as_ptr(&mut self.proc_once)) }
     }
