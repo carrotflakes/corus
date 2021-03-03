@@ -1,10 +1,15 @@
-use crate::{signal::Mono, Event};
+use std::{
+    collections::VecDeque,
+    ops::{Div, Sub},
+};
+
+use crate::{signal::Mono, Event, EventControl};
 
 use super::{Node, ProcContext};
 
 #[derive(Clone)]
 pub enum ParamState<F: Float> {
-    Constant,
+    Constant(F),
     Linear(F),
     Exponential(F),
     Target { target: F, time_constant: f64 },
@@ -22,8 +27,8 @@ impl<F: Float> Param<F> {
 
     pub fn with_value(value: F) -> Self {
         Param {
-            value,
-            state: ParamState::Constant,
+            value: value.clone(),
+            state: ParamState::Constant(value),
         }
     }
 }
@@ -33,7 +38,7 @@ impl Node<f64> for Param<f64> {
     fn proc(&mut self, ctx: &ProcContext) -> f64 {
         let value = self.value.clone();
         match self.state {
-            ParamState::Constant => {}
+            ParamState::Constant(_) => {}
             ParamState::Linear(v) => {
                 self.value = self.value + v / ctx.sample_rate as f64;
             }
@@ -57,9 +62,44 @@ impl Node<f64> for Param<f64> {
     fn unlock(&mut self) {}
 }
 
-pub trait Float: 'static + Clone + Default + From<f64> + Into<f64> {}
+pub trait Float:
+    'static + Clone + Default + From<f64> + Into<f64> + Div<Output = Self> + Sub<Output = Self>
+{
+    fn linear_interpolate(&self, other: Self, r: f64) -> Self;
+    fn exponential_interpolate(&self, other: Self, r: f64) -> Self;
+    fn powf(&self, other: Self) -> Self;
+}
 
-impl Float for f64 {}
+impl Float for f64 {
+    #[inline]
+    fn linear_interpolate(&self, other: Self, r: f64) -> Self {
+        self * (1.0 - r) + other * r
+    }
+
+    #[inline]
+    fn exponential_interpolate(&self, other: Self, r: f64) -> Self {
+        (self.ln() * (1.0 - r) + other.ln() * r).exp()
+    }
+
+    #[inline]
+    fn powf(&self, other: Self) -> Self {
+        f64::powf(*self, other)
+    }
+}
+
+impl<F: Float> Event for ParamState<F> {
+    type Target = Param<F>;
+
+    fn dispatch(&self, _time: f64, target: &mut Param<F>) {
+        match self {
+            ParamState::Constant(value) => {
+                target.value = value.clone();
+            }
+            _ => {}
+        }
+        target.state = self.clone();
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum ParamEvent<F: Float> {
@@ -69,71 +109,246 @@ pub enum ParamEvent<F: Float> {
     SetTargetAtTime { target: F, time_constant: f64 },
 }
 
-impl<F: Float> Event for ParamEvent<F> {
-    type Target = Param<F>;
+pub struct ParamEventSchedule<F: Float> {
+    events: VecDeque<(f64, ParamEvent<F>)>,
+    last_value: (f64, ParamEvent<F>),
+}
 
-    fn dispatch(&self, _time: f64, target: &mut Self::Target) {
-        match self {
-            ParamEvent::SetValueAtTime { value } => {
-                target.value = value.clone();
-                target.state = ParamState::Constant;
+impl<F: Float> ParamEventSchedule<F> {
+    pub fn new() -> Self {
+        Self {
+            events: VecDeque::new(),
+            last_value: (
+                0.0,
+                ParamEvent::SetValueAtTime {
+                    value: F::from(0.0),
+                },
+            ),
+        }
+    }
+
+    pub fn push_event(&mut self, time: f64, event: ParamEvent<F>) {
+        for (i, e) in self.events.iter().enumerate() {
+            if time < e.0 {
+                self.events.insert(i, (time, event));
+                return;
             }
-            ParamEvent::LinearRampToValueAtTime { value } => {
-                target.state = ParamState::Linear(value.clone());
-            }
-            ParamEvent::ExponentialRampToValueAtTime { value } => {
-                target.state = ParamState::Exponential(value.clone());
-            }
+        }
+        self.events.push_back((time, event));
+    }
+
+    pub fn set_value_at_time(&mut self, time: f64, value: F) {
+        self.push_event(time, ParamEvent::SetValueAtTime { value });
+    }
+
+    pub fn linear_ramp_to_value_at_time(&mut self, time: f64, value: F) {
+        self.push_event(time, ParamEvent::LinearRampToValueAtTime { value });
+    }
+
+    pub fn exponential_ramp_to_value_at_time(&mut self, time: f64, value: F) {
+        self.push_event(time, ParamEvent::ExponentialRampToValueAtTime { value });
+    }
+
+    pub fn set_target_at_time(&mut self, time: f64, target: F, time_constant: f64) {
+        self.push_event(
+            time,
             ParamEvent::SetTargetAtTime {
-                target: t,
+                target,
                 time_constant,
-            } => {
-                target.state = ParamState::Target {
-                    target: t.clone(),
-                    time_constant: *time_constant,
-                };
+            },
+        );
+    }
+
+    fn cancel_scheduled_values_(&mut self, time: f64) -> Option<(f64, ParamEvent<F>)> {
+        if let Some(i) = self.events.iter().position(|e| time <= e.0) {
+            let e = self.events[i].clone();
+            self.events.truncate(i);
+            Some(e)
+        } else {
+            None
+        }
+    }
+
+    pub fn cancel_scheduled_values(&mut self, time: f64) {
+        self.cancel_scheduled_values_(time);
+    }
+
+    pub fn cancel_and_hold_at_time(&mut self, time: f64) {
+        let value = self.compute_value(time);
+        if let Some(e) = self.cancel_scheduled_values_(time) {
+            match e.1 {
+                ParamEvent::SetValueAtTime { .. } | ParamEvent::SetTargetAtTime { .. } => {
+                    self.set_value_at_time(time, value)
+                }
+                ParamEvent::LinearRampToValueAtTime { .. } => {
+                    self.linear_ramp_to_value_at_time(time, value)
+                }
+                ParamEvent::ExponentialRampToValueAtTime { .. } => {
+                    self.exponential_ramp_to_value_at_time(time, value)
+                }
             }
+        } else {
+            self.set_value_at_time(time, value); // OK?
+        }
+    }
+
+    pub fn compute_value(&self, time: f64) -> F {
+        let mut before = Some(&self.last_value);
+        let mut after = None;
+        for event in &self.events {
+            if time < event.0 {
+                match event.1 {
+                    ParamEvent::SetValueAtTime { .. } => {}
+                    ParamEvent::LinearRampToValueAtTime { .. }
+                    | ParamEvent::ExponentialRampToValueAtTime { .. } => {
+                        after = Some(event);
+                    }
+                    ParamEvent::SetTargetAtTime { .. } => {}
+                }
+                break;
+            }
+            match event.1 {
+                ParamEvent::SetValueAtTime { .. } => {
+                    before = Some(event);
+                    after = None;
+                }
+                ParamEvent::LinearRampToValueAtTime { .. }
+                | ParamEvent::ExponentialRampToValueAtTime { .. } => {
+                    before = Some(event);
+                    after = None;
+                }
+                ParamEvent::SetTargetAtTime { .. } => {
+                    after = Some(event);
+                }
+            }
+        }
+        if let Some(before) = before {
+            let before_value = match before.1.clone() {
+                ParamEvent::SetValueAtTime { value }
+                | ParamEvent::LinearRampToValueAtTime { value }
+                | ParamEvent::ExponentialRampToValueAtTime { value } => value,
+                ParamEvent::SetTargetAtTime { .. } => {
+                    unreachable!()
+                }
+            };
+            if let Some(after) = after {
+                match after.1.clone() {
+                    ParamEvent::SetValueAtTime { .. } => {
+                        unreachable!()
+                    }
+                    ParamEvent::LinearRampToValueAtTime { value } => {
+                        let r = (time - before.0) / (after.0 - before.0);
+                        before_value.linear_interpolate(value, r)
+                    }
+                    ParamEvent::ExponentialRampToValueAtTime { value } => {
+                        let r = (time - before.0) / (after.0 - before.0);
+                        before_value.exponential_interpolate(value, r)
+                    }
+                    ParamEvent::SetTargetAtTime {
+                        target,
+                        time_constant,
+                    } => {
+                        let t = (time - after.0) as f64;
+                        let r = 1.0 - (-t / time_constant).exp();
+                        before_value.linear_interpolate(target, r)
+                    }
+                }
+            } else {
+                before_value
+            }
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn dispatch(&mut self, time: f64, ec: &mut EventControl<ParamState<F>>) {
+        let mut before_value = self.compute_value(self.last_value.0);
+        while !self.events.is_empty() {
+            let first = &self.events[0];
+            match first.1.clone() {
+                ParamEvent::SetValueAtTime { value } => {
+                    if first.0 < time {
+                        ec.push(first.0, ParamState::Constant(value.clone()));
+                        before_value = value.clone();
+                        self.last_value = first.clone();
+                    }
+                }
+                ParamEvent::LinearRampToValueAtTime { value } => {
+                    ec.push(
+                        self.last_value.0,
+                        ParamState::Linear(
+                            (value.clone() - before_value.clone())
+                                / F::from(first.0 - self.last_value.0),
+                        ),
+                    );
+                    if first.0 < time {
+                        ec.push(first.0, ParamState::Constant(value.clone()));
+                        before_value = value.clone();
+                        self.last_value = (first.0, ParamEvent::SetValueAtTime { value });
+                    }
+                }
+                ParamEvent::ExponentialRampToValueAtTime { value } => {
+                    ec.push(
+                        self.last_value.0,
+                        ParamState::Exponential(
+                            (value.clone() / before_value.clone())
+                                .powf(F::from(1.0 / (first.0 - self.last_value.0))),
+                        ),
+                    );
+                    if first.0 < time {
+                        ec.push(first.0, ParamState::Constant(value.clone()));
+                        before_value = value.clone();
+                        self.last_value = (first.0, ParamEvent::SetValueAtTime { value });
+                    }
+                }
+                ParamEvent::SetTargetAtTime {
+                    target,
+                    time_constant,
+                } => {
+                    if first.0 < time {
+                        ec.push(
+                            first.0,
+                            ParamState::Target {
+                                target,
+                                time_constant,
+                            },
+                        );
+                        self.last_value = first.clone();
+                    }
+                }
+            }
+            if time < first.0 {
+                // 位置、大丈夫？
+                break;
+            }
+            self.events.pop_front();
         }
     }
 }
 
 #[test]
 fn test() {
-    let mut param = crate::EventControlInplace::new(Param::<f64>::new());
+    let mut eq = crate::EventQueue::new();
+    let param = std::sync::Arc::new(Param::<f64>::new());
+    let mut param_ctl = eq.get_controller(&param);
     let mut pc = ProcContext::new(4);
+    let mut schedule = ParamEventSchedule::new();
 
-    param.push_event(2.0 / 4.0, ParamEvent::SetValueAtTime { value: 1.0 });
-    param.push_event(4.0 / 4.0, ParamEvent::SetValueAtTime { value: 2.0 });
-    param.push_event(
-        4.0 / 4.0,
-        ParamEvent::LinearRampToValueAtTime { value: -2.0 * 4.0 },
-    );
-    param.push_event(
-        6.0 / 4.0,
-        ParamEvent::LinearRampToValueAtTime {
-            value: 3.0 / 4.0 * 4.0,
-        },
-    );
-    param.push_event(10.0 / 4.0, ParamEvent::SetValueAtTime { value: 1.0 });
-    param.push_event(
-        12.0 / 4.0,
-        ParamEvent::SetTargetAtTime {
-            target: 0.0,
-            time_constant: 0.5,
-        },
-    );
-    param.push_event(15.0 / 4.0, ParamEvent::SetValueAtTime { value: 0.1 });
-    // param.set_value_at_time(2.0 / 4.0, 1.0);
-    // param.set_value_at_time(4.0 / 4.0, 2.0);
-    // param.linear_ramp_to_value_at_time(6.0 / 4.0, -2.0);
-    // param.linear_ramp_to_value_at_time(10.0 / 4.0, 1.0);
-    // param.set_target_at_time(12.0 / 4.0, 0.0, 0.5);
-    // param.cancel_and_hold_at_time(15.0 / 4.0);
-    // param.exponential_ramp_to_value_at_time(19.0 / 4.0, 1.0);
+    schedule.set_value_at_time(2.0 / 4.0, 1.0);
+    schedule.set_value_at_time(4.0 / 4.0, 2.0);
+    schedule.linear_ramp_to_value_at_time(6.0 / 4.0, -2.0);
+    schedule.linear_ramp_to_value_at_time(10.0 / 4.0, 1.0);
+    schedule.set_target_at_time(12.0 / 4.0, 0.0, 0.5);
+    schedule.cancel_and_hold_at_time(15.0 / 4.0);
+    schedule.exponential_ramp_to_value_at_time(19.0 / 4.0, 1.0);
+
+    schedule.dispatch(100.0, &mut param_ctl);
+
+    let mut node = eq.finish(param);
 
     for _ in 0..20 {
         dbg!(pc.time);
-        dbg!(param.proc(&pc));
+        dbg!(node.proc(&pc));
         pc.time += 1.0 / pc.sample_rate as f64;
     }
 }

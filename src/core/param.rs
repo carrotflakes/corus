@@ -109,6 +109,8 @@ impl<F: Float, T: Mono<F>> Param<F, T> {
                     self.exponential_ramp_to_value_at_time(time, value)
                 }
             }
+        } else {
+            self.set_value_at_time(time, value); // OK?
         }
     }
 
@@ -169,7 +171,7 @@ impl<F: Float, T: Mono<F>> Param<F, T> {
                         target,
                         time_constant,
                     } => {
-                        let t = (time - before.time) as f64;
+                        let t = (time - after.time) as f64;
                         let r = 1.0 - (-t / time_constant).exp();
                         before_value.linear_interpolate(target, r)
                     }
