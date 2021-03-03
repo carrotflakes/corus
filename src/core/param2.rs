@@ -102,7 +102,7 @@ impl<F: Float> Event for ParamState<F> {
 }
 
 #[derive(Debug, Clone)]
-pub enum ParamEvent<F: Float> {
+enum ParamEvent<F: Float> {
     SetValueAtTime { value: F },
     LinearRampToValueAtTime { value: F },
     ExponentialRampToValueAtTime { value: F },
@@ -129,7 +129,7 @@ impl<F: Float> ParamEventSchedule<F> {
         }
     }
 
-    pub fn push_event(&mut self, time: f64, event: ParamEvent<F>) {
+    fn push_event(&mut self, time: f64, event: ParamEvent<F>) {
         for (i, e) in self.events.iter().enumerate() {
             if time < e.0 {
                 self.events.insert(i, (time, event));
@@ -263,7 +263,7 @@ impl<F: Float> ParamEventSchedule<F> {
         }
     }
 
-    pub fn dispatch(&mut self, time: f64) {
+    pub fn send(&mut self, time: f64) {
         let mut before_value = self.compute_value(self.last_event.0);
         while !self.events.is_empty() {
             let first = &self.events[0];
@@ -343,7 +343,7 @@ fn test() {
     schedule.cancel_and_hold_at_time(15.0 / 4.0);
     schedule.exponential_ramp_to_value_at_time(19.0 / 4.0, 1.0);
 
-    schedule.dispatch(100.0);
+    schedule.send(100.0);
 
     let mut node = eq.finish(param);
 
