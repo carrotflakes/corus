@@ -38,21 +38,20 @@ impl Node<C1f64> for Benihora {
         }
 
         let v = self.node.as_mut().proc(ctx);
-        let lambda1 = (ctx.time - self.block_updated_time) / self.block_time; // TODO: lambdaなくしたい
-        let lambda2 =
-            (ctx.time - self.block_updated_time + 0.5 / ctx.sample_rate as f64) / self.block_time;
+        let lambda = (ctx.time - self.block_updated_time) / self.block_time; // TODO: lambdaなくしたい
         let glottal_output = self
             .glottis
-            .run_step(ctx.time, ctx.sample_rate as usize, lambda1, v.get_m() as F);
-        let noise_mod = self.glottis.get_noise_modulator(lambda1);
+            .run_step(ctx.time, ctx.sample_rate as usize, lambda, v.get_m() as F);
+        let noise_mod = self.glottis.get_noise_modulator(lambda);
         let turbulence_noise = v.get_m() as F * noise_mod; // v.0[1] is better...
         let mut vocal_out = 0.0;
         for i in 0..self.proc_num {
+            let time = ctx.time + (i as f64 / self.proc_num as f64) / ctx.sample_rate as f64;
             vocal_out += self.tract.run_step(
-                ctx.time + (i as f64 / self.proc_num as f64) / ctx.sample_rate as f64,
+                time,
                 glottal_output,
                 turbulence_noise,
-                lambda1,
+                (time - self.block_updated_time) / self.block_time,
                 ctx.sample_rate as usize * self.proc_num,
             );
         }
