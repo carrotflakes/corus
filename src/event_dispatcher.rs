@@ -44,11 +44,15 @@ impl EventQueue {
         }
     }
 
-    pub fn finish<T: 'static, N: Node<T>>(self, node: N) -> EventDispatchNode<T, N> {
-        EventDispatchNode {
-            node,
-            event_queue: self,
-            _t: Default::default(),
+    pub fn dispatch_node<T: 'static, N: Node<T>>(&self, node: N) -> EventDispatchNode<T, N> {
+        EventDispatchNode::new(node, self.clone())
+    }
+}
+
+impl Clone for EventQueue {
+    fn clone(&self) -> Self {
+        EventQueue {
+            events: self.events.clone(),
         }
     }
 }
@@ -90,6 +94,16 @@ pub struct EventDispatchNode<T: 'static, N: Node<T>> {
     node: N,
     event_queue: EventQueue,
     _t: PhantomData<T>,
+}
+
+impl<T: 'static, N: Node<T>> EventDispatchNode<T, N> {
+    pub fn new(node: N, event_queue: EventQueue) -> Self {
+        Self {
+            node,
+            event_queue,
+            _t: Default::default(),
+        }
+    }
 }
 
 impl<T: 'static, N: Node<T>> Node<T> for EventDispatchNode<T, N> {

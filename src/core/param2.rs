@@ -345,7 +345,7 @@ fn test() {
 
     schedule.send(100.0);
 
-    let mut node = eq.finish(param);
+    let mut node = eq.dispatch_node(param);
 
     for _ in 0..20 {
         dbg!(pc.time);
