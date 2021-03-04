@@ -2,7 +2,7 @@ mod write_to_file;
 
 use corus::{
     contrib::chip::{Noise, NoiseEvent},
-    EventControlInplace,
+    EventControlInplace, EventPusher,
 };
 
 fn main() {

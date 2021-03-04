@@ -3,7 +3,7 @@ use std::{
     ops::{Div, Sub},
 };
 
-use crate::{signal::Mono, Event, EventControl};
+use crate::{Event, EventPusher, signal::Mono};
 
 use super::{Node, ProcContext};
 
@@ -109,14 +109,14 @@ enum ParamEvent<F: Float> {
     SetTargetAtTime { target: F, time_constant: f64 },
 }
 
-pub struct ParamEventSchedule<F: Float> {
+pub struct ParamEventSchedule<F: Float, EP: EventPusher<ParamState<F>>> {
     events: VecDeque<(f64, ParamEvent<F>)>,
     last_event: (f64, ParamEvent<F>),
-    control: EventControl<ParamState<F>>,
+    event_pusher: EP,
 }
 
-impl<F: Float> ParamEventSchedule<F> {
-    pub fn new(control: EventControl<ParamState<F>>) -> Self {
+impl<F: Float, EP: EventPusher<ParamState<F>>> ParamEventSchedule<F, EP> {
+    pub fn new(event_pusher: EP) -> Self {
         Self {
             events: VecDeque::new(),
             last_event: (
@@ -125,7 +125,7 @@ impl<F: Float> ParamEventSchedule<F> {
                     value: F::from(0.0),
                 },
             ),
-            control,
+            event_pusher,
         }
     }
 
@@ -270,13 +270,13 @@ impl<F: Float> ParamEventSchedule<F> {
             match first.1.clone() {
                 ParamEvent::SetValueAtTime { value } => {
                     if first.0 < time {
-                        self.control.push(first.0, ParamState::Constant(value.clone()));
+                        self.event_pusher.push_event(first.0, ParamState::Constant(value.clone()));
                         before_value = value.clone();
                         self.last_event = first.clone();
                     }
                 }
                 ParamEvent::LinearRampToValueAtTime { value } => {
-                    self.control.push(
+                    self.event_pusher.push_event(
                         self.last_event.0,
                         ParamState::Linear(
                             (value.clone() - before_value.clone())
@@ -284,13 +284,13 @@ impl<F: Float> ParamEventSchedule<F> {
                         ),
                     );
                     if first.0 < time {
-                        self.control.push(first.0, ParamState::Constant(value.clone()));
+                        self.event_pusher.push_event(first.0, ParamState::Constant(value.clone()));
                         before_value = value.clone();
                         self.last_event = (first.0, ParamEvent::SetValueAtTime { value });
                     }
                 }
                 ParamEvent::ExponentialRampToValueAtTime { value } => {
-                    self.control.push(
+                    self.event_pusher.push_event(
                         self.last_event.0,
                         ParamState::Exponential(
                             (value.clone() / before_value.clone())
@@ -298,7 +298,7 @@ impl<F: Float> ParamEventSchedule<F> {
                         ),
                     );
                     if first.0 < time {
-                        self.control.push(first.0, ParamState::Constant(value.clone()));
+                        self.event_pusher.push_event(first.0, ParamState::Constant(value.clone()));
                         before_value = value.clone();
                         self.last_event = (first.0, ParamEvent::SetValueAtTime { value });
                     }
@@ -308,7 +308,7 @@ impl<F: Float> ParamEventSchedule<F> {
                     time_constant,
                 } => {
                     if first.0 < time {
-                        self.control.push(
+                        self.event_pusher.push_event(
                             first.0,
                             ParamState::Target {
                                 target,

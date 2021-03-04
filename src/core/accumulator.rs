@@ -96,7 +96,7 @@ where
 
 #[test]
 fn test() {
-    use crate::EventControlInplace;
+    use crate::{EventControlInplace, EventPusher};
     let mut accumulator = EventControlInplace::new(Accumulator::new(
         super::constant::Constant::new(C1f64::from(1.0)),
         C1f64::from(4.0),

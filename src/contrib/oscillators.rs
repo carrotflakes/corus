@@ -6,7 +6,7 @@ use crate::{
         Node,
     },
     signal::{C1f64, Mono},
-    EventControlInplace,
+    EventControlInplace, EventPusher,
 };
 
 pub fn sine<A: Node<C1f64>>(frequency: A) -> impl Node<C1f64> {

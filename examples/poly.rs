@@ -11,7 +11,7 @@ use corus::{
     },
     notenum_to_frequency,
     signal::C1f64,
-    EventControlInplace,
+    EventControlInplace, EventPusher,
 };
 
 fn main() {

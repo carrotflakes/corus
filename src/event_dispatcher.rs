@@ -57,6 +57,10 @@ impl Clone for EventQueue {
     }
 }
 
+pub trait EventPusher<E: Event> {
+    fn push_event(&mut self, time: f64, event: E);
+}
+
 #[derive(Clone)]
 pub struct EventControl<E: Event> {
     events: Rc<RefCell<VecDeque<(f64, Box<dyn FnMut(f64)>)>>>,
@@ -75,8 +79,10 @@ impl<E: Event> EventControl<E> {
             _t: Default::default(),
         }
     }
+}
 
-    pub fn push(&mut self, time: f64, event: E) {
+impl<E: Event> EventPusher<E> for EventControl<E> {
+    fn push_event(&mut self, time: f64, event: E) {
         let target =
             unsafe { std::mem::transmute::<_, &'static mut E::Target>(self.target.as_ptr()) };
         let mut events = self.events.borrow_mut();
@@ -134,8 +140,10 @@ impl<E: Event> EventControlInplace<E> {
             events: Vec::new().into(),
         }
     }
+}
 
-    pub fn push_event(&mut self, time: f64, event: E) {
+impl<E: Event> EventPusher<E> for EventControlInplace<E> {
+    fn push_event(&mut self, time: f64, event: E) {
         for (i, e) in self.events.iter().enumerate() {
             if time < e.0 {
                 self.events.insert(i, (time, event));

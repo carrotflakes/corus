@@ -7,7 +7,7 @@ use corus::{
         param::Param,
         proc_once_share::ProcOnceShare,
     },
-    EventControlInplace,
+    EventControlInplace, EventPusher,
 };
 
 fn main() {
