@@ -38,9 +38,9 @@ where
         v
     }
 
-    fn lock(&mut self) {
+    fn lock(&mut self, ctx: &ProcContext) {
         for node in &mut self.nodes {
-            node.lock();
+            node.lock(ctx);
         }
     }
 

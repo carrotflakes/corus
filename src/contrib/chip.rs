@@ -51,7 +51,7 @@ impl Node<C1f64> for Noise {
         C1f64::from_m(self.output as f64 * 2.0 - 1.0)
     }
 
-    fn lock(&mut self) {}
+    fn lock(&mut self, _ctx: &ProcContext) {}
 
     fn unlock(&mut self) {}
 }

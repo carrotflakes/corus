@@ -38,7 +38,7 @@ pub struct ProcGuard<'a, T: 'static, A: Node<T> + ?Sized> {
 
 impl<'a, T: 'static, A: Node<T> + ?Sized> ProcGuard<'a, T, A> {
     fn new(context: &'a mut ProcContext, node: &'a mut A) -> Self {
-        node.lock();
+        node.lock(context);
         Self {
             context,
             node,

@@ -50,8 +50,8 @@ where
         delay_value + v * -self.gain.clone()
     }
 
-    fn lock(&mut self) {
-        self.node.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.node.lock(ctx);
     }
 
     fn unlock(&mut self) {

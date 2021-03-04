@@ -41,8 +41,8 @@ where
         self.get_mut().proc(ctx)
     }
 
-    fn lock(&mut self) {
-        self.get_mut().lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.get_mut().lock(ctx);
     }
 
     fn unlock(&mut self) {

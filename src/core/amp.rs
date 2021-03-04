@@ -37,9 +37,9 @@ where
         self.input.proc(ctx) * self.gain.proc(ctx)
     }
 
-    fn lock(&mut self) {
-        self.input.lock();
-        self.gain.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.input.lock(ctx);
+        self.gain.lock(ctx);
     }
 
     fn unlock(&mut self) {

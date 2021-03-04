@@ -4,7 +4,7 @@ use crate::proc_context::ProcContext;
 
 pub trait Node<T: 'static> {
     fn proc(&mut self, ctx: &ProcContext) -> T;
-    fn lock(&mut self);
+    fn lock(&mut self, ctx: &ProcContext);
     fn unlock(&mut self);
 }
 
@@ -14,8 +14,8 @@ impl<T: 'static, N: Node<T> + ?Sized> Node<T> for Box<N> {
         self.as_mut().proc(ctx)
     }
 
-    fn lock(&mut self) {
-        self.as_mut().lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.as_mut().lock(ctx);
     }
 
     fn unlock(&mut self) {
@@ -33,11 +33,11 @@ where
         get_mut(self).proc(ctx)
     }
 
-    fn lock(&mut self) {
+    fn lock(&mut self, ctx: &ProcContext) {
         if Arc::strong_count(self) != 1 {
             panic!("Cloned Arc<Node<_>> cannot be proc!");
         }
-        get_mut(self).lock();
+        get_mut(self).lock(ctx);
     }
 
     fn unlock(&mut self) {

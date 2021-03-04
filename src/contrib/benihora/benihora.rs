@@ -58,8 +58,8 @@ impl Node<C1f64> for Benihora {
         (vocal_out / self.proc_num as f64).into()
     }
 
-    fn lock(&mut self) {
-        self.node.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.node.lock(ctx);
     }
 
     fn unlock(&mut self) {

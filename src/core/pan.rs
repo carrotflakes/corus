@@ -55,9 +55,9 @@ where
         v.into_stereo_with_pan(pan.get(0))
     }
 
-    fn lock(&mut self) {
-        self.a.lock();
-        self.b.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.a.lock(ctx);
+        self.b.lock(ctx);
     }
 
     fn unlock(&mut self) {

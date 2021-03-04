@@ -65,10 +65,10 @@ where
             .proc(ctx)
     }
 
-    fn lock(&mut self) {
+    fn lock(&mut self, ctx: &ProcContext) {
         if let None = self.ref_mut {
             let mut r = self.node.lock().unwrap();
-            r.lock();
+            r.lock(ctx);
             self.ref_mut = Some(unsafe { std::mem::transmute::<_, MutexGuard<'static, A>>(r) });
         }
     }

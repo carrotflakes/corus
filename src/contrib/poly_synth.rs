@@ -66,9 +66,9 @@ impl<A: Node<C1f64>> Node<C1f64> for PolySynth<A> {
         v
     }
 
-    fn lock(&mut self) {
+    fn lock(&mut self, ctx: &ProcContext) {
         for voice in &mut self.voices {
-            voice.node.lock();
+            voice.node.lock(ctx);
         }
     }
 

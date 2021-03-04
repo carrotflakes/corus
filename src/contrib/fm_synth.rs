@@ -96,12 +96,12 @@ where
         T::from_m(outputs[4])
     }
 
-    fn lock(&mut self) {
-        self.frequency.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.frequency.lock(ctx);
         for oscillator in &mut self.oscillators {
-            oscillator.0.lock();
-            oscillator.1.lock();
-            oscillator.2 .0.lock();
+            oscillator.0.lock(ctx);
+            oscillator.1.lock(ctx);
+            oscillator.2 .0.lock(ctx);
         }
     }
 

@@ -92,9 +92,9 @@ impl<
         v
     }
 
-    fn lock(&mut self) {
+    fn lock(&mut self, ctx: &ProcContext) {
         for voice in &mut self.voices {
-            voice.voice.lock();
+            voice.voice.lock(ctx);
         }
     }
 
@@ -134,8 +134,8 @@ impl<A: Node<f64>, P1, P2> Node<f64> for Voice<A, P1, P2> {
         self.0.proc(ctx)
     }
 
-    fn lock(&mut self) {
-        self.0.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.0.lock(ctx);
     }
 
     fn unlock(&mut self) {

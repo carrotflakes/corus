@@ -30,7 +30,7 @@ where
         (self.f)()
     }
 
-    fn lock(&mut self) {}
+    fn lock(&mut self, _ctx: &ProcContext) {}
 
     fn unlock(&mut self) {}
 }

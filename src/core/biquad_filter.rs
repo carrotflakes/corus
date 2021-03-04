@@ -53,9 +53,9 @@ where
         sample
     }
 
-    fn lock(&mut self) {
-        self.params.lock();
-        self.node.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.params.lock(ctx);
+        self.node.lock(ctx);
     }
 
     fn unlock(&mut self) {
@@ -93,9 +93,9 @@ where
         sample
     }
 
-    fn lock(&mut self) {
-        self.params.lock();
-        self.node.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.params.lock(ctx);
+        self.node.lock(ctx);
     }
 
     fn unlock(&mut self) {
@@ -146,10 +146,10 @@ where
         )
     }
 
-    fn lock(&mut self) {
-        self.frequency.lock();
-        self.gain.lock();
-        self.q.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.frequency.lock(ctx);
+        self.gain.lock(ctx);
+        self.q.lock(ctx);
     }
 
     fn unlock(&mut self) {

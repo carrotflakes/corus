@@ -37,9 +37,9 @@ where
         self.a.proc(ctx) + self.b.proc(ctx)
     }
 
-    fn lock(&mut self) {
-        self.a.lock();
-        self.b.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.a.lock(ctx);
+        self.b.lock(ctx);
     }
 
     fn unlock(&mut self) {

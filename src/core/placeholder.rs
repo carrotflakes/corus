@@ -72,12 +72,12 @@ where
             .proc(ctx)
     }
 
-    fn lock(&mut self) {
+    fn lock(&mut self, ctx: &ProcContext) {
         self.node
             .as_mut()
             .as_mut()
             .expect("Placeholder unset")
-            .lock();
+            .lock(ctx);
     }
 
     fn unlock(&mut self) {

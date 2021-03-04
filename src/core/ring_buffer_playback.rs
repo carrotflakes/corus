@@ -43,8 +43,8 @@ where
         self.buffer.borrow().get(i)
     }
 
-    fn lock(&mut self) {
-        self.node.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.node.lock(ctx);
     }
 
     fn unlock(&mut self) {

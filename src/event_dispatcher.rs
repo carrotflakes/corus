@@ -119,8 +119,8 @@ impl<T: 'static, N: Node<T>> Node<T> for EventDispatchNode<T, N> {
         self.node.proc(ctx)
     }
 
-    fn lock(&mut self) {
-        self.node.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.node.lock(ctx);
     }
 
     fn unlock(&mut self) {
@@ -167,8 +167,8 @@ impl<T: 'static, N: Node<T>, E: Event<Target = N>> Node<T> for EventControlInpla
         self.target.proc(ctx)
     }
 
-    fn lock(&mut self) {
-        self.target.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.target.lock(ctx);
     }
 
     fn unlock(&mut self) {

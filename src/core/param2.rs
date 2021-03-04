@@ -57,7 +57,7 @@ impl Node<f64> for Param<f64> {
         f64::from_m(value)
     }
 
-    fn lock(&mut self) {}
+    fn lock(&mut self, _ctx: &ProcContext) {}
 
     fn unlock(&mut self) {}
 }

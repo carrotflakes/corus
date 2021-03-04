@@ -21,7 +21,7 @@ impl<T: Clone + 'static> Node<T> for Constant<T> {
         self.value.clone()
     }
 
-    fn lock(&mut self) {}
+    fn lock(&mut self, _ctx: &ProcContext) {}
 
     fn unlock(&mut self) {}
 }

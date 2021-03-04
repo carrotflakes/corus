@@ -226,7 +226,7 @@ impl<T: Mono<f64>> Node<T> for Param<f64, T> {
         T::from_m(self.compute_value(ctx.current_time))
     }
 
-    fn lock(&mut self) {}
+    fn lock(&mut self, _ctx: &ProcContext) {}
 
     fn unlock(&mut self) {}
 }

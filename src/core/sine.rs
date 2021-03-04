@@ -35,8 +35,8 @@ where
         (p.get_m() * std::f64::consts::PI * 2.0).sin().into()
     }
 
-    fn lock(&mut self) {
-        self.frequency.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.frequency.lock(ctx);
     }
 
     fn unlock(&mut self) {

@@ -66,8 +66,8 @@ where
             }
     }
 
-    fn lock(&mut self) {
-        self.node.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.node.lock(ctx);
     }
 
     fn unlock(&mut self) {
@@ -97,8 +97,8 @@ where
         v * (gain * out_gain)
     }
 
-    fn lock(&mut self) {
-        self.node.lock();
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.node.lock(ctx);
     }
 
     fn unlock(&mut self) {

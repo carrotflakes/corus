@@ -50,10 +50,10 @@ where
         self.value.clone()
     }
 
-    fn lock(&mut self) {
+    fn lock(&mut self, ctx: &ProcContext) {
         self.lock_count += 1;
         if self.lock_count == 1 {
-            self.node.lock();
+            self.node.lock(ctx);
         }
     }
 
