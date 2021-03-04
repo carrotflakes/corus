@@ -108,8 +108,8 @@ fn test() {
     accumulator.push_event(3.0, SetValueAtTime::new(-1.0));
 
     for _ in 0..20 {
-        dbg!(pc.time);
+        dbg!(pc.current_time);
         dbg!(accumulator.proc(&pc));
-        pc.time += 1.0 / pc.sample_rate as f64;
+        pc.current_time += 1.0 / pc.sample_rate as f64;
     }
 }

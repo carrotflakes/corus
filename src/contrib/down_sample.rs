@@ -33,10 +33,13 @@ where
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
-        if self.next_update <= ctx.time {
+        if self.next_update <= ctx.current_time {
             self.value = self.node.proc(&ProcContext {
                 sample_rate: self.sample_rate,
-                time: ctx.time,
+                current_time: ctx.current_time * self.sample_rate as f64 / ctx.sample_rate as f64,
+                current_sample: ctx.current_sample * self.sample_rate / ctx.sample_rate,
+                proc_samples: ctx.proc_samples * self.sample_rate / ctx.sample_rate,
+                proc_length: ctx.proc_length,
             });
             self.next_update += 1.0 / self.sample_rate as f64;
         }

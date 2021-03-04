@@ -85,7 +85,7 @@ pub fn fm() {
     let mut event_pump = sdl_ctx.event_pump().unwrap();
 
     'running: loop {
-        let audio_time = device.lock().ctx.time;
+        let audio_time = device.lock().ctx.current_time;
         canvas.set_draw_color(Color::RGB(255, 255, 255));
         canvas.clear();
 

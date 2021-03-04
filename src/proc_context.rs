@@ -3,22 +3,29 @@ use std::marker::PhantomData;
 use crate::Node;
 
 pub struct ProcContext {
-    pub sample_rate: u64,
-    pub time: f64,
+    pub sample_rate: u64, // DO NOT change after construct!
+    pub current_time: f64,
+    pub current_sample: u64,
+    pub proc_samples: u64, // TODO
+    pub proc_length: f64, // TODO
 }
 
 impl ProcContext {
     pub fn new(sample_rate: u64) -> Self {
         ProcContext {
             sample_rate,
-            time: 0.0,
+            current_time: 0.0,
+            current_sample: 0,
+            proc_samples: 1,
+            proc_length: 1.0 / sample_rate as f64,
         }
     }
 
     #[inline]
     pub fn sample<T: 'static, N: Node<T> + ?Sized>(&mut self, node: &mut N) -> T {
         let r = node.proc(self);
-        self.time += 1.0 / self.sample_rate as f64;
+        self.current_sample += 1;
+        self.current_time = self.current_sample as f64 / self.sample_rate as f64;
         r
     }
 
@@ -50,7 +57,7 @@ impl<'a, T: 'static, A: Node<T> + ?Sized> ProcGuard<'a, T, A> {
     #[inline]
     pub fn sample(&mut self) -> T {
         let r = self.node.proc(self.context);
-        self.context.time += 1.0 / self.context.sample_rate as f64;
+        self.context.current_time += 1.0 / self.context.sample_rate as f64;
         r
     }
 }

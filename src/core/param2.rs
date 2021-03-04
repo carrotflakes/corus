@@ -348,8 +348,8 @@ fn test() {
     let mut node = eq.dispatch_node(param);
 
     for _ in 0..20 {
-        dbg!(pc.time);
+        dbg!(pc.current_time);
         dbg!(node.proc(&pc));
-        pc.time += 1.0 / pc.sample_rate as f64;
+        pc.current_time += 1.0 / pc.sample_rate as f64;
     }
 }

@@ -31,22 +31,22 @@ impl Benihora {
 impl Node<C1f64> for Benihora {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
-        if self.block_updated_time + self.block_time <= ctx.time {
+        if self.block_updated_time + self.block_time <= ctx.current_time {
             self.block_updated_time += self.block_time;
-            self.glottis.update_block(ctx.time, self.block_time);
+            self.glottis.update_block(ctx.current_time, self.block_time);
             self.tract.update_block(self.block_time);
         }
 
         let v = self.node.as_mut().proc(ctx);
-        let lambda = (ctx.time - self.block_updated_time) / self.block_time; // TODO: lambdaなくしたい
+        let lambda = (ctx.current_time - self.block_updated_time) / self.block_time; // TODO: lambdaなくしたい
         let glottal_output = self
             .glottis
-            .run_step(ctx.time, ctx.sample_rate as usize, lambda, v.get_m() as F);
+            .run_step(ctx.current_time, ctx.sample_rate as usize, lambda, v.get_m() as F);
         let noise_mod = self.glottis.get_noise_modulator(lambda);
         let turbulence_noise = v.get_m() as F * noise_mod; // v.0[1] is better...
         let mut vocal_out = 0.0;
         for i in 0..self.proc_num {
-            let time = ctx.time + (i as f64 / self.proc_num as f64) / ctx.sample_rate as f64;
+            let time = ctx.current_time + (i as f64 / self.proc_num as f64) / ctx.sample_rate as f64;
             vocal_out += self.tract.run_step(
                 time,
                 glottal_output,

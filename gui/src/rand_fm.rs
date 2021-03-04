@@ -77,7 +77,7 @@ pub fn rand_fm() {
     let mut note_off_count = 0;
 
     'running: loop {
-        let audio_time = device.lock().ctx.time;
+        let audio_time = device.lock().ctx.current_time;
         canvas.set_draw_color(Color::RGB(255, 255, 255));
         canvas.clear();
         canvas.present();

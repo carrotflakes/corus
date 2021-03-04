@@ -31,7 +31,7 @@ where
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
-        let s = (ctx.time * ctx.sample_rate as f64) as usize;
+        let s = (ctx.current_time * ctx.sample_rate as f64) as usize;
         let buf = self.buffer.borrow();
         buf[s % buf.len()].clone()
     }

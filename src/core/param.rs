@@ -190,7 +190,7 @@ impl<T: Mono<f64>> Node<T> for Param<f64, T> {
     fn proc(&mut self, ctx: &ProcContext) -> T {
         {
             while !self.events.is_empty() {
-                if ctx.time < self.events[0].time {
+                if ctx.current_time < self.events[0].time {
                     break;
                 }
                 match self.events[0].body {
@@ -201,7 +201,7 @@ impl<T: Mono<f64>> Node<T> for Param<f64, T> {
                     }
                     EventBody::SetTargetAtTime { .. } => {
                         if let Some(e) = self.events.get(1) {
-                            if ctx.time < e.time {
+                            if ctx.current_time < e.time {
                                 break;
                             }
                             match e.body {
@@ -223,7 +223,7 @@ impl<T: Mono<f64>> Node<T> for Param<f64, T> {
             }
         }
 
-        T::from_m(self.compute_value(ctx.time))
+        T::from_m(self.compute_value(ctx.current_time))
     }
 
     fn lock(&mut self) {}
@@ -262,8 +262,8 @@ fn test() {
     param.exponential_ramp_to_value_at_time(19.0 / 4.0, 1.0);
 
     for _ in 0..20 {
-        dbg!(pc.time);
+        dbg!(pc.current_time);
         dbg!(param.proc(&pc));
-        pc.time += 1.0 / pc.sample_rate as f64;
+        pc.current_time += 1.0 / pc.sample_rate as f64;
     }
 }

@@ -43,8 +43,8 @@ where
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
-        if self.time != ctx.time {
-            self.time = ctx.time;
+        if self.time != ctx.current_time {
+            self.time = ctx.current_time;
             self.value = self.node.proc(ctx);
         }
         self.value.clone()

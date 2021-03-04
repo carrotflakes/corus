@@ -36,7 +36,7 @@ impl EventQueue {
     pub fn dispatch(&mut self, ctx: &ProcContext) {
         let mut events = self.events.borrow_mut();
         while let Some(e) = events.front_mut() {
-            if ctx.time < e.0 {
+            if ctx.current_time < e.0 {
                 break;
             }
             (e.1)(e.0);
@@ -158,7 +158,7 @@ impl<T: 'static, N: Node<T>, E: Event<Target = N>> Node<T> for EventControlInpla
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         while let Some(e) = self.events.front_mut() {
-            if ctx.time < e.0 {
+            if ctx.current_time < e.0 {
                 break;
             }
             e.1.dispatch(e.0, &mut self.target);
