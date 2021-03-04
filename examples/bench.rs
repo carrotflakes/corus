@@ -51,5 +51,5 @@ fn main() {
 
     let node = Amp::new(mix, Constant::from(0.1));
 
-    write_to_file::write_to_file("bench.wav", sample_rate, 4.0, node);
+    write_to_file::write_to_file("bench.wav", sample_rate, 4.0, node, None, None);
 }

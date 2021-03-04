@@ -51,5 +51,5 @@ fn main() {
     };
     let node = amp_pan(node, Constant::from(0.5), Constant::from(0.0));
 
-    write_to_file::write_to_file("karplus-strong.wav", SAMPLE_RATE, 3.0, node);
+    write_to_file::write_to_file("karplus-strong.wav", SAMPLE_RATE, 3.0, node, None, None);
 }

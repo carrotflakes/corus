@@ -17,5 +17,5 @@ fn main() {
     node.push_event(2.0 * 0.5, NoiseEvent::OriginalFreq(5, 4));
     node.push_event(2.0 * 0.6, NoiseEvent::OriginalFreq(6, 4));
     node.push_event(2.0 * 0.7, NoiseEvent::OriginalFreq(7, 4));
-    write_to_file::write_to_file("chip_noise.wav", sample_rate, 3.0, node);
+    write_to_file::write_to_file("chip_noise.wav", sample_rate, 3.0, node, None, None);
 }

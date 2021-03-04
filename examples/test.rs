@@ -35,5 +35,5 @@ fn main() {
         &|node| schroeder_reverb(node),
         Constant::from(1.0),
     );
-    write_to_file::write_to_file("test.wav", 44100, 3.0, node);
+    write_to_file::write_to_file("test.wav", 44100, 3.0, node, None, None);
 }

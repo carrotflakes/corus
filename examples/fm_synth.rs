@@ -17,5 +17,5 @@ fn main() {
     ]);
     node.note_on(0.0, 440.0);
     node.note_off(2.0);
-    write_to_file::write_to_file("fm_synth.wav", sample_rate, 3.0, node);
+    write_to_file::write_to_file("fm_synth.wav", sample_rate, 3.0, node, None, None);
 }

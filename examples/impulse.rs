@@ -28,5 +28,5 @@ fn main() {
         &|node| schroeder_reverb(node),
         fade,
     );
-    write_to_file::write_to_file("impulse.wav", 44100, 5.0, node);
+    write_to_file::write_to_file("impulse.wav", 44100, 5.0, node, None, None);
 }

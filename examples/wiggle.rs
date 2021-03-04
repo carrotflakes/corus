@@ -25,5 +25,5 @@ fn main() {
     let node = Map::new(acc, |x| C1f64::from((x.get_m() + -0.5) * 0.5));
     let node = Pan::new(node, Constant::from(0.0));
 
-    write_to_file::write_to_file("wiggle.wav", SAMPLE_RATE, 10.0, node);
+    write_to_file::write_to_file("wiggle.wav", SAMPLE_RATE, 10.0, node, None, None);
 }

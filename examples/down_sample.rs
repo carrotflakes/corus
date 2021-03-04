@@ -13,5 +13,5 @@ fn main() {
         (v * 2.0 * std::f64::consts::PI).sin()
     });
     let node = DownSample::new(node, 0.0, 4000);
-    write_to_file::write_to_file("down_sample.wav", 44100, 3.0, node);
+    write_to_file::write_to_file("down_sample.wav", 44100, 3.0, node, Some(0x305cf4c5e74b9b4), Some(0x946ed74d4d37eb6c));
 }

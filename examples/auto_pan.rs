@@ -19,6 +19,6 @@ fn main() {
     let node = Pan::new(node, Sine::new(Constant::from(0.25)));
 
     let file = format!("{}-autopan.wav", file[..file.len() - 4].to_string());
-    write_to_file::write_to_file(file.as_str(), SAMPLE_RATE, 8.0, node);
+    write_to_file::write_to_file(file.as_str(), SAMPLE_RATE, 8.0, node, None, None);
     println!("saved {:?}", &file);
 }

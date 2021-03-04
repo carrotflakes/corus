@@ -71,5 +71,5 @@ fn main() {
 
     let node = Mix::new(vec![kick, snare, hh]);
     let node = Amp::new(node, Constant::from(0.2));
-    write_to_file::write_to_file("beats.wav", SAMPLE_RATE, 4.0 / bps, node);
+    write_to_file::write_to_file("beats.wav", SAMPLE_RATE, 4.0 / bps, node, None, None);
 }

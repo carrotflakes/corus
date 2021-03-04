@@ -29,6 +29,6 @@ fn main() {
     let node = schroeder_reverb(node);
     let file = format!("{}-reverbed.wav", file[..file.len() - 4].to_string());
 
-    write_to_file::write_to_file(file.as_str(), 44100, render_len, node);
+    write_to_file::write_to_file(file.as_str(), 44100, render_len, node, None, None);
     println!("saved {:?}", &file);
 }

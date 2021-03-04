@@ -26,5 +26,5 @@ fn main() {
         ),
     );
 
-    write_to_file::write_to_file("wavetable.wav", SAMPLE_RATE, 3.0, node);
+    write_to_file::write_to_file("wavetable.wav", SAMPLE_RATE, 3.0, node, None, None);
 }

@@ -111,7 +111,7 @@ fn main() {
     let node = delay_fx(node, SAMPLE_RATE as usize, 0.3, 0.3);
 
     let file = format!("{}.wav", file[..file.len() - 4].to_string());
-    write_to_file::write_to_file(file.as_str(), SAMPLE_RATE, time, node);
+    write_to_file::write_to_file(file.as_str(), SAMPLE_RATE, time, node, Some(0x5d6bcb4593b4cfbe), Some(0xdbd66e902a4f3ac));
     println!("saved {:?}", &file);
 }
 

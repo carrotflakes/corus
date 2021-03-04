@@ -7,6 +7,8 @@ pub fn write_to_file<T: IntoStereo<f64>, N: Node<T> + 'static>(
     sample_rate: usize,
     len: f64,
     mut node: N,
+    f64hash: Option<u64>,
+    i16hash: Option<u64>,
 ) {
     let spec = hound::WavSpec {
         channels: 2,
@@ -47,8 +49,18 @@ pub fn write_to_file<T: IntoStereo<f64>, N: Node<T> + 'static>(
     writer.finalize().unwrap();
     println!();
     println!("{:?} elapsed", start.elapsed());
-    println!("hash(f64): {:x}", f64hasher.finish());
-    println!("hash(i16): {:x}", i16hasher.finish());
+    let f64hash_act = f64hasher.finish();
+    let i16hash_act = i16hasher.finish();
+    if let Some(f64hash) = f64hash {
+        println!("f64 hash: {:>16x} (expect {:>16x})", f64hash_act, f64hash);
+    } else {
+        println!("f64 hash: {:>16x}", f64hash_act);
+    }
+    if let Some(i16hash) = i16hash {
+        println!("i16 hash: {:>16x} (expect {:>16x})", i16hash_act, i16hash);
+    } else {
+        println!("i16 hash: {:>16x}", i16hash_act);
+    }
 }
 
 #[allow(dead_code)]

@@ -18,6 +18,6 @@ fn main() {
     });
     let file = format!("{}-reversed.wav", file[..file.len() - 4].to_string());
 
-    write_to_file::write_to_file(file.as_str(), 44100, 5.0, node);
+    write_to_file::write_to_file(file.as_str(), 44100, 5.0, node, None, None);
     println!("saved {:?}", &file);
 }

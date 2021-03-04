@@ -77,5 +77,5 @@ fn main() {
 
     let node = Amp::new(synth, Constant::from(0.1));
 
-    write_to_file::write_to_file("poly.wav", sample_rate, 3.0, node);
+    write_to_file::write_to_file("poly.wav", sample_rate, 3.0, node, None, None);
 }
