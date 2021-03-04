@@ -67,7 +67,7 @@ where
 
     fn lock(&mut self, ctx: &ProcContext) {
         if let None = self.ref_mut {
-            let mut r = self.node.lock().unwrap();
+            let mut r = Mutex::lock(&mut self.node).unwrap();
             r.lock(ctx);
             self.ref_mut = Some(unsafe { std::mem::transmute::<_, MutexGuard<'static, A>>(r) });
         }
@@ -87,7 +87,7 @@ where
     A: Node<T> + 'static,
 {
     pub fn lock(&mut self) -> std::sync::MutexGuard<A> {
-        self.node.lock().unwrap()
+        Mutex::lock(&mut self.node).unwrap()
     }
 }
 
@@ -108,5 +108,12 @@ unsafe impl<T, A> Send for Controllable<T, A>
 where
     T: 'static,
     A: Node<T>,
+{
+}
+
+unsafe impl<T, A> Sync for Controllable<T, A>
+where
+    T: 'static,
+    A: Node<T> + Sync,
 {
 }

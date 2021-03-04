@@ -21,21 +21,18 @@ pub fn schroeder_reverb<
     ProcOnceShare<T, N>,
     Amp<
         T,
-        AllPassFilter<
-            T,
-            AllPassFilter<T, Mix<T, Box<dyn Node<T>>>>,
-        >,
+        AllPassFilter<T, AllPassFilter<T, Mix<T, CombFilter<T, ProcOnceShare<T, N>>>>>,
         Constant<T>,
     >,
 > {
     let node = ProcOnceShare::new(node);
     let nodes: Vec<_> = (0..4)
         .map(|i| {
-            Box::new(CombFilter::new(
+            CombFilter::new(
                 node.clone(),
                 0.03 + 0.0041 * i as f64,
                 (0.6 + i as f64 * 0.02).into(),
-            )) as Box<dyn Node<T>>
+            )
         })
         .collect();
     let mix = Mix::new(nodes);

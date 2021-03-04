@@ -10,6 +10,7 @@ pub mod fm_synth;
 pub mod fn_processor;
 pub mod generic_poly_synth;
 mod oscillators;
+pub mod parallel_mix;
 mod perlin_noise;
 pub mod poly_synth;
 pub mod rand;
@@ -23,13 +24,18 @@ pub use effects::*;
 pub use oscillators::*;
 pub use perlin_noise::*;
 
-use crate::{ProcContext, core::{
+use crate::{
+    core::{
         amp::Amp,
         controllable::{Controllable, Controller},
         pan::Pan,
         param::Param,
         Node,
-    }, signal::{C1f64, C2f64, Mono}, time::AsSample};
+    },
+    signal::{C1f64, C2f64, Mono},
+    time::AsSample,
+    ProcContext,
+};
 
 pub fn amp_pan<A, G, P>(
     node: A,
@@ -58,7 +64,5 @@ pub fn render_to_buffer<T: 'static, N: Node<T>, S: AsSample>(
     length: S,
     node: &mut N,
 ) -> Vec<T> {
-    ProcContext::new(sample_rate)
-        .lock(node, length)
-        .collect()
+    ProcContext::new(sample_rate).lock(node, length).collect()
 }

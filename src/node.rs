@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::proc_context::ProcContext;
 
@@ -52,4 +52,24 @@ where
     A: Node<T> + ?Sized,
 {
     unsafe { std::mem::transmute::<_, &mut A>(Arc::as_ptr(arc)) }
+}
+
+
+impl<T, A> Node<T> for Mutex<A>
+where
+    T: 'static + Clone + Default,
+    A: Node<T> + ?Sized,
+{
+    #[inline]
+    fn proc(&mut self, ctx: &ProcContext) -> T {
+        self.get_mut().unwrap().proc(ctx)
+    }
+
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.get_mut().unwrap().lock(ctx);
+    }
+
+    fn unlock(&mut self) {
+        self.get_mut().unwrap().unlock();
+    }
 }

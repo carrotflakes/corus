@@ -125,8 +125,8 @@ pub struct NoteOff<P>(pub P);
 
 pub struct Voice<A: Node<f64>, P1, P2>(
     pub A,
-    pub Box<dyn FnMut(f64, NoteOn<P1>)>,
-    pub Box<dyn FnMut(f64, NoteOff<P2>)>,
+    pub Box<dyn FnMut(f64, NoteOn<P1>) + Send + Sync>,
+    pub Box<dyn FnMut(f64, NoteOff<P2>) + Send + Sync>,
 );
 
 impl<A: Node<f64>, P1, P2> Node<f64> for Voice<A, P1, P2> {

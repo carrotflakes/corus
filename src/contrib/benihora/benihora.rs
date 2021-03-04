@@ -7,7 +7,7 @@ use super::{
 };
 
 pub struct Benihora {
-    node: Box<dyn Node<C1f64>>,
+    node: Box<dyn Node<C1f64> + Send + Sync>,
     glottis: Glottis,
     tract: Tract,
     block_time: f64,         // sec
@@ -16,7 +16,7 @@ pub struct Benihora {
 }
 
 impl Benihora {
-    pub fn new(node: Box<dyn Node<C1f64>>, proc_num: usize) -> Self {
+    pub fn new(node: Box<dyn Node<C1f64> + Send + Sync>, proc_num: usize) -> Self {
         Self {
             glottis: Glottis::new(),
             tract: Tract::new(),

@@ -10,8 +10,8 @@ type F = f64;
 
 type Env<T> = (
     Controllable<T, Param<F, T>>,
-    Box<dyn FnMut(f64)>,
-    Box<dyn FnMut(f64)>,
+    Box<dyn FnMut(f64) + Send + Sync>,
+    Box<dyn FnMut(f64) + Send + Sync>,
 );
 
 pub struct FmSynth<T, A, B>

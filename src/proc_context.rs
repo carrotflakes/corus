@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{time::AsSample, Node};
 
+#[derive(Clone)]
 pub struct ProcContext {
     pub sample_rate: u64, // DO NOT change after construct!
     pub current_time: f64,

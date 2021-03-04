@@ -1,6 +1,7 @@
 mod write_to_file;
 
-use corus::{EventControlInplace, EventPusher, ProcContext, contrib::{
+use corus::{
+    contrib::{
         amp_pan,
         chip::{Noise, NoiseEvent},
         controllable_param, delay_fx,
@@ -9,7 +10,8 @@ use corus::{EventControlInplace, EventPusher, ProcContext, contrib::{
         perlin_noise,
         rand_fm_synth::rand_fm_synth,
         resetable_acc,
-    }, core::{
+    },
+    core::{
         accumulator::Accumulator,
         add::Add,
         amp::Amp,
@@ -21,7 +23,12 @@ use corus::{EventControlInplace, EventPusher, ProcContext, contrib::{
         param::Param,
         proc_once_share::ProcOnceShare,
         Node,
-    }, db_to_amp, notenum_to_frequency, signal::{C1f64, C2f64}, time::Sample};
+    },
+    db_to_amp, notenum_to_frequency,
+    signal::C2f64,
+    time::Sample,
+    EventControlInplace, EventPusher, ProcContext,
+};
 
 const SAMPLE_RATE: usize = 44100;
 const DB_MIN: f64 = 24.0;
@@ -95,7 +102,7 @@ fn main() {
         .into_iter()
         .chain(used_tracks)
         .filter(|t| t.3)
-        .map(|t| Box::new(amp_pan(t.0, t.1, t.2)) as Box<dyn Node<C2f64>>)
+        .map(|t| Box::new(amp_pan(t.0, t.1, t.2)) as Box<dyn Node<C2f64> + Send + Sync>)
         .collect();
 
     println!("{} synthes", synthes.len());
@@ -105,11 +112,18 @@ fn main() {
     let node = delay_fx(node, SAMPLE_RATE as usize, 0.3, 0.3);
 
     let file = format!("{}.wav", file[..file.len() - 4].to_string());
-    write_to_file::write_to_file(file.as_str(), SAMPLE_RATE, time, node, Some(0xd5fda141d7866f), Some(0x71719d5955c5d20d));
+    write_to_file::write_to_file(
+        file.as_str(),
+        SAMPLE_RATE,
+        time,
+        node,
+        Some(0xd5fda141d7866f),
+        Some(0x71719d5955c5d20d),
+    );
     println!("saved {:?}", &file);
 }
 
-type MyVoice = Voice<Box<dyn Node<f64>>, (u8, f64), ()>;
+type MyVoice = Voice<Box<dyn Node<f64> + Send + Sync>, (u8, f64), ()>;
 
 fn new_track(
     track: usize,
@@ -144,7 +158,7 @@ fn saw_builder(pitch: ProcOnceShare<f64, Controllable<f64, Param<f64, f64>>>) ->
     let (env, mut env_on, mut env_off) = AdsrEnvelope::new(0.01, 0.5, 0.2, 0.3).build();
     let node = Amp::new(saw, Amp::new(env, gain));
     Voice(
-        Box::new(node) as Box<dyn Node<C1f64>>,
+        Box::new(node) as Box<dyn Node<f64> + Send + Sync>,
         Box::new(move |time, NoteOn((notenum, velocity))| {
             freq_param_ctrl
                 .lock()
@@ -166,7 +180,7 @@ fn noise_builder() -> MyVoice {
     let (env, mut env_on, mut env_off) = ArEnvelope::new(0.01, 0.3).build();
     let node = Amp::new(noise, Amp::new(env, gain));
     Voice(
-        Box::new(node) as Box<dyn Node<C1f64>>,
+        Box::new(node) as Box<dyn Node<f64> + Send + Sync>,
         Box::new(move |time, NoteOn((notenum, velocity))| {
             noise_ctrl.lock().push_event(time, NoiseEvent::ResetReg);
             noise_ctrl.lock().push_event(
@@ -189,7 +203,7 @@ fn fm_synth_builder(seed: u32) -> MyVoice {
     let mut ctrl2 = synth.controller();
     let node = Amp::new(synth, gain);
     Voice(
-        Box::new(node) as Box<dyn Node<C1f64>>,
+        Box::new(node) as Box<dyn Node<f64> + Send + Sync>,
         Box::new(move |time, NoteOn((notenum, velocity))| {
             gain_ctrl.lock().set_value_at_time(time, velocity);
             ctrl1
@@ -218,7 +232,7 @@ fn benihora_builder() -> MyVoice {
         Constant::from(0.75),
     );
     Voice(
-        Box::new(Amp::new(benihora, Constant::from(1.5))) as Box<dyn Node<C1f64>>,
+        Box::new(Amp::new(benihora, Constant::from(1.5))) as Box<dyn Node<f64> + Send + Sync>,
         Box::new(move |time, NoteOn((notenum, velocity))| {
             let time = time - 0.05;
             ctrl1
@@ -260,7 +274,7 @@ fn wavetable_builder(pitch: ProcOnceShare<f64, Controllable<f64, Param<f64, f64>
     let (env, mut env_on, mut env_off) = AdsrEnvelope::new(0.01, 0.5, 0.2, 0.3).build();
     let node = Amp::new(node, Amp::new(env, gain));
     Voice(
-        Box::new(node) as Box<dyn Node<C1f64>>,
+        Box::new(node) as Box<dyn Node<f64> + Send + Sync>,
         Box::new(move |time, NoteOn((notenum, velocity))| {
             freq_param_ctrl
                 .lock()
@@ -290,6 +304,8 @@ fn make_wavetable() -> Vec<f64> {
             Constant::from(1.0),
         ),
     );
-    let buf: Vec<_> = ProcContext::new(1000).lock(&mut node, Sample(1000)).collect();
+    let buf: Vec<_> = ProcContext::new(1000)
+        .lock(&mut node, Sample(1000))
+        .collect();
     buf
 }

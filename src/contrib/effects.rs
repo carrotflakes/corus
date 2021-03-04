@@ -1,17 +1,21 @@
 use crate::{
     core::{
-        add::Add, amp::Amp, ring_buffer_record::RingBufferRecord, ring_buffer_playback::RingBufferPlayback, constant::Constant,
-        placeholder::Placeholder, proc_once_share::ProcOnceShare, Node,
+        add::Add, amp::Amp, constant::Constant, placeholder::Placeholder,
+        proc_once_share::ProcOnceShare, ring_buffer_playback::RingBufferPlayback,
+        ring_buffer_record::RingBufferRecord, Node,
     },
     signal::C2f64,
 };
 
-pub fn delay_fx<A: Node<C2f64> + 'static>(
+pub fn delay_fx<A: Node<C2f64> + 'static + Send + Sync>(
     node: A,
     sample_rate: usize,
     delay: f64,
     feedback: f64,
-) -> ProcOnceShare<C2f64, RingBufferRecord<C2f64, Placeholder<C2f64, Box<dyn Node<C2f64>>>>> {
+) -> ProcOnceShare<
+    C2f64,
+    RingBufferRecord<C2f64, Placeholder<C2f64, Box<dyn Node<C2f64> + Send + Sync>>>,
+> {
     let mut p = Placeholder::new(None);
     let mut ps = p.setter();
     let buffer = ProcOnceShare::new(RingBufferRecord::new(p, sample_rate));
@@ -22,7 +26,7 @@ pub fn delay_fx<A: Node<C2f64> + 'static>(
                 RingBufferPlayback::new(Constant::from(delay), buffer.clone()),
                 Constant::from(C2f64([feedback, feedback])),
             ),
-        )) as Box<dyn Node<C2f64>>);
+        )) as Box<dyn Node<C2f64> + Send + Sync>);
     }
     buffer
 }
