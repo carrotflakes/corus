@@ -58,11 +58,13 @@ where
     fn lock(&mut self, ctx: &ProcContext) {
         self.a.lock(ctx);
         self.b.lock(ctx);
+        self.level.lock(ctx);
     }
 
     fn unlock(&mut self) {
         self.a.unlock();
         self.b.unlock();
+        self.level.unlock();
     }
 }
 
