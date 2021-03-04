@@ -1,7 +1,7 @@
 use corus::{
-    Node,
-    ProcContext,
     signal::{C1f64, Mono},
+    time::Sample,
+    Node, ProcContext,
 };
 use sdl2::audio::AudioCallback;
 
@@ -23,7 +23,7 @@ impl AudioCallback for Audio {
     type Channel = f32;
 
     fn callback(&mut self, out: &mut [f32]) {
-        let mut s = self.ctx.lock(&mut self.node);
+        let mut s = self.ctx.lock(&mut self.node, Sample(out.len() as u64));
         for x in out.iter_mut() {
             *x = s.next().unwrap().get_m() as f32;
         }

@@ -23,17 +23,13 @@ pub use effects::*;
 pub use oscillators::*;
 pub use perlin_noise::*;
 
-use crate::{
-    core::{
+use crate::{ProcContext, core::{
         amp::Amp,
         controllable::{Controllable, Controller},
         pan::Pan,
         param::Param,
         Node,
-    },
-    signal::{C1f64, C2f64, Mono},
-    ProcContext,
-};
+    }, signal::{C1f64, C2f64, Mono}, time::AsSample};
 
 pub fn amp_pan<A, G, P>(
     node: A,
@@ -57,13 +53,12 @@ pub fn controllable_param<T: Mono<f64>>(
     (c, ctrl)
 }
 
-pub fn render_to_buffer<T: 'static, N: Node<T>>(
+pub fn render_to_buffer<T: 'static, N: Node<T>, S: AsSample>(
     sample_rate: u64,
-    length: f64,
+    length: S,
     node: &mut N,
 ) -> Vec<T> {
     ProcContext::new(sample_rate)
-        .lock(node)
-        .take((sample_rate as f64 * length).round() as usize) // round?
+        .lock(node, length)
         .collect()
 }

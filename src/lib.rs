@@ -5,6 +5,7 @@ mod node;
 mod proc_context;
 pub mod ring_buffer;
 pub mod signal;
+pub mod time;
 
 pub use event_dispatcher::*;
 pub use node::*;

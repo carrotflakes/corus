@@ -1,7 +1,6 @@
 mod write_to_file;
 
-use corus::{
-    contrib::{
+use corus::{EventControlInplace, EventPusher, ProcContext, contrib::{
         amp_pan,
         chip::{Noise, NoiseEvent},
         controllable_param, delay_fx,
@@ -10,8 +9,7 @@ use corus::{
         perlin_noise,
         rand_fm_synth::rand_fm_synth,
         resetable_acc,
-    },
-    core::{
+    }, core::{
         accumulator::Accumulator,
         add::Add,
         amp::Amp,
@@ -23,11 +21,7 @@ use corus::{
         param::Param,
         proc_once_share::ProcOnceShare,
         Node,
-    },
-    db_to_amp, notenum_to_frequency,
-    signal::{C1f64, C2f64},
-    EventControlInplace, EventPusher, ProcContext,
-};
+    }, db_to_amp, notenum_to_frequency, signal::{C1f64, C2f64}, time::Sample};
 
 const SAMPLE_RATE: usize = 44100;
 const DB_MIN: f64 = 24.0;
@@ -111,7 +105,7 @@ fn main() {
     let node = delay_fx(node, SAMPLE_RATE as usize, 0.3, 0.3);
 
     let file = format!("{}.wav", file[..file.len() - 4].to_string());
-    write_to_file::write_to_file(file.as_str(), SAMPLE_RATE, time, node, Some(0x5d6bcb4593b4cfbe), Some(0xdbd66e902a4f3ac));
+    write_to_file::write_to_file(file.as_str(), SAMPLE_RATE, time, node, Some(0xd5fda141d7866f), Some(0x71719d5955c5d20d));
     println!("saved {:?}", &file);
 }
 
@@ -296,6 +290,6 @@ fn make_wavetable() -> Vec<f64> {
             Constant::from(1.0),
         ),
     );
-    let buf: Vec<_> = ProcContext::new(1000).lock(&mut node).take(1000).collect();
+    let buf: Vec<_> = ProcContext::new(1000).lock(&mut node, Sample(1000)).collect();
     buf
 }

@@ -1,6 +1,6 @@
 use std::{collections::hash_map::DefaultHasher, hash::Hasher, io::Write};
 
-use corus::{Node, ProcContext, signal::{C2f64, IntoStereo, Stereo}};
+use corus::{Node, ProcContext, signal::{C2f64, IntoStereo, Stereo}, time::{AsSample, Second}};
 
 pub fn write_to_file<T: IntoStereo<f64>, N: Node<T> + 'static>(
     name: &str,
@@ -21,14 +21,12 @@ pub fn write_to_file<T: IntoStereo<f64>, N: Node<T> + 'static>(
     let mut f64hasher = DefaultHasher::new();
     let mut i16hasher = DefaultHasher::new();
     let start = std::time::Instant::now();
-    let len_usize = (sample_rate as f64 * len).ceil() as usize;
     let mut count = 0;
     for s in pc
-        .lock(&mut node)
-        .take(len_usize)
+        .lock(&mut node, Second(len))
     {
         if count % 10000 == 0 {
-            print!("\r{:>4}/{}", count / 10000, len_usize / 10000);
+            print!("\r{:>4}/{}", count / 10000, Second(len).as_sample(sample_rate as u64) / 10000);
             std::io::stdout().flush().unwrap();
         }
         count += 1;

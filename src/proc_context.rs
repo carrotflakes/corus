@@ -1,13 +1,12 @@
 use std::marker::PhantomData;
 
-use crate::Node;
+use crate::{time::AsSample, Node};
 
 pub struct ProcContext {
     pub sample_rate: u64, // DO NOT change after construct!
     pub current_time: f64,
     pub current_sample: u64,
-    pub proc_samples: u64, // TODO
-    pub proc_length: f64, // TODO
+    pub rest_proc_samples: u64,
 }
 
 impl ProcContext {
@@ -16,24 +15,17 @@ impl ProcContext {
             sample_rate,
             current_time: 0.0,
             current_sample: 0,
-            proc_samples: 1,
-            proc_length: 1.0 / sample_rate as f64,
+            rest_proc_samples: 0,
         }
     }
 
     #[inline]
-    pub fn sample<T: 'static, N: Node<T> + ?Sized>(&mut self, node: &mut N) -> T {
-        let r = node.proc(self);
-        self.current_sample += 1;
-        self.current_time = self.current_sample as f64 / self.sample_rate as f64;
-        r
-    }
-
-    #[inline]
-    pub fn lock<'a, T: 'static, A: Node<T> + ?Sized>(
+    pub fn lock<'a, T: 'static, A: Node<T> + ?Sized, S: AsSample>(
         &'a mut self,
         node: &'a mut A,
+        proc_length: S,
     ) -> ProcGuard<'a, T, A> {
+        self.rest_proc_samples = proc_length.as_sample(self.sample_rate);
         ProcGuard::new(self, node)
     }
 }
@@ -56,8 +48,13 @@ impl<'a, T: 'static, A: Node<T> + ?Sized> ProcGuard<'a, T, A> {
 
     #[inline]
     pub fn sample(&mut self) -> T {
+        if self.context.rest_proc_samples == 0 {
+            panic!("Exceeded the allowed number of samples");
+        }
         let r = self.node.proc(self.context);
-        self.context.current_time += 1.0 / self.context.sample_rate as f64;
+        self.context.current_sample += 1;
+        self.context.current_time = self.context.current_sample as f64 / self.context.sample_rate as f64;
+        self.context.rest_proc_samples -= 1;
         r
     }
 }
@@ -72,6 +69,10 @@ impl<'a, T: 'static, A: Node<T> + ?Sized> Iterator for ProcGuard<'a, T, A> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        Some(self.sample())
+        if self.context.rest_proc_samples != 0 {
+            Some(self.sample())
+        } else {
+            None
+        }
     }
 }
