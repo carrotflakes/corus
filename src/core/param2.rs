@@ -1,9 +1,10 @@
 use std::{
     collections::VecDeque,
     ops::{Div, Sub},
+    sync::{Arc, Mutex},
 };
 
-use crate::{Event, EventPusher, signal::Mono};
+use crate::{signal::Mono, Event, EventControl, EventPusher, EventQueue};
 
 use super::{Node, ProcContext};
 
@@ -270,7 +271,8 @@ impl<F: Float, EP: EventPusher<ParamState<F>>> ParamEventSchedule<F, EP> {
             match first.1.clone() {
                 ParamEvent::SetValueAtTime { value } => {
                     if first.0 < time {
-                        self.event_pusher.push_event(first.0, ParamState::Constant(value.clone()));
+                        self.event_pusher
+                            .push_event(first.0, ParamState::Constant(value.clone()));
                         before_value = value.clone();
                         self.last_event = first.clone();
                     }
@@ -284,7 +286,8 @@ impl<F: Float, EP: EventPusher<ParamState<F>>> ParamEventSchedule<F, EP> {
                         ),
                     );
                     if first.0 < time {
-                        self.event_pusher.push_event(first.0, ParamState::Constant(value.clone()));
+                        self.event_pusher
+                            .push_event(first.0, ParamState::Constant(value.clone()));
                         before_value = value.clone();
                         self.last_event = (first.0, ParamEvent::SetValueAtTime { value });
                     }
@@ -298,7 +301,8 @@ impl<F: Float, EP: EventPusher<ParamState<F>>> ParamEventSchedule<F, EP> {
                         ),
                     );
                     if first.0 < time {
-                        self.event_pusher.push_event(first.0, ParamState::Constant(value.clone()));
+                        self.event_pusher
+                            .push_event(first.0, ParamState::Constant(value.clone()));
                         before_value = value.clone();
                         self.last_event = (first.0, ParamEvent::SetValueAtTime { value });
                     }
@@ -328,6 +332,48 @@ impl<F: Float, EP: EventPusher<ParamState<F>>> ParamEventSchedule<F, EP> {
     }
 }
 
+pub struct ParamEventScheduleNode<F: Float> {
+    param: Arc<Param<F>>,
+    schedule: Arc<Mutex<ParamEventSchedule<F, EventControl<ParamState<F>>>>>,
+}
+
+impl<F: Float> ParamEventScheduleNode<F> {
+    pub fn new(event_queue: &mut EventQueue) -> Self {
+        let param = Arc::new(Param::new());
+        ParamEventScheduleNode {
+            schedule: Arc::new(Mutex::new(ParamEventSchedule::new(
+                event_queue.get_controller(&param),
+            ))),
+            param,
+        }
+    }
+
+    pub fn get_scheduler(
+        &mut self,
+    ) -> Arc<Mutex<ParamEventSchedule<F, EventControl<ParamState<F>>>>> {
+        self.schedule.clone()
+    }
+}
+
+impl Node<f64> for ParamEventScheduleNode<f64> {
+    #[inline]
+    fn proc(&mut self, ctx: &ProcContext) -> f64 {
+        self.param.proc(ctx)
+    }
+
+    fn lock(&mut self, ctx: &ProcContext) {
+        self.schedule
+            .lock()
+            .unwrap()
+            .send(ctx.current_time + ctx.rest_proc_samples as f64 / ctx.sample_rate as f64);
+        self.param.lock(ctx);
+    }
+
+    fn unlock(&mut self) {
+        self.param.unlock();
+    }
+}
+
 #[test]
 fn test() {
     let mut eq = crate::EventQueue::new();
@@ -351,5 +397,29 @@ fn test() {
         dbg!(pc.current_time);
         dbg!(node.proc(&pc));
         pc.current_time += 1.0 / pc.sample_rate as f64;
+    }
+}
+
+#[test]
+fn test2() {
+    let mut eq = crate::EventQueue::new();
+    let mut param = ParamEventScheduleNode::new(&mut eq);
+    let mut pc = ProcContext::new(4);
+    {
+        let schedule = param.get_scheduler();
+        let mut schedule = schedule.lock().unwrap();
+        schedule.set_value_at_time(2.0 / 4.0, 1.0);
+        schedule.set_value_at_time(4.0 / 4.0, 2.0);
+        schedule.linear_ramp_to_value_at_time(6.0 / 4.0, -2.0);
+        schedule.linear_ramp_to_value_at_time(10.0 / 4.0, 1.0);
+        schedule.set_target_at_time(12.0 / 4.0, 0.0, 0.5);
+        schedule.cancel_and_hold_at_time(15.0 / 4.0);
+        schedule.exponential_ramp_to_value_at_time(19.0 / 4.0, 1.0);
+    }
+    let mut node = eq.dispatch_node(param);
+
+    let mut lock = pc.lock(&mut node, crate::time::Second(10.0));
+    for _ in 0..20 {
+        dbg!(lock.next());
     }
 }
