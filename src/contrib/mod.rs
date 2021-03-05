@@ -18,6 +18,7 @@ pub mod rand_fm_synth;
 pub mod schroeder;
 pub mod simple_comp;
 pub mod smooth;
+pub mod spring;
 pub mod triggerable;
 
 pub use effects::*;
