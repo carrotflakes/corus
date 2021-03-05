@@ -48,7 +48,7 @@ impl<
         ID: PartialEq + Default,
     > PolySynth<P1, P2, A, ID>
 {
-    pub fn new(voice_builder: &dyn Fn() -> A, voice_num: usize) -> Self {
+    pub fn new(voice_builder: &mut dyn FnMut() -> A, voice_num: usize) -> Self {
         Self {
             voices: (0..voice_num)
                 .map(|_| VoiceContainer::new(voice_builder()))

@@ -1,9 +1,7 @@
 use std::{
-    cell::RefCell,
     collections::VecDeque,
     marker::PhantomData,
-    rc::Rc,
-    sync::{Arc, Weak},
+    sync::{Arc, Mutex, Weak},
 };
 
 use crate::{core::Node, proc_context::ProcContext};
@@ -14,18 +12,22 @@ pub trait Event: 'static {
     fn dispatch(&self, time: f64, target: &mut Self::Target);
 }
 
-fn caller<E: Event>(event: E, target: &'static mut E::Target) -> Box<dyn FnMut(f64)> {
+fn caller<E>(event: E, target: &'static mut E::Target) -> Box<dyn FnMut(f64) + Send + Sync>
+where
+    E: Event + Send + Sync,
+    <E as Event>::Target: Send + Sync,
+{
     Box::new(move |time: f64| event.dispatch(time, target))
 }
 
 pub struct EventQueue {
-    events: Rc<RefCell<VecDeque<(f64, Box<dyn FnMut(f64)>)>>>,
+    events: Arc<Mutex<VecDeque<(f64, Box<dyn FnMut(f64) + Send + Sync>)>>>,
 }
 
 impl EventQueue {
     pub fn new() -> Self {
         Self {
-            events: Rc::new(RefCell::new(Vec::new().into())),
+            events: Arc::new(Mutex::new(Vec::new().into())),
         }
     }
 
@@ -34,7 +36,7 @@ impl EventQueue {
     }
 
     pub fn dispatch(&mut self, ctx: &ProcContext) {
-        let mut events = self.events.borrow_mut();
+        let mut events = self.events.lock().unwrap();
         while let Some(e) = events.front_mut() {
             if ctx.current_time < e.0 {
                 break;
@@ -63,14 +65,14 @@ pub trait EventPusher<E: Event> {
 
 #[derive(Clone)]
 pub struct EventControl<E: Event> {
-    events: Rc<RefCell<VecDeque<(f64, Box<dyn FnMut(f64)>)>>>,
+    events: Arc<Mutex<VecDeque<(f64, Box<dyn FnMut(f64) + Send + Sync>)>>>,
     target: Weak<E::Target>,
     _t: PhantomData<E>,
 }
 
 impl<E: Event> EventControl<E> {
     fn new(
-        events: Rc<RefCell<VecDeque<(f64, Box<dyn FnMut(f64)>)>>>,
+        events: Arc<Mutex<VecDeque<(f64, Box<dyn FnMut(f64) + Send + Sync>)>>>,
         target: Weak<E::Target>,
     ) -> Self {
         Self {
@@ -81,11 +83,15 @@ impl<E: Event> EventControl<E> {
     }
 }
 
-impl<E: Event> EventPusher<E> for EventControl<E> {
+impl<E> EventPusher<E> for EventControl<E>
+where
+    E: Event + Send + Sync,
+    <E as Event>::Target: Send + Sync,
+{
     fn push_event(&mut self, time: f64, event: E) {
         let target =
             unsafe { std::mem::transmute::<_, &'static mut E::Target>(self.target.as_ptr()) };
-        let mut events = self.events.borrow_mut();
+        let mut events = self.events.lock().unwrap();
         for (i, e) in events.iter().enumerate() {
             if time < e.0 {
                 events.insert(i, (time, caller(event, target)));

@@ -332,12 +332,12 @@ impl<F: Float, EP: EventPusher<ParamState<F>>> ParamEventSchedule<F, EP> {
     }
 }
 
-pub struct ParamEventScheduleNode<F: Float> {
+pub struct ParamEventScheduleNode<F: Float + Send + Sync> {
     param: Arc<Param<F>>,
     schedule: Arc<Mutex<ParamEventSchedule<F, EventControl<ParamState<F>>>>>,
 }
 
-impl<F: Float> ParamEventScheduleNode<F> {
+impl<F: Float + Send + Sync> ParamEventScheduleNode<F> {
     pub fn new(event_queue: &mut EventQueue) -> Self {
         let param = Arc::new(Param::new());
         ParamEventScheduleNode {
