@@ -6,13 +6,14 @@ pub use into_stereo::IntoStereo;
 
 use std::ops::{Add, Mul, Neg};
 
-pub trait Signal: 'static + Sized {
+pub trait Signal: 'static + Sized + Clone + Add<Output = Self> + Mul<Output = Self> + Neg<Output = Self> {
     type Float;
 
     fn get(&self, channel: usize) -> Self::Float;
     fn map<F: Fn(Self::Float) -> Self::Float>(&self, f: F) -> Self;
     fn map2_1<F: Fn(Self::Float, Self::Float) -> Self::Float>(&self, self2: Self, f: F) -> Self;
     fn mul_identity() -> Self;
+    fn lerp(&self, other: &Self, r: Self::Float) -> Self;
 }
 
 pub type C1f64 = f64;
@@ -84,6 +85,11 @@ impl Signal for C1f64 {
     fn mul_identity() -> Self {
         1.0
     }
+
+    #[inline]
+    fn lerp(&self, other: &Self, r: Self::Float) -> Self {
+        self * (1.0 - r) + other * r
+    }
 }
 
 impl Signal for C2f64 {
@@ -107,6 +113,11 @@ impl Signal for C2f64 {
     #[inline]
     fn mul_identity() -> Self {
         Self([1.0, 1.0])
+    }
+
+    #[inline]
+    fn lerp(&self, other: &Self, r: Self::Float) -> Self {
+        self.clone() * (1.0 - r) + other.clone() * r
     }
 }
 
@@ -146,6 +157,11 @@ impl Signal for f32 {
     #[inline]
     fn mul_identity() -> Self {
         1.0
+    }
+
+    #[inline]
+    fn lerp(&self, other: &Self, r: Self::Float) -> Self {
+        self * (1.0 - r) + other * r
     }
 }
 
