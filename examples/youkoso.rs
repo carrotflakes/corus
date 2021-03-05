@@ -138,12 +138,12 @@ fn new_track(
     let (pitch, pitch_ctrl) = controllable_param(1.0);
     let pitch = ProcOnceShare::new(pitch);
     let synth = if track == 0 || track == 2 || track == 3 {
-        PolySynth::new(&|| benihora_builder(), 1)
+        PolySynth::new(&mut || benihora_builder(), 1)
     } else if track == 9 {
-        PolySynth::new(&noise_builder, 8)
+        PolySynth::new(&mut noise_builder, 8)
     } else {
         // Box::new(PolySynth::new(&|| fm_synth_builder(program as u32), 8))
-        PolySynth::new(&|| saw_builder(pitch.clone()), 8)
+        PolySynth::new(&mut || saw_builder(pitch.clone()), 8)
     };
     let gain = Param::with_value(1.0f64);
     let pan = Param::with_value(0.0f64);
