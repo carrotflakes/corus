@@ -1,3 +1,5 @@
+use crate::Event;
+
 use super::{Node, ProcContext};
 
 #[derive(Clone)]
@@ -24,4 +26,20 @@ impl<T: Clone + 'static> Node<T> for Constant<T> {
     fn lock(&mut self, _ctx: &ProcContext) {}
 
     fn unlock(&mut self) {}
+}
+
+pub enum ConstantEvent<T: Clone + 'static> {
+    SetValue(T),
+}
+
+impl<T: Clone + 'static> Event for ConstantEvent<T> {
+    type Target = Constant<T>;
+
+    fn dispatch(&self, _time: f64, target: &mut Self::Target) {
+        match self {
+            ConstantEvent::SetValue(value) => {
+                target.value = value.clone();
+            }
+        }
+    }
 }
