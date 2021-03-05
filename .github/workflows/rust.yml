@@ -1,0 +1,25 @@
+name: Rust
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run tests
+      run: cargo test --verbose
+    - name: Build examples
+      run: |
+        for f in $(ls examples/*.rs); do
+        cargo build --release --example $(basename $f | sed 's/\.[^\.]*$//')
+        done
