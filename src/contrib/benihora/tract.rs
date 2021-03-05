@@ -1,7 +1,5 @@
 use std::f64::consts::PI;
 
-use crate::contrib::rand::Rand;
-
 use super::F;
 const NOSE_OFFSET: F = 0.8;
 
@@ -9,7 +7,6 @@ pub struct Tract {
     pub mouth: Mouth,
     pub nose: Nose,
     pub movement_speed: F, // CM per second
-    rand: Rand,            // for update max_amplitude
 }
 
 struct Transient {
@@ -29,7 +26,6 @@ impl Tract {
             mouth: Mouth::new(mouth_length),
             nose: Nose::new(nose_length, mouth_length),
             movement_speed: 15.0,
-            rand: Rand::new(0),
         };
 
         tract.mouth.calculate_reflections(&tract.nose);
@@ -48,8 +44,6 @@ impl Tract {
         lambda: F,
         sample_rate: usize,
     ) -> F {
-        let update_amplitudes = self.rand.next_f32() < 0.1;
-
         let lip_output = self.mouth.run_step(
             &mut self.nose,
             time,
@@ -57,9 +51,8 @@ impl Tract {
             turbulence_noise,
             lambda,
             sample_rate,
-            update_amplitudes,
         );
-        let nose_out = self.nose.run_step(&self.mouth, update_amplitudes);
+        let nose_out = self.nose.run_step(&self.mouth);
 
         lip_output + nose_out
     }
@@ -114,8 +107,6 @@ pub struct Mouth {
     reflection: Vec<F>,
     new_reflection: Vec<F>,
 
-    max_amplitude: Vec<F>, // 表示時用
-
     glottal_reflection: F,
     lip_reflection: F,
 
@@ -150,7 +141,6 @@ impl Mouth {
             new_reflection: vec![0.0; length + 1],
             junction_output_r: vec![0.0; length + 1],
             junction_output_l: vec![0.0; length + 1],
-            max_amplitude: vec![0.0; length],
             diameter: diameter.clone(),
             rest_diameter: diameter.clone(),
             target_diameter: diameter.clone(),
@@ -179,7 +169,6 @@ impl Mouth {
         turbulence_noise: F,
         lambda: F,
         sample_rate: usize,
-        update_amplitudes: bool,
     ) -> F {
         // mouth
         self.process_transients(sample_rate);
@@ -208,15 +197,6 @@ impl Mouth {
         for i in 0..self.length {
             self.r[i] = (self.junction_output_r[i] * 0.999).clamp(-1.0, 1.0);
             self.l[i] = (self.junction_output_l[i + 1] * 0.999).clamp(-1.0, 1.0);
-
-            if update_amplitudes {
-                let amplitude = (self.r[i] + self.l[i]).abs();
-                self.max_amplitude[i] = if amplitude > self.max_amplitude[i] {
-                    amplitude
-                } else {
-                    self.max_amplitude[i] * 0.999
-                };
-            }
         }
 
         self.r[self.length - 1]
@@ -430,8 +410,6 @@ pub struct Nose {
     junction_output_l: Vec<F>,
     reflection: Vec<F>,
 
-    max_amplitude: Vec<F>, // 表示時用
-
     pub fade: F, // 0.9999
     pub velum_target: F,
 }
@@ -457,13 +435,12 @@ impl Nose {
                 })
                 .collect(),
             a: vec![0.0; length],
-            max_amplitude: vec![0.0; length],
             fade: 0.999,
             velum_target: 0.5, // 0.01
         }
     }
 
-    fn run_step(&mut self, mouth: &Mouth, update_amplitudes: bool) -> F {
+    fn run_step(&mut self, mouth: &Mouth) -> F {
         self.junction_output_l[self.length] = self.r[self.length - 1] * mouth.lip_reflection;
 
         for i in 1..self.length {
@@ -475,15 +452,6 @@ impl Nose {
         for i in 0..self.length {
             self.r[i] = (self.junction_output_r[i] * self.fade).clamp(-1.0, 1.0);
             self.l[i] = (self.junction_output_l[i + 1] * self.fade).clamp(-1.0, 1.0);
-
-            if update_amplitudes {
-                let amplitude = (self.r[i] + self.l[i]).abs();
-                self.max_amplitude[i] = if amplitude > self.max_amplitude[i] {
-                    amplitude
-                } else {
-                    self.max_amplitude[i] * 0.999
-                };
-            }
         }
 
         self.r[self.length - 1]
