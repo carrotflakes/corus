@@ -2,7 +2,7 @@ mod write_to_file;
 
 use corus::{
     contrib::spring::{Spring, SpringEvent},
-    core::{constant::Constant, param::Param},
+    core::param::Param,
     notenum_to_frequency, EventControlInplace, EventPusher,
 };
 
