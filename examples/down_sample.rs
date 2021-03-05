@@ -1,7 +1,7 @@
 mod write_to_file;
 
 use corus::{
-    contrib::down_sample::DownSample,
+    contrib::down_sample::{DownSample, DownSampleType},
     core::{accumulator::Accumulator, map::Map, param::Param},
     signal::C1f64,
 };
@@ -12,6 +12,13 @@ fn main() {
     let node = Map::new(Accumulator::new(freq, C1f64::from(1.0)), |v| {
         (v * 2.0 * std::f64::consts::PI).sin()
     });
-    let node = DownSample::new(node, 0.0, 4000);
-    write_to_file::write_to_file("down_sample.wav", 44100, 3.0, node, Some(0xcd4cfed689495a2f), Some(0xa65115ea898355ad));
+    let node = DownSample::new(node, 0.0, 4000, DownSampleType::NearestNeighbor);
+    write_to_file::write_to_file(
+        "down_sample.wav",
+        44100,
+        3.0,
+        node,
+        Some(0xcd4cfed689495a2f),
+        Some(0xa65115ea898355ad),
+    );
 }
