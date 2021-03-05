@@ -21,7 +21,7 @@ pub struct Glottis {
 impl Glottis {
     pub fn new() -> Self {
         Self {
-            frequency: FrequencyCtrl::new(140.0, 0.005, 6.0, false),
+            frequency: FrequencyCtrl::new(140.0, 0.005, 6.0),
             tenseness: TensenessCtrl::new(0.6),
 
             intensity: 0.0,
@@ -94,12 +94,10 @@ pub struct FrequencyCtrl {
 
     pub vibrato_amount: F,
     pub vibrato_frequency: F,
-
-    pub auto_wobble: bool,
 }
 
 impl FrequencyCtrl {
-    fn new(frequency: F, vibrato_amount: F, vibrato_frequency: F, auto_wobble: bool) -> Self {
+    fn new(frequency: F, vibrato_amount: F, vibrato_frequency: F) -> Self {
         Self {
             old_frequency: frequency,
             new_frequency: frequency,
@@ -107,7 +105,6 @@ impl FrequencyCtrl {
             smooth_frequency: frequency,
             vibrato_amount,
             vibrato_frequency,
-            auto_wobble,
         }
     }
 
@@ -119,10 +116,6 @@ impl FrequencyCtrl {
         let mut vibrato = self.vibrato_amount * (2.0 * PI * time * self.vibrato_frequency).sin();
         vibrato += 0.02 * simplex1(time * 4.07);
         vibrato += 0.04 * simplex1(time * 2.15);
-        if self.auto_wobble {
-            vibrato += 0.2 * simplex1(time * 0.98);
-            vibrato += 0.4 * simplex1(time * 0.5);
-        }
 
         if self.ui_frequency > self.smooth_frequency {
             self.smooth_frequency = (self.smooth_frequency * 1.1).min(self.ui_frequency)
