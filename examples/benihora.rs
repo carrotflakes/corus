@@ -101,6 +101,8 @@ fn main() {
         BenihoraEvent::SetOtherConstrictions(vec![(12.0, 0.6)]),
     );
     benihora_ctl.push_event(16.0, BenihoraEvent::SetOtherConstrictions(vec![]));
+    benihora_ctl.push_event(16.0, BenihoraEvent::SetVibrato(0.01, 4.0));
+    benihora_ctl.push_event(17.0, BenihoraEvent::SetVibrato(0.03, 4.0));
 
     let node = amp_pan(benihora, Constant::from(1.0), Constant::from(0.0));
     write_to_file::write_to_file("benihora.wav", SAMPLE_RATE, 20.0, eq.dispatch_node(node), None, None);

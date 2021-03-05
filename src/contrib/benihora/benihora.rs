@@ -73,6 +73,7 @@ pub enum BenihoraEvent {
     SetFrequency(F),
     SetTenseness(F),
     SetStatus(bool, bool),
+    SetVibrato(F, F),
 }
 
 impl crate::Event for BenihoraEvent {
@@ -121,6 +122,10 @@ impl crate::Event for BenihoraEvent {
             BenihoraEvent::SetStatus(breath, close) => {
                 node.glottis.breath = *breath;
                 node.glottis.glottis_close = *close;
+            }
+            BenihoraEvent::SetVibrato(amount, frequency) => {
+                node.glottis.frequency.vibrato_amount = *amount;
+                node.glottis.frequency.vibrato_frequency = *frequency;
             }
         }
     }
