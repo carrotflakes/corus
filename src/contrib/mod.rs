@@ -19,6 +19,7 @@ pub mod schroeder;
 pub mod simple_comp;
 pub mod smooth;
 pub mod spring;
+pub mod stop_proc;
 pub mod triggerable;
 
 pub use effects::*;
