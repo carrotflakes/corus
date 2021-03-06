@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::{proc_once::ProcOnce, Node, ProcContext};
 
-pub struct ProcOnceShare<T, A>
+pub struct Share<T, A>
 where
     T: 'static + Clone + Default,
     A: Node<T>,
@@ -10,13 +10,13 @@ where
     proc_once: Arc<ProcOnce<T, A>>,
 }
 
-impl<T, A> ProcOnceShare<T, A>
+impl<T, A> Share<T, A>
 where
     T: 'static + Clone + Default,
     A: Node<T>,
 {
     pub fn new(node: A) -> Self {
-        ProcOnceShare {
+        Share {
             proc_once: Arc::new(ProcOnce::new(node)),
         }
     }
@@ -31,7 +31,7 @@ where
     }
 }
 
-impl<T, A> Node<T> for ProcOnceShare<T, A>
+impl<T, A> Node<T> for Share<T, A>
 where
     T: 'static + Clone + Default,
     A: Node<T>,
@@ -50,7 +50,7 @@ where
     }
 }
 
-impl<T, A> Clone for ProcOnceShare<T, A>
+impl<T, A> Clone for Share<T, A>
 where
     T: 'static + Clone + Default,
     A: Node<T>,
@@ -62,12 +62,12 @@ where
     }
 }
 
-impl<T, A> From<Arc<ProcOnce<T, A>>> for ProcOnceShare<T, A>
+impl<T, A> From<Arc<ProcOnce<T, A>>> for Share<T, A>
 where
     T: 'static + Clone + Default,
     A: Node<T>,
 {
     fn from(node: Arc<ProcOnce<T, A>>) -> Self {
-        ProcOnceShare { proc_once: node }
+        Share { proc_once: node }
     }
 }

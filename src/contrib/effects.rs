@@ -1,7 +1,7 @@
 use crate::{
     core::{
         add::Add, amp::Amp, constant::Constant, placeholder::Placeholder,
-        proc_once_share::ProcOnceShare, ring_buffer_playback::RingBufferPlayback,
+        share::Share, ring_buffer_playback::RingBufferPlayback,
         ring_buffer_record::RingBufferRecord, Node,
     },
     signal::C2f64,
@@ -12,13 +12,13 @@ pub fn delay_fx<A: Node<C2f64> + 'static + Send + Sync>(
     sample_rate: usize,
     delay: f64,
     feedback: f64,
-) -> ProcOnceShare<
+) -> Share<
     C2f64,
     RingBufferRecord<C2f64, Placeholder<C2f64, Box<dyn Node<C2f64> + Send + Sync>>>,
 > {
     let mut p = Placeholder::new(None);
     let mut ps = p.setter();
-    let buffer = ProcOnceShare::new(RingBufferRecord::new(p, sample_rate));
+    let buffer = Share::new(RingBufferRecord::new(p, sample_rate));
     unsafe {
         ps.set(Box::new(Add::new(
             node,

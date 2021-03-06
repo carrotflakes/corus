@@ -5,7 +5,7 @@ use corus::{
     core::{
         impulse::{Impulse, ImpulseEvent},
         param::Param,
-        proc_once_share::ProcOnceShare,
+        share::Share,
     },
     EventControlInplace, EventPusher,
 };
@@ -24,7 +24,7 @@ fn main() {
     let mut fade = Param::with_value(0.0);
     fade.set_value_at_time(2.0, 1.0);
     let node = bypass_fader(
-        ProcOnceShare::new(impulse),
+        Share::new(impulse),
         &|node| schroeder_reverb(node),
         fade,
     );

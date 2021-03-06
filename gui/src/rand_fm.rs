@@ -4,7 +4,7 @@ use corus::{
     contrib::rand_fm_synth::rand_fm_synth,
     core::{
         add::Add, amp::Amp, constant::Constant, controllable::Controllable, param::Param,
-        placeholder::Placeholder, proc_once_share::ProcOnceShare, sine::Sine, Node,
+        placeholder::Placeholder, share::Share, sine::Sine, Node,
     },
     notenum_to_frequency,
 };

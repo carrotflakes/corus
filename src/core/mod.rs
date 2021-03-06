@@ -14,9 +14,9 @@ pub mod param;
 pub mod param2;
 pub mod placeholder;
 pub mod proc_once;
-pub mod proc_once_share;
 pub mod ring_buffer_playback;
 pub mod ring_buffer_record;
+pub mod share;
 pub mod sine;
 
 use crate::ring_buffer::RingBuffer;
@@ -24,10 +24,9 @@ use std::borrow::Borrow;
 
 pub use crate::{Node, ProcContext};
 
-use self::{proc_once_share::ProcOnceShare, ring_buffer_record::RingBufferRecord};
+use self::{ring_buffer_record::RingBufferRecord, share::Share};
 
-impl<T, A> Borrow<RingBuffer<T>>
-    for ProcOnceShare<T, RingBufferRecord<T, A>>
+impl<T, A> Borrow<RingBuffer<T>> for Share<T, RingBufferRecord<T, A>>
 where
     T: 'static + Clone + Default,
     A: Node<T>,

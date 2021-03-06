@@ -3,7 +3,7 @@ use std::{thread, time::Duration};
 use corus::{
     core::{
         add::Add, amp::Amp, constant::Constant, controllable::Controllable, param::Param,
-        proc_once_share::ProcOnceShare, sine::Sine,
+        share::Share, sine::Sine,
     },
     notenum_to_frequency,
 };
@@ -39,7 +39,7 @@ pub fn fm() {
 
     let mut device = audio_subsys
         .open_playback(None, &desired_spec, move |spec| {
-            let osc_freq = ProcOnceShare::new(osc_freq);
+            let osc_freq = Share::new(osc_freq);
             crate::audio::Audio::new(
                 spec.freq as u64,
                 Box::new(Amp::new(

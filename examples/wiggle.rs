@@ -3,14 +3,14 @@ mod write_to_file;
 use corus::{
     contrib::{fn_processor::FnProcessor, perlin_noise},
     core::{accumulator::Accumulator, constant::Constant},
-    core::{add::Add, map::Map, pan::Pan, proc_once_share::ProcOnceShare},
+    core::{add::Add, map::Map, pan::Pan, share::Share},
     signal::{C1f64, Mono},
 };
 
 const SAMPLE_RATE: usize = 44100;
 
 fn main() {
-    let osc = ProcOnceShare::new(FnProcessor::new({
+    let osc = Share::new(FnProcessor::new({
         let mut i = 0.0;
         move || {
             i += 1.0 / SAMPLE_RATE as f64;

@@ -2,7 +2,7 @@ use std::ops::{Mul, Neg};
 
 use crate::core::{
     add::Add, all_pass_filter::AllPassFilter, amp::Amp, comb_filter::CombFilter,
-    constant::Constant, mix::Mix, proc_once_share::ProcOnceShare, Node,
+    constant::Constant, mix::Mix, share::Share, Node,
 };
 
 pub fn schroeder_reverb<
@@ -18,14 +18,14 @@ pub fn schroeder_reverb<
     node: N,
 ) -> Add<
     T,
-    ProcOnceShare<T, N>,
+    Share<T, N>,
     Amp<
         T,
-        AllPassFilter<T, AllPassFilter<T, Mix<T, CombFilter<T, ProcOnceShare<T, N>>>>>,
+        AllPassFilter<T, AllPassFilter<T, Mix<T, CombFilter<T, Share<T, N>>>>>,
         Constant<T>,
     >,
 > {
-    let node = ProcOnceShare::new(node);
+    let node = Share::new(node);
     let nodes: Vec<_> = (0..4)
         .map(|i| {
             CombFilter::new(

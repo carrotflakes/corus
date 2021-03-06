@@ -3,18 +3,18 @@ mod write_to_file;
 use corus::{
     core::{
         add::Add, amp::Amp, constant::Constant, controllable::Controllable, mix::Mix, param::Param,
-        placeholder::Placeholder, proc_once_share::ProcOnceShare,
+        placeholder::Placeholder, share::Share,
         ring_buffer_playback::RingBufferPlayback, ring_buffer_record::RingBufferRecord, sine::Sine,
         Node,
     },
     signal::C1f64,
 };
 
-fn main() {
-    let sample_rate = 44100;
+const SAMPLE_RATE: usize = 44100;
 
+fn main() {
     let mut nodes = Vec::new();
-    let modulator = ProcOnceShare::new(Amp::new(
+    let modulator = Share::new(Amp::new(
         Sine::new(Constant::from(4.0)),
         Constant::from(20.0),
     ));
@@ -36,7 +36,7 @@ fn main() {
     let mix = {
         let mut p = Placeholder::new(None);
         let mut ps = p.setter();
-        let buffer = ProcOnceShare::new(RingBufferRecord::new(p, sample_rate as usize));
+        let buffer = Share::new(RingBufferRecord::new(p, SAMPLE_RATE));
         unsafe {
             ps.set(Box::new(Add::new(
                 mix,
@@ -51,5 +51,5 @@ fn main() {
 
     let node = Amp::new(mix, Constant::from(0.1));
 
-    write_to_file::write_to_file("bench.wav", sample_rate, 4.0, node, None, None);
+    write_to_file::write_to_file("bench.wav", SAMPLE_RATE, 4.0, node, None, None);
 }

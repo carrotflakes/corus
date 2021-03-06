@@ -21,7 +21,7 @@ use corus::{
         map::Map,
         mix::Mix,
         param::Param,
-        proc_once_share::ProcOnceShare,
+        share::Share,
         Node,
     },
     db_to_amp, notenum_to_frequency,
@@ -136,7 +136,7 @@ fn new_track(
     Controller<f64, Param<f64, f64>>,
 ) {
     let (pitch, pitch_ctrl) = controllable_param(1.0);
-    let pitch = ProcOnceShare::new(pitch);
+    let pitch = Share::new(pitch);
     let synth = if track == 0 || track == 2 || track == 3 {
         PolySynth::new(&mut || benihora_builder(), 1)
     } else if track == 9 {
@@ -150,7 +150,7 @@ fn new_track(
     (synth, gain, pan, false, pitch_ctrl)
 }
 
-fn saw_builder(pitch: ProcOnceShare<f64, Controllable<f64, Param<f64, f64>>>) -> MyVoice {
+fn saw_builder(pitch: Share<f64, Controllable<f64, Param<f64, f64>>>) -> MyVoice {
     let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
     let (gain, mut gain_ctrl) = controllable_param(1.0);
     let (acc, mut acc_reset) = resetable_acc(Amp::new(freq_param, pitch));
@@ -263,7 +263,7 @@ fn benihora_builder() -> MyVoice {
     )
 }
 
-fn wavetable_builder(pitch: ProcOnceShare<f64, Controllable<f64, Param<f64, f64>>>) -> MyVoice {
+fn wavetable_builder(pitch: Share<f64, Controllable<f64, Param<f64, f64>>>) -> MyVoice {
     let wavetable = make_wavetable();
     let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
     let (gain, mut gain_ctrl) = controllable_param(1.0);

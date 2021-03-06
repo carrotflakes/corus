@@ -7,7 +7,7 @@ use corus::{
         constant::Constant,
     },
     core::{
-        biquad_filter::BiquadFilterParams, map::Map, param::Param, proc_once_share::ProcOnceShare,
+        biquad_filter::BiquadFilterParams, map::Map, param::Param, share::Share,
     },
     signal::C1f64,
 };
@@ -31,7 +31,7 @@ fn main() {
     );
     let node = CombFilter::new(node, 0.01, 0.9.into());
     let node = bypass_fader(
-        ProcOnceShare::new(node),
+        Share::new(node),
         &|node| schroeder_reverb(node),
         Constant::from(1.0),
     );

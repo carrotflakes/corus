@@ -9,7 +9,7 @@ use corus::{
         constant::Constant,
         param::Param,
         placeholder::Placeholder,
-        proc_once_share::ProcOnceShare,
+        share::Share,
         ring_buffer_playback::RingBufferPlayback,
         ring_buffer_record::RingBufferRecord,
         Node,
@@ -29,7 +29,7 @@ fn main() {
     let node = {
         let mut p = Placeholder::new(None);
         let mut ps = p.setter();
-        let buffer = ProcOnceShare::new(RingBufferRecord::new(p, SAMPLE_RATE));
+        let buffer = Share::new(RingBufferRecord::new(p, SAMPLE_RATE));
         unsafe {
             ps.set(Box::new(Add::new(
                 node,

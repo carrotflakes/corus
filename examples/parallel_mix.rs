@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use corus::{Node, contrib::{bypass_fader::bypass_fader, parallel_mix::ParallelMix, schroeder::schroeder_reverb}, core::{
         accumulator::Accumulator, biquad_filter::BiquadFilter, comb_filter::CombFilter,
         constant::Constant,
-    }, core::{amp::Amp, biquad_filter::BiquadFilterParams, map::Map, param::Param, proc_once_share::ProcOnceShare, sine::Sine}, signal::C1f64};
+    }, core::{amp::Amp, biquad_filter::BiquadFilterParams, map::Map, param::Param, share::Share, sine::Sine}, signal::C1f64};
 
 fn main() {
     let node = Map::new(
@@ -26,7 +26,7 @@ fn main() {
     );
     let node = CombFilter::new(node, 0.01, 0.9.into());
     let node = bypass_fader(
-        ProcOnceShare::new(node),
+        Share::new(node),
         &|node| schroeder_reverb(node),
         Constant::from(1.0),
     );
