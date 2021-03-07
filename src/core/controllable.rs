@@ -14,13 +14,11 @@ where
     _t: std::marker::PhantomData<T>,
 }
 
-pub struct Controller<T, A>
+pub struct Controller<A>
 where
-    T: 'static,
-    A: Node<T> + 'static,
+    A: 'static,
 {
     node: Arc<Mutex<A>>,
-    _t: std::marker::PhantomData<T>,
 }
 
 impl<T, A> Controllable<T, A>
@@ -36,10 +34,9 @@ where
         }
     }
 
-    pub fn controller(&self) -> Controller<T, A> {
+    pub fn controller(&self) -> Controller<A> {
         Controller {
             node: self.node.clone(),
-            _t: self._t,
         }
     }
 
@@ -81,25 +78,22 @@ where
     }
 }
 
-impl<T, A> Controller<T, A>
+impl<A> Controller<A>
 where
-    T: 'static,
-    A: Node<T> + 'static,
+    A: 'static,
 {
     pub fn lock(&mut self) -> std::sync::MutexGuard<A> {
         Mutex::lock(&mut self.node).unwrap()
     }
 }
 
-impl<T, A> Clone for Controller<T, A>
+impl<A> Clone for Controller<A>
 where
-    T: 'static,
-    A: Node<T> + 'static,
+    A: 'static,
 {
     fn clone(&self) -> Self {
         Self {
             node: self.node.clone(),
-            _t: self._t,
         }
     }
 }

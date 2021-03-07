@@ -133,7 +133,7 @@ fn new_track(
     Param<f64, f64>,
     Param<f64, f64>,
     bool,
-    Controller<f64, Param<f64, f64>>,
+    Controller<Param<f64, f64>>,
 ) {
     let (pitch, pitch_ctrl) = controllable_param(1.0);
     let pitch = Share::new(pitch);

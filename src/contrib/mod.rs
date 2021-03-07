@@ -54,7 +54,7 @@ where
 
 pub fn controllable_param<T: Mono<f64>>(
     initial_value: f64,
-) -> (Controllable<T, Param<f64, T>>, Controller<T, Param<f64, T>>) {
+) -> (Controllable<T, Param<f64, T>>, Controller<Param<f64, T>>) {
     let c = Controllable::new(Param::new());
     let mut ctrl = c.controller();
     ctrl.lock().set_value_at_time(0.0, initial_value);
