@@ -1,36 +1,34 @@
 use crate::{
-    core::{controllable::Controllable, param::Param, Node},
+    core::{param3::ParamEventScheduleNode, Node},
     proc_context::ProcContext,
     signal::Mono,
 };
 
-use super::envelope::EnvelopeGenerator;
+use super::envelope2::EnvelopeGenerator;
 
 type F = f64;
 
 type Env<T> = (
-    Controllable<T, Param<F, T>>,
+    ParamEventScheduleNode<T>,
     Box<dyn FnMut(f64) + Send + Sync>,
     Box<dyn FnMut(f64) + Send + Sync>,
 );
 
-pub struct FmSynth<T, A, B>
+pub struct FmSynth<A, B>
 where
-    T: Mono<F>,
-    A: Node<T>,
-    B: Node<T>,
+    A: Node<F>,
+    B: Node<F>,
 {
-    pub oscillators: [(A, B, Env<T>, F, [bool; 5], F); 4],
-    pub frequency: Param<F, T>,
+    pub oscillators: [(A, B, Env<F>, F, [bool; 5], F); 4],
+    pub frequency: ParamEventScheduleNode<F>,
 }
 
-impl<T, A, B> FmSynth<T, A, B>
+impl<A, B> FmSynth<A, B>
 where
-    T: Mono<F>,
-    A: Node<T>,
-    B: Node<T>,
+    A: Node<F>,
+    B: Node<F>,
 {
-    pub fn new<E: EnvelopeGenerator<T>>(oscillators: [(A, B, E, F, Vec<u8>); 4]) -> Self {
+    pub fn new<E: EnvelopeGenerator<F>>(oscillators: [(A, B, E, F, Vec<u8>); 4]) -> Self {
         let f = |x: (A, B, E, F, Vec<u8>)| {
             (
                 x.0,
@@ -51,12 +49,16 @@ where
         let oscillators = [f(o0), f(o1), f(o2), f(o3)];
         Self {
             oscillators,
-            frequency: Param::new(),
+            frequency: ParamEventScheduleNode::new(),
         }
     }
 
     pub fn note_on(&mut self, time: f64, frequency: F) {
-        self.frequency.set_value_at_time(time, frequency);
+        self.frequency
+            .get_scheduler()
+            .lock()
+            .unwrap()
+            .set_value_at_time(time, frequency);
         for oscillator in &mut self.oscillators {
             (oscillator.2 .1)(time);
         }
@@ -69,14 +71,13 @@ where
     }
 }
 
-impl<T, A, B> Node<T> for FmSynth<T, A, B>
+impl<A, B> Node<F> for FmSynth<A, B>
 where
-    T: Mono<f64>,
-    A: Node<T>,
-    B: Node<T>,
+    A: Node<F>,
+    B: Node<F>,
 {
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> F {
         let mut outputs = [0.0; 5];
         let dtime = 1.0 / ctx.sample_rate as f64;
         let frequency = self.frequency.proc(ctx).get_m();
@@ -93,7 +94,7 @@ where
                 }
             }
         }
-        T::from_m(outputs[4])
+        outputs[4]
     }
 
     fn lock(&mut self, ctx: &ProcContext) {

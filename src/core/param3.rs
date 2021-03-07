@@ -70,11 +70,12 @@ pub trait Float:
     + Div<Output = Self>
     + Add<Output = Self>
     + Sub<Output = Self>
-    + Send + Sync
+    + Send + Sync + std::fmt::Debug + PartialOrd
 {
     fn linear_interpolate(&self, other: Self, r: f64) -> Self;
     fn exponential_interpolate(&self, other: Self, r: f64) -> Self;
     fn powf(&self, other: Self) -> Self;
+    fn is_finite(self) -> bool;
 }
 
 impl Float for f64 {
@@ -91,6 +92,11 @@ impl Float for f64 {
     #[inline]
     fn powf(&self, other: Self) -> Self {
         f64::powf(*self, other)
+    }
+
+    #[inline]
+    fn is_finite(self) -> bool {
+        f64::is_finite(self)
     }
 }
 
@@ -154,6 +160,7 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
     }
 
     pub fn exponential_ramp_to_value_at_time(&mut self, time: f64, value: F) {
+        assert!(F::from(0.0) < value && value.is_finite());
         self.push_event(time, ParamEvent::ExponentialRampToValueAtTime { value });
     }
 
@@ -310,12 +317,15 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
                     }
                 }
                 ParamEvent::ExponentialRampToValueAtTime { value } => {
+                    let mut v = (value.clone() / before_value.clone())
+                    .powf(F::from(1.0 / (first.0 - self.last_event.0)));
+                    // TODO
+                    if F::from(10000000.0) < v {
+                        v = F::from(10000000.0);
+                    }
                     event_queue.push_event(
                         self.last_event.0,
-                        ParamState::Exponential(
-                            (value.clone() / before_value.clone())
-                                .powf(F::from(1.0 / (first.0 - self.last_event.0))),
-                        ),
+                        ParamState::Exponential(v),
                         param.clone(),
                     );
                     if first.0 < time {

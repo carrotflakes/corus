@@ -142,7 +142,7 @@ fn new_track(
     } else if track == 9 {
         PolySynth::new(&mut noise_builder, 8)
     } else {
-        // Box::new(PolySynth::new(&|| fm_synth_builder(program as u32), 8))
+        // PolySynth::new(&mut || fm_synth_builder(program as u32), 8)
         PolySynth::new(&mut || saw_builder(pitch.clone()), 8)
     };
     let gain = Param::with_value(1.0f64);

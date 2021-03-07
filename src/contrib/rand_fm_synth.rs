@@ -1,10 +1,10 @@
 use crate::{core::constant::Constant, signal::{C1f64, Mono}};
 
-use super::{envelope::AdsrEnvelope, fm_synth::FmSynth, rand::Rand};
+use super::{envelope2::AdsrEnvelope, fm_synth::FmSynth, rand::Rand};
 
 pub fn rand_fm_synth(
     seed: u32,
-) -> FmSynth<C1f64, Constant<C1f64>, Constant<C1f64>> {
+) -> FmSynth<Constant<C1f64>, Constant<C1f64>> {
     let mut rand = Rand::new(seed);
     let f = |rand: &mut Rand, root: bool, amp: f64, c: Vec<u8>| {
         let rate_base = if root {

@@ -44,6 +44,9 @@ pub fn write_to_file_with_event_queue<T: IntoStereo<f64>, N: Node<T> + 'static>(
         }
         count += 1;
         let s = s.into_stereo();
+        if !(s.get_l() as f64).is_finite() || !(s.get_r() as f64).is_finite() {
+            panic!("signal is not finite, l: {:?}, r: {:?}", s.get_l(), s.get_r());
+        }
         let l = (s.get_l() * std::i16::MAX as f64) as i16;
         let r = (s.get_r() * std::i16::MAX as f64) as i16;
         f64hasher.write(&s.get_l().to_le_bytes());
