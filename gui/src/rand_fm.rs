@@ -69,7 +69,6 @@ pub fn rand_fm() {
     let mut seed = 0;
 
     let synth = Controllable::new(rand_fm_synth(seed));
-    seed += 1;
     let mut synth_ctrl = synth.controller();
     node_ctrl.lock().set(Box::new(synth));
     let mut notenum = None;
@@ -80,6 +79,7 @@ pub fn rand_fm() {
         let audio_time = device.lock().ctx.current_time;
         canvas.set_draw_color(Color::RGB(255, 255, 255));
         canvas.clear();
+        draw_text(&mut canvas, &format!("seed: {:?}", seed), 5, 5);
         canvas.present();
 
         for ev in event_pump.poll_iter() {
@@ -100,14 +100,14 @@ pub fn rand_fm() {
                     };
                     match keycode {
                         Keycode::W => {
-                            let synth = Controllable::new(rand_fm_synth(seed));
                             seed += 1;
+                            let synth = Controllable::new(rand_fm_synth(seed));
                             synth_ctrl = synth.controller();
                             node_ctrl.lock().set(Box::new(synth) as Box<dyn Node<f64>>);
                         }
                         Keycode::Q => {
-                            let synth = Controllable::new(rand_fm_synth(seed));
                             seed -= 1;
+                            let synth = Controllable::new(rand_fm_synth(seed));
                             synth_ctrl = synth.controller();
                             node_ctrl.lock().set(Box::new(synth) as Box<dyn Node<f64>>);
                         }
