@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{time::AsSample, Node};
+use crate::{EventQueue, Node, time::AsSample};
 
 #[derive(Clone)]
 pub struct ProcContext {
@@ -8,6 +8,7 @@ pub struct ProcContext {
     pub current_time: f64,
     pub current_sample: u64,
     pub rest_proc_samples: u64,
+    pub event_queue: EventQueue,
 }
 
 impl ProcContext {
@@ -17,6 +18,7 @@ impl ProcContext {
             current_time: 0.0,
             current_sample: 0,
             rest_proc_samples: 0,
+            event_queue: EventQueue::new(),
         }
     }
 
@@ -52,6 +54,7 @@ impl<'a, T: 'static, A: Node<T> + ?Sized> ProcGuard<'a, T, A> {
         if self.context.rest_proc_samples == 0 {
             panic!("Exceeded the allowed number of samples");
         }
+        self.context.event_queue.dispatch(self.context.current_time);
         let r = self.node.proc(self.context);
         self.context.current_sample += 1;
         self.context.current_time = self.context.current_sample as f64 / self.context.sample_rate as f64;

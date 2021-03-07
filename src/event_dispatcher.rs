@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, Mutex, Weak},
 };
 
-use crate::{core::Node, proc_context::ProcContext};
+use crate::{proc_context::ProcContext, Node};
 
 pub trait Event: 'static {
     type Target: 'static;
@@ -12,16 +12,34 @@ pub trait Event: 'static {
     fn dispatch(&self, time: f64, target: &mut Self::Target);
 }
 
-fn caller<E>(event: E, target: &'static mut E::Target) -> Box<dyn FnMut(f64) + Send + Sync>
+struct EventTargetPair<E>
 where
     E: Event + Send + Sync,
     <E as Event>::Target: Send + Sync,
 {
-    Box::new(move |time: f64| event.dispatch(time, target))
+    event: E,
+    target: Weak<E::Target>,
+}
+
+trait EventDispatch: Send + Sync {
+    fn dispatch(&mut self, time: f64);
+}
+
+impl<E> EventDispatch for EventTargetPair<E>
+where
+    E: Event + Send + Sync,
+    <E as Event>::Target: Send + Sync,
+{
+    #[inline]
+    fn dispatch(&mut self, time: f64) {
+        let target =
+            unsafe { std::mem::transmute::<_, &mut E::Target>(Weak::as_ptr(&self.target)) };
+        self.event.dispatch(time, target);
+    }
 }
 
 pub struct EventQueue {
-    events: Arc<Mutex<VecDeque<(f64, Box<dyn FnMut(f64) + Send + Sync>)>>>,
+    events: Arc<Mutex<VecDeque<(f64, Box<dyn EventDispatch>)>>>,
 }
 
 impl EventQueue {
@@ -31,23 +49,39 @@ impl EventQueue {
         }
     }
 
-    pub fn get_controller<E: Event>(&mut self, arc: &Arc<E::Target>) -> EventControl<E> {
+    pub fn get_controller<E>(&mut self, arc: &Arc<E::Target>) -> EventControl<E>
+    where
+        E: Event + Send + Sync,
+        <E as Event>::Target: Send + Sync,
+    {
         EventControl::new(self.events.clone(), Arc::downgrade(arc))
     }
 
-    pub fn dispatch(&mut self, ctx: &ProcContext) {
+    pub(crate) fn dispatch(&mut self, current_time: f64) {
         let mut events = self.events.lock().unwrap();
         while let Some(e) = events.front_mut() {
-            if ctx.current_time < e.0 {
+            if current_time < e.0 {
                 break;
             }
-            (e.1)(e.0);
+            e.1.dispatch(e.0);
             events.pop_front();
         }
     }
 
-    pub fn dispatch_node<T: 'static, N: Node<T>>(&self, node: N) -> EventDispatchNode<T, N> {
-        EventDispatchNode::new(node, self.clone())
+    pub fn push_event<E>(&self, time: f64, event: E, target: Weak<E::Target>)
+    where
+        E: Event + Send + Sync,
+        <E as Event>::Target: Send + Sync,
+    {
+        let pair = Box::new(EventTargetPair { event, target });
+        let mut events = self.events.lock().unwrap();
+        for (i, e) in events.iter().enumerate() {
+            if time < e.0 {
+                events.insert(i, (time, pair));
+                return;
+            }
+        }
+        events.push_back((time, pair));
     }
 }
 
@@ -65,14 +99,14 @@ pub trait EventPusher<E: Event> {
 
 #[derive(Clone)]
 pub struct EventControl<E: Event> {
-    events: Arc<Mutex<VecDeque<(f64, Box<dyn FnMut(f64) + Send + Sync>)>>>,
+    events: Arc<Mutex<VecDeque<(f64, Box<dyn EventDispatch>)>>>,
     target: Weak<E::Target>,
     _t: PhantomData<E>,
 }
 
 impl<E: Event> EventControl<E> {
     fn new(
-        events: Arc<Mutex<VecDeque<(f64, Box<dyn FnMut(f64) + Send + Sync>)>>>,
+        events: Arc<Mutex<VecDeque<(f64, Box<dyn EventDispatch>)>>>,
         target: Weak<E::Target>,
     ) -> Self {
         Self {
@@ -89,48 +123,16 @@ where
     <E as Event>::Target: Send + Sync,
 {
     fn push_event(&mut self, time: f64, event: E) {
-        let target =
-            unsafe { std::mem::transmute::<_, &'static mut E::Target>(self.target.as_ptr()) };
+        let target = self.target.clone();
+        let pair = Box::new(EventTargetPair { event, target });
         let mut events = self.events.lock().unwrap();
         for (i, e) in events.iter().enumerate() {
             if time < e.0 {
-                events.insert(i, (time, caller(event, target)));
+                events.insert(i, (time, pair));
                 return;
             }
         }
-        events.push_back((time, caller(event, target)));
-    }
-}
-
-pub struct EventDispatchNode<T: 'static, N: Node<T>> {
-    node: N,
-    event_queue: EventQueue,
-    _t: PhantomData<T>,
-}
-
-impl<T: 'static, N: Node<T>> EventDispatchNode<T, N> {
-    pub fn new(node: N, event_queue: EventQueue) -> Self {
-        Self {
-            node,
-            event_queue,
-            _t: Default::default(),
-        }
-    }
-}
-
-impl<T: 'static, N: Node<T>> Node<T> for EventDispatchNode<T, N> {
-    #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
-        self.event_queue.dispatch(ctx);
-        self.node.proc(ctx)
-    }
-
-    fn lock(&mut self, ctx: &ProcContext) {
-        self.node.lock(ctx);
-    }
-
-    fn unlock(&mut self) {
-        self.node.unlock();
+        events.push_back((time, pair));
     }
 }
 

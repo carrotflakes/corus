@@ -1,14 +1,26 @@
 use std::{collections::hash_map::DefaultHasher, hash::Hasher, io::Write};
 
-use corus::{Node, ProcContext, signal::{C2f64, IntoStereo, Stereo}, time::{AsSample, Second}};
+use corus::{EventQueue, Node, ProcContext, signal::{C2f64, IntoStereo, Stereo}, time::{AsSample, Second}};
 
 pub fn write_to_file<T: IntoStereo<f64>, N: Node<T> + 'static>(
+    name: &str,
+    sample_rate: usize,
+    len: f64,
+    node: N,
+    f64hash: Option<u64>,
+    i16hash: Option<u64>,
+) {
+    write_to_file_with_event_queue(name, sample_rate, len, node, f64hash, i16hash, EventQueue::new())
+}
+
+pub fn write_to_file_with_event_queue<T: IntoStereo<f64>, N: Node<T> + 'static>(
     name: &str,
     sample_rate: usize,
     len: f64,
     mut node: N,
     f64hash: Option<u64>,
     i16hash: Option<u64>,
+    event_queue: EventQueue,
 ) {
     let spec = hound::WavSpec {
         channels: 2,
@@ -18,6 +30,7 @@ pub fn write_to_file<T: IntoStereo<f64>, N: Node<T> + 'static>(
     };
     let mut writer = hound::WavWriter::create(name, spec).unwrap();
     let mut pc = ProcContext::new(sample_rate as u64);
+    pc.event_queue = event_queue;
     let mut f64hasher = DefaultHasher::new();
     let mut i16hasher = DefaultHasher::new();
     let start = std::time::Instant::now();

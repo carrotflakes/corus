@@ -1,4 +1,4 @@
-use crate::{signal::Signal, Node, ProcContext};
+use crate::{EventQueue, Node, ProcContext, signal::Signal};
 
 pub struct DownSample<T, A>
 where
@@ -49,6 +49,7 @@ where
                 current_time: ctx.current_time * self.sample_rate as f64 / ctx.sample_rate as f64,
                 current_sample: ctx.current_sample * self.sample_rate / ctx.sample_rate,
                 rest_proc_samples: ctx.rest_proc_samples * self.sample_rate / ctx.sample_rate,
+                event_queue: EventQueue::new(),
             });
             self.next_update += 1.0 / self.sample_rate as f64;
         }
