@@ -1,10 +1,13 @@
 use std::{thread, time::Duration};
 
 use corus::{
-    contrib::rand_fm_synth::rand_fm_synth,
+    contrib::{
+        controllable_param,
+        generic_poly_synth::{NoteOff, NoteOn, PolySynth, Voice},
+        rand_fm_synth::rand_fm_synth,
+    },
     core::{
-        add::Add, amp::Amp, constant::Constant, controllable::Controllable, param::Param,
-        placeholder::Placeholder, share::Share, sine::Sine, Node,
+        amp::Amp, constant::Constant, controllable::Controllable, placeholder::Placeholder, Node,
     },
     notenum_to_frequency,
 };
@@ -30,7 +33,9 @@ pub fn rand_fm() {
         samples: None,     // default sample size
     };
 
-    let node = Controllable::new(Placeholder::new(Some(Box::new(Constant::new(0.0)) as Box<dyn Node<f64>>)));
+    let node = Controllable::new(Placeholder::new(Some(
+        Box::new(Constant::new(0.0)) as Box<dyn Node<f64>>
+    )));
     let mut node_ctrl = node.controller();
 
     let mut device = audio_subsys
@@ -68,12 +73,10 @@ pub fn rand_fm() {
     let mut event_pump = sdl_ctx.event_pump().unwrap();
     let mut seed = 0;
 
-    let synth = Controllable::new(rand_fm_synth(seed));
+    let synth = Controllable::new(create_fm_synth(seed));
     let mut synth_ctrl = synth.controller();
     node_ctrl.lock().set(Box::new(synth));
-    let mut notenum = None;
-    let mut desire_notenum = None;
-    let mut note_off_count = 0;
+    let mut notenum_ons = vec![false; 128];
 
     'running: loop {
         let audio_time = device.lock().ctx.current_time;
@@ -95,19 +98,24 @@ pub fn rand_fm() {
                     keycode: Some(keycode),
                     ..
                 } => {
-                    let mut set = |nn: u32| {
-                        desire_notenum = Some(nn);
+                    let mut set = |nn: u8| {
+                        if !notenum_ons[nn as usize] {
+                            synth_ctrl
+                                .lock()
+                                .note_on(audio_time, Some(nn as u8), (nn as u8, 1.0));
+                            notenum_ons[nn as usize] = true;
+                        }
                     };
                     match keycode {
                         Keycode::W => {
                             seed += 1;
-                            let synth = Controllable::new(rand_fm_synth(seed));
+                            let synth = Controllable::new(create_fm_synth(seed));
                             synth_ctrl = synth.controller();
                             node_ctrl.lock().set(Box::new(synth) as Box<dyn Node<f64>>);
                         }
                         Keycode::Q => {
                             seed -= 1;
-                            let synth = Controllable::new(rand_fm_synth(seed));
+                            let synth = Controllable::new(create_fm_synth(seed));
                             synth_ctrl = synth.controller();
                             node_ctrl.lock().set(Box::new(synth) as Box<dyn Node<f64>>);
                         }
@@ -131,10 +139,10 @@ pub fn rand_fm() {
                     keycode: Some(keycode),
                     ..
                 } => {
-                    let mut set = |nn: u32| {
-                        if desire_notenum == Some(nn) {
-                            desire_notenum = None;
-                            note_off_count = 2;
+                    let mut set = |nn: u8| {
+                        if notenum_ons[nn as usize] {
+                            synth_ctrl.lock().note_off(audio_time, Some(nn as u8), ());
+                            notenum_ons[nn as usize] = false;
                         }
                     };
                     match keycode {
@@ -161,20 +169,33 @@ pub fn rand_fm() {
                 _ => {}
             }
         }
-
-        if desire_notenum != notenum {
-            if let Some(nn) = desire_notenum {
-                synth_ctrl.lock().note_on(audio_time, notenum_to_frequency(nn));
-                notenum = Some(nn);
-            } else {
-                if note_off_count == 0 {
-                    synth_ctrl.lock().note_off(audio_time);
-                    notenum = None;
-                } else {
-                    note_off_count -= 1;
-                }
-            }
-        }
         thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
+}
+
+type MyVoice = Voice<Box<dyn Node<f64> + Send + Sync>, (u8, f64), ()>;
+
+fn create_fm_synth(seed: u32) -> PolySynth<(u8, f64), (), MyVoice, Option<u8>> {
+    PolySynth::new(
+        &mut || {
+            let (gain, mut gain_ctrl) = controllable_param(1.0);
+            let synth = Controllable::new(rand_fm_synth(seed));
+            let mut ctrl1 = synth.controller();
+            let mut ctrl2 = synth.controller();
+            let node = Amp::new(synth, gain);
+            Voice(
+                Box::new(node) as Box<dyn Node<f64> + Send + Sync>,
+                Box::new(move |time, NoteOn((notenum, velocity))| {
+                    gain_ctrl.lock().set_value_at_time(time, velocity);
+                    ctrl1
+                        .lock()
+                        .note_on(time, notenum_to_frequency(notenum as u32));
+                }),
+                Box::new(move |time, NoteOff(())| {
+                    ctrl2.lock().note_off(time);
+                }),
+            )
+        },
+        16,
+    )
 }
