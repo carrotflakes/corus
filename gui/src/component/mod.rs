@@ -4,6 +4,7 @@ use crate::{context::Context, interface::*};
 
 pub mod component_container;
 pub mod text_box;
+pub mod text_box_container;
 pub mod text_input_state;
 
 pub trait Component<U: Ui> {

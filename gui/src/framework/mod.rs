@@ -194,13 +194,14 @@ impl interface::VideoSubsystem for VideoSubsystem {
         self.0
             .window(title, width, height)
             .position_centered()
+            .resizable()
             .build()
             .map(|x| Window { window: x })
             .map_err(|e| e.to_string())
     }
 
     fn text_input_start(&mut self, rect: interface::Rect) {
-        let mut ti = self.0.text_input();
+        let ti = self.0.text_input();
         ti.set_rect(sdl2::rect::Rect::new(rect.0, rect.1, rect.2, rect.3));
         ti.start();
     }

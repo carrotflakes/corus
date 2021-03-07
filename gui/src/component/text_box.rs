@@ -6,17 +6,21 @@ use super::Component;
 
 
 pub struct TextBox<U: Ui> {
-    str: String,
-    rect: Rect,
+    pub id: usize,
+    pub str: String,
+    pub rect: Rect,
+    pub inputs: Vec<usize>,
     touch: Option<TextBoxState>,
     _t: PhantomData<dyn Fn() -> U>,
 }
 
 impl<U: Ui> TextBox<U> {
-    pub fn new(str: String, rect: Rect) -> Self {
+    pub fn new(id: usize, str: String, rect: Rect) -> Self {
         Self {
+            id,
             str,
             rect,
+            inputs: vec![],
             touch: None,
             _t: Default::default(),
         }
@@ -132,6 +136,7 @@ impl<U: Ui> Component<U> for TextBox<U> {
 
     fn draw(&mut self, ctx: &mut Context<U>) {
         ctx.canvas.set_draw_color(RGB(0, 0, 0));
+        ctx.canvas.draw_rect(Rect::new(self.rect.0, self.rect.1 - 5, 10, 5));
         ctx.canvas.draw_rect(self.rect.clone());
         ctx.draw_text(&self.str, self.rect.0, self.rect.1);
     }
