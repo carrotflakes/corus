@@ -25,6 +25,7 @@ pub struct AdsrEnvelope<F: 'static + Clone + Default, T: Mono<F>> {
 
 impl<T: Mono<F> + Send + Sync> AdsrEnvelope<F, T> {
     pub fn new(a: f64, d: F, s: f64, r: f64) -> Self {
+        assert!(0.0 < d);
         Self { a, d, s, r, _t: Default::default() }
     }
 

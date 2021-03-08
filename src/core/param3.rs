@@ -8,7 +8,7 @@ use super::{Node, ProcContext};
 pub enum ParamState<F: Float> {
     Constant(F),
     Linear(F),
-    Exponential(F),
+    Exponential(F, f64),
     Target { target: F, time_constant: f64 },
 }
 
@@ -37,10 +37,10 @@ impl<F: Float> Node<F> for Param<F> {
         match self.state {
             ParamState::Constant(_) => {}
             ParamState::Linear(v) => {
-                self.value = self.value + v / F::from(ctx.sample_rate as f64);
+                self.value = self.value + v / F::from(ctx.sample_rate as f64); // TODO: pre-compute the value at Node.lock()
             }
-            ParamState::Exponential(v) => {
-                self.value = self.value * v.powf(F::from(1.0 / ctx.sample_rate as f64));
+            ParamState::Exponential(v, vv) => {
+                self.value = self.value * v.powf(F::from(1.0 / (vv * ctx.sample_rate as f64)));
             }
             ParamState::Target {
                 target,
@@ -126,6 +126,7 @@ enum ParamEvent<F: Float> {
 pub struct ParamEventSchedule<F: Float> {
     events: VecDeque<(f64, ParamEvent<F>)>,
     last_event: (f64, ParamEvent<F>),
+    last_value: F,
 }
 
 impl<F: Float + Send + Sync> ParamEventSchedule<F> {
@@ -138,6 +139,7 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
                     value: F::from(0.0),
                 },
             ),
+            last_value: F::from(0.0),
         }
     }
 
@@ -282,84 +284,95 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
         event_queue: &EventQueue,
         param: &Weak<Param<F>>,
     ) {
-        let mut before_value = self.compute_value(self.last_event.0);
         while !self.events.is_empty() {
             let first = &self.events[0];
+            if time < first.0 {
+                break;
+            }
             match first.1.clone() {
                 ParamEvent::SetValueAtTime { value } => {
-                    if first.0 < time {
-                        event_queue.push_event(
-                            first.0,
-                            ParamState::Constant(value.clone()),
-                            param.clone(),
-                        );
-                        before_value = value.clone();
-                        self.last_event = first.clone();
-                    }
+                    event_queue.push_event(
+                        first.0,
+                        ParamState::Constant(value.clone()),
+                        param.clone(),
+                    );
+                    self.last_value = value;
                 }
                 ParamEvent::LinearRampToValueAtTime { value } => {
                     event_queue.push_event(
                         self.last_event.0,
                         ParamState::Linear(
-                            (value.clone() - before_value.clone())
+                            (value.clone() - self.last_value)
                                 / F::from(first.0 - self.last_event.0),
                         ),
                         param.clone(),
                     );
-                    if first.0 < time {
-                        event_queue.push_event(
-                            first.0,
-                            ParamState::Constant(value.clone()),
-                            param.clone(),
-                        );
-                        before_value = value.clone();
-                        self.last_event = (first.0, ParamEvent::SetValueAtTime { value });
-                    }
-                }
-                ParamEvent::ExponentialRampToValueAtTime { value } => {
-                    let mut v = (value.clone() / before_value.clone())
-                    .powf(F::from(1.0 / (first.0 - self.last_event.0)));
-                    // TODO
-                    if F::from(10000000.0) < v {
-                        v = F::from(10000000.0);
-                    }
                     event_queue.push_event(
-                        self.last_event.0,
-                        ParamState::Exponential(v),
+                        first.0,
+                        ParamState::Constant(value.clone()),
                         param.clone(),
                     );
-                    if first.0 < time {
-                        event_queue.push_event(
-                            first.0,
-                            ParamState::Constant(value.clone()),
-                            param.clone(),
-                        );
-                        before_value = value.clone();
-                        self.last_event = (first.0, ParamEvent::SetValueAtTime { value });
-                    }
+                    self.last_value = value;
+                }
+                ParamEvent::ExponentialRampToValueAtTime { value } => {
+                    event_queue.push_event(
+                        self.last_event.0,
+                        ParamState::Exponential(value.clone() / self.last_value, first.0 - self.last_event.0),
+                        param.clone(),
+                    );
+                    event_queue.push_event(
+                        first.0,
+                        ParamState::Constant(value.clone()),
+                        param.clone(),
+                    );
+                    self.last_value = value;
                 }
                 ParamEvent::SetTargetAtTime {
                     target,
                     time_constant,
                 } => {
-                    if first.0 < time {
-                        event_queue.push_event(
-                            first.0,
-                            ParamState::Target {
-                                target,
-                                time_constant,
-                            },
-                            param.clone(),
-                        );
-                        self.last_event = first.clone();
-                    }
+                    event_queue.push_event(
+                        first.0,
+                        ParamState::Target {
+                            target,
+                            time_constant,
+                        },
+                        param.clone(),
+                    );
                 }
             }
-            if time < first.0 {
-                // 位置、大丈夫？
-                break;
-            }
+            self.last_event = first.clone();
             self.events.pop_front();
+        }
+
+        if let Some(first) = self.events.front() {
+            match first.1.clone() {
+                ParamEvent::SetValueAtTime { .. } => {
+                }
+                ParamEvent::LinearRampToValueAtTime { value } => {
+                    // TODO: prevent push multiple times.
+                    event_queue.push_event(
+                        self.last_event.0,
+                        ParamState::Linear(
+                            (value.clone() - self.last_value)
+                                / F::from(first.0 - self.last_event.0),
+                        ),
+                        param.clone(),
+                    );
+                }
+                ParamEvent::ExponentialRampToValueAtTime { value } => {
+                    // TODO: prevent push multiple times.
+                    event_queue.push_event(
+                        self.last_event.0,
+                        ParamState::Exponential(value.clone() / self.last_value, first.0 - self.last_event.0),
+                        param.clone(),
+                    );
+                }
+                ParamEvent::SetTargetAtTime {
+                    ..
+                } => {
+                }
+            }
         }
     }
 }
