@@ -1,6 +1,6 @@
 use std::{ops::Add, thread};
 
-use crate::{Node, ProcContext};
+use crate::{EventQueue, Node, ProcContext};
 
 // Non blocking
 pub struct ParallelMix<T, A>
@@ -9,6 +9,7 @@ where
     A: Node<T> + Send + Sync + 'static,
 {
     nodes: Vec<A>,
+    event_queues: Vec<EventQueue>,
     samples: Vec<T>,
     progresses: Vec<usize>,
     i: usize,
@@ -23,6 +24,7 @@ where
 {
     pub fn new(nodes: Vec<A>) -> Self {
         ParallelMix {
+            event_queues: (0..nodes.len()).map(|_| EventQueue::new()).collect(),
             nodes,
             samples: Vec::new(),
             progresses: Vec::new(),
@@ -64,6 +66,7 @@ where
         for (i, node) in self.nodes.iter_mut().enumerate() {
             let node = unsafe {std::mem::transmute::<_, &'static mut A>(node)};
             let mut ctx = ctx.clone();
+            ctx.event_queue = self.event_queues[i].clone();
             let mut samples = unsafe {std::mem::transmute::<_, &'static mut [T]>(&mut self.samples[i * ctx.rest_proc_samples as usize..(i + 1) * ctx.rest_proc_samples as usize])};
             let progress = unsafe {std::mem::transmute::<_, &'static mut usize>(&mut self.progresses[i])};
             thread::spawn(move || {
