@@ -2,6 +2,8 @@ use std::marker::PhantomData;
 
 use super::{Node, ProcContext};
 
+use crate::{Event, EventQueue};
+
 pub struct ProcOnce<T, A>
 where
     T: 'static + Clone + Default,
@@ -11,6 +13,7 @@ where
     time: f64,
     value: T,
     pub(crate) lock_count: u32,
+    bound_event_queue: Option<EventQueue>,
 }
 
 impl<T, A> ProcOnce<T, A>
@@ -24,6 +27,7 @@ where
             time: -1.0,
             value: Default::default(),
             lock_count: 0,
+            bound_event_queue: None,
         }
     }
 
@@ -53,6 +57,13 @@ where
     fn lock(&mut self, ctx: &ProcContext) {
         self.lock_count += 1;
         if self.lock_count == 1 {
+            if let Some(eq) = &self.bound_event_queue {
+                if eq != &ctx.event_queue {
+                    panic!("this ProcOnce is shared by multiple contexts!");
+                }
+            } else {
+                self.bound_event_queue = Some(ctx.event_queue.clone());
+            }
             self.node.lock(ctx);
         }
     }
@@ -61,11 +72,10 @@ where
         self.lock_count -= 1;
         if self.lock_count == 0 {
             self.node.unlock();
+            // self.bound_event_queue = None;
         }
     }
 }
-
-use crate::Event;
 
 pub struct ProcOnceEvent<T, A, E>
 where

@@ -86,10 +86,18 @@ impl EventQueue {
 }
 
 impl Clone for EventQueue {
+    #[inline]
     fn clone(&self) -> Self {
         EventQueue {
             events: self.events.clone(),
         }
+    }
+}
+
+impl PartialEq for EventQueue {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.events, &other.events)
     }
 }
 
