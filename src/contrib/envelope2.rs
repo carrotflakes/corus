@@ -60,6 +60,7 @@ impl<T: Mono<F> + Send + Sync> AdsrEnvelope<F, T> {
                     let mut env = env_ctl.lock().unwrap();
                     env.cancel_and_hold_at_time(time);
                     env.exponential_ramp_to_value_at_time(time + r, 0.001.into());
+                    env.set_value_at_time(time + r, 0.0.into());
                     // env.set_target_at_time(time, 0.0, r);
                 }
             },
