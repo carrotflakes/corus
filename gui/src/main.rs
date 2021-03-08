@@ -8,7 +8,7 @@ mod interface;
 mod framework;
 
 fn main() {
-    // f::f::<framework::Ui>();
-    rand_fm::rand_fm();
+    f::f::<framework::Ui>();
+    // rand_fm::rand_fm();
     // fm::fm();
 }

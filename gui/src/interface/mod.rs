@@ -59,7 +59,7 @@ pub trait Font {
 
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Point(pub i32, pub i32);
 
 impl Point {
@@ -68,7 +68,7 @@ impl Point {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Rect(pub i32, pub i32, pub u32, pub u32);
 
 impl Rect {

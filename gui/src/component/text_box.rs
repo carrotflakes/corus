@@ -2,8 +2,7 @@ use std::{any::Any, marker::PhantomData};
 
 use crate::{context::Context, interface::*};
 
-use super::Component;
-
+use super::{Component, wire::Wire};
 
 pub struct TextBox<U: Ui> {
     pub id: usize,
@@ -24,6 +23,20 @@ impl<U: Ui> TextBox<U> {
             touch: None,
             _t: Default::default(),
         }
+    }
+
+    pub fn input_rects(&self) -> impl Iterator<Item = Rect> {
+        let rect = self.rect;
+        (0..1).map(move |i| {
+            Rect::new(rect.0 + i * 20, rect.1 - 5, 10, 5)
+        })
+    }
+
+    pub fn output_rects(&self) -> impl Iterator<Item = Rect> {
+        let rect = self.rect;
+        (0..1).map(move |i| {
+            Rect::new(rect.0 + i * 20, rect.1 + rect.3 as i32, 10, 5)
+        })
     }
 }
 
@@ -58,6 +71,15 @@ impl<U: Ui> Component<U> for TextBox<U> {
                     y,
                 } => {
                     if *mouse_btn == MouseButton::Left {
+                        for ir in self.input_rects() {
+                            if ir.contains_point(Point::new(*x, *y)) {
+                                ctx.messages.push(Box::new(Wire::new(
+                                    self.id,
+                                    Point::new(ir.0, ir.1),
+                                    Point::new(ir.0, ir.1),
+                                )));
+                            }
+                        }
                         if self.rect.contains_point(Point::new(*x, *y)) {
                             self.touch = Some(TextBoxState::MouseDrag);
                             return true;
@@ -136,7 +158,12 @@ impl<U: Ui> Component<U> for TextBox<U> {
 
     fn draw(&mut self, ctx: &mut Context<U>) {
         ctx.canvas.set_draw_color(RGB(0, 0, 0));
-        ctx.canvas.draw_rect(Rect::new(self.rect.0, self.rect.1 - 5, 10, 5));
+        for input_rect in self.input_rects() {
+            ctx.canvas.draw_rect(input_rect);
+        }
+        for output_rect in self.output_rects() {
+            ctx.canvas.draw_rect(output_rect);
+        }
         ctx.canvas.draw_rect(self.rect.clone());
         ctx.draw_text(&self.str, self.rect.0, self.rect.1);
     }
