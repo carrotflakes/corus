@@ -1,6 +1,6 @@
 # corus
 
-Primitive sound synthesis library.
+Primitive sound synthesis toolkit.
 
 TODO:
 
@@ -9,7 +9,6 @@ TODO:
 - wavetable
 - pararell mix
 - chip
-- basic nodes
 
 ## Cardinal nodes
 - Constant: produce a constant value.
@@ -20,6 +19,7 @@ TODO:
 - Sine: produce a sine wave at a given frequency.
 - Share: shareable node wrapper.
 - Controller: allows dynamic changes to inner node.
+- Map: map the signal by arbitrary function.
 
 ## Author
 
