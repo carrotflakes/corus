@@ -18,7 +18,8 @@ TODO:
 - Add: mix two signals.
 - Mix: mix n signals.
 - Sine: produce a sine wave at a given frequency.
-- Share: shareable node container.
+- Share: shareable node wrapper.
+- Controller: allows dynamic changes to inner node.
 
 ## Author
 
