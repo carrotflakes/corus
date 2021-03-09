@@ -1,4 +1,8 @@
-use crate::{core::Node, proc_context::ProcContext, signal::{C1f64, Mono}};
+use crate::{
+    core::Node,
+    proc_context::ProcContext,
+    signal::{C1f64, Mono},
+};
 
 use super::{
     glottis::Glottis,
@@ -39,9 +43,12 @@ impl Node<C1f64> for Benihora {
 
         let v = self.node.as_mut().proc(ctx);
         let lambda = (ctx.current_time - self.block_updated_time) / self.block_time; // TODO: lambdaなくしたい
-        let glottal_output = self
-            .glottis
-            .run_step(ctx.current_time, ctx.sample_rate as usize, lambda, v.get_m() as F);
+        let glottal_output = self.glottis.run_step(
+            ctx.current_time,
+            ctx.sample_rate as usize,
+            lambda,
+            v.get_m() as F,
+        ) + v * 1.0e-20; // tract に 0.0 を渡すと何故か遅くなるので僅かにノイズを混ぜる
         let noise_mod = self.glottis.get_noise_modulator(lambda);
         let turbulence_noise = v.get_m() as F * noise_mod; // v.0[1] is better...
         let mut vocal_out = 0.0;
