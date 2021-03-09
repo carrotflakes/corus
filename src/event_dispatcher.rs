@@ -1,7 +1,7 @@
 use std::{
     collections::VecDeque,
     marker::PhantomData,
-    sync::{Arc, Mutex, Weak},
+    sync::{Arc, Mutex},
 };
 
 use crate::{proc_context::ProcContext, Node};
@@ -18,7 +18,7 @@ where
     <E as Event>::Target: Send + Sync,
 {
     event: E,
-    target: Weak<E::Target>,
+    target: Arc<E::Target>,
 }
 
 trait EventDispatch: Send + Sync {
@@ -32,8 +32,7 @@ where
 {
     #[inline]
     fn dispatch(&mut self, time: f64) {
-        let target =
-            unsafe { std::mem::transmute::<_, &mut E::Target>(Weak::as_ptr(&self.target)) };
+        let target = unsafe { std::mem::transmute::<_, &mut E::Target>(Arc::as_ptr(&self.target)) };
         self.event.dispatch(time, target);
     }
 }
@@ -49,12 +48,12 @@ impl EventQueue {
         }
     }
 
-    pub fn get_controller<E>(&mut self, arc: &Arc<E::Target>) -> EventControl<E>
+    pub fn get_controller<T, E>(&mut self, ec: &EventControllable<T, E::Target>) -> EventControl<E>
     where
         E: Event + Send + Sync,
-        <E as Event>::Target: Send + Sync,
+        <E as Event>::Target: Node<T> + Send + Sync,
     {
-        EventControl::new(self.events.clone(), Arc::downgrade(arc))
+        EventControl::new(self.events.clone(), ec.inner())
     }
 
     pub(crate) fn dispatch(&mut self, current_time: f64) {
@@ -68,7 +67,7 @@ impl EventQueue {
         }
     }
 
-    pub fn push_event<E>(&self, time: f64, event: E, target: Weak<E::Target>)
+    pub fn push_event<E>(&self, time: f64, event: E, target: Arc<E::Target>)
     where
         E: Event + Send + Sync,
         <E as Event>::Target: Send + Sync,
@@ -105,17 +104,64 @@ pub trait EventPusher<E: Event> {
     fn push_event(&mut self, time: f64, event: E);
 }
 
+pub struct EventControllable<T: 'static, A: 'static + Node<T>> {
+    node: Arc<A>,
+    _t: PhantomData<T>,
+}
+
+impl<T: 'static, A: 'static + Node<T>> EventControllable<T, A> {
+    pub fn new(node: A) -> Self {
+        Self {
+            node: Arc::new(node),
+            _t: Default::default(),
+        }
+    }
+
+    #[inline]
+    pub fn inner(&self) -> Arc<A> {
+        self.node.clone()
+    }
+}
+
+impl<T, A> Node<T> for EventControllable<T, A>
+where
+    T: 'static,
+    A: 'static + Node<T>,
+{
+    #[inline]
+    fn proc(&mut self, ctx: &ProcContext) -> T {
+        get_mut(&mut self.node).proc(ctx)
+    }
+
+    fn lock(&mut self, ctx: &ProcContext) {
+        get_mut(&mut self.node).lock(ctx);
+    }
+
+    fn unlock(&mut self) {
+        get_mut(&mut self.node).unlock();
+    }
+}
+
+#[inline]
+fn get_mut<T, A>(arc: &mut Arc<A>) -> &mut A
+where
+    T: 'static,
+    A: 'static + Node<T>,
+{
+    unsafe { std::mem::transmute::<_, &mut A>(Arc::as_ptr(arc)) }
+}
+
 #[derive(Clone)]
 pub struct EventControl<E: Event> {
     events: Arc<Mutex<VecDeque<(f64, Box<dyn EventDispatch>)>>>,
-    target: Weak<E::Target>,
+    target: Arc<E::Target>,
     _t: PhantomData<E>,
 }
 
 impl<E: Event> EventControl<E> {
     fn new(
         events: Arc<Mutex<VecDeque<(f64, Box<dyn EventDispatch>)>>>,
-        target: Weak<E::Target>,
+        target: Arc<E::Target>,
     ) -> Self {
         Self {
             events,

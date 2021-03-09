@@ -1,6 +1,10 @@
-use std::{collections::VecDeque, ops::{Add, Div, Mul, Sub}, sync::{Arc, Mutex, Weak}};
+use std::{
+    collections::VecDeque,
+    ops::{Add, Div, Mul, Sub},
+    sync::{Arc, Mutex},
+};
 
-use crate::{Event, EventQueue};
+use crate::{Event, EventControllable, EventQueue};
 
 use super::{Node, ProcContext};
 
@@ -70,7 +74,10 @@ pub trait Float:
     + Div<Output = Self>
     + Add<Output = Self>
     + Sub<Output = Self>
-    + Send + Sync + std::fmt::Debug + PartialOrd
+    + Send
+    + Sync
+    + std::fmt::Debug
+    + PartialOrd
 {
     fn linear_interpolate(&self, other: Self, r: f64) -> Self;
     fn exponential_interpolate(&self, other: Self, r: f64) -> Self;
@@ -282,7 +289,7 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
         &mut self,
         time: f64,
         event_queue: &EventQueue,
-        param: &Weak<Param<F>>,
+        param: &EventControllable<F, Param<F>>,
     ) {
         while !self.events.is_empty() {
             let first = &self.events[0];
@@ -294,7 +301,7 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
                     event_queue.push_event(
                         first.0,
                         ParamState::Constant(value.clone()),
-                        param.clone(),
+                        param.inner(),
                     );
                     self.last_value = value;
                 }
@@ -305,25 +312,28 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
                             (value.clone() - self.last_value)
                                 / F::from(first.0 - self.last_event.0),
                         ),
-                        param.clone(),
+                        param.inner(),
                     );
                     event_queue.push_event(
                         first.0,
                         ParamState::Constant(value.clone()),
-                        param.clone(),
+                        param.inner(),
                     );
                     self.last_value = value;
                 }
                 ParamEvent::ExponentialRampToValueAtTime { value } => {
                     event_queue.push_event(
                         self.last_event.0,
-                        ParamState::Exponential(value.clone() / self.last_value, first.0 - self.last_event.0),
-                        param.clone(),
+                        ParamState::Exponential(
+                            value.clone() / self.last_value,
+                            first.0 - self.last_event.0,
+                        ),
+                        param.inner(),
                     );
                     event_queue.push_event(
                         first.0,
                         ParamState::Constant(value.clone()),
-                        param.clone(),
+                        param.inner(),
                     );
                     self.last_value = value;
                 }
@@ -337,7 +347,7 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
                             target,
                             time_constant,
                         },
-                        param.clone(),
+                        param.inner(),
                     );
                 }
             }
@@ -347,8 +357,7 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
 
         if let Some(first) = self.events.front() {
             match first.1.clone() {
-                ParamEvent::SetValueAtTime { .. } => {
-                }
+                ParamEvent::SetValueAtTime { .. } => {}
                 ParamEvent::LinearRampToValueAtTime { value } => {
                     // TODO: prevent push multiple times.
                     event_queue.push_event(
@@ -357,34 +366,34 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
                             (value.clone() - self.last_value)
                                 / F::from(first.0 - self.last_event.0),
                         ),
-                        param.clone(),
+                        param.inner(),
                     );
                 }
                 ParamEvent::ExponentialRampToValueAtTime { value } => {
                     // TODO: prevent push multiple times.
                     event_queue.push_event(
                         self.last_event.0,
-                        ParamState::Exponential(value.clone() / self.last_value, first.0 - self.last_event.0),
-                        param.clone(),
+                        ParamState::Exponential(
+                            value.clone() / self.last_value,
+                            first.0 - self.last_event.0,
+                        ),
+                        param.inner(),
                     );
                 }
-                ParamEvent::SetTargetAtTime {
-                    ..
-                } => {
-                }
+                ParamEvent::SetTargetAtTime { .. } => {}
             }
         }
     }
 }
 
 pub struct ParamEventScheduleNode<F: Float> {
-    param: Arc<Param<F>>,
+    param: EventControllable<F, Param<F>>,
     schedule: Arc<Mutex<ParamEventSchedule<F>>>,
 }
 
 impl<F: Float> ParamEventScheduleNode<F> {
     pub fn new() -> Self {
-        let param = Arc::new(Param::new());
+        let param = EventControllable::new(Param::new());
         ParamEventScheduleNode {
             schedule: Arc::new(Mutex::new(ParamEventSchedule::new())),
             param,
@@ -406,7 +415,7 @@ impl<F: Float> Node<F> for ParamEventScheduleNode<F> {
         self.schedule.lock().unwrap().send(
             ctx.current_time + ctx.rest_proc_samples as f64 / ctx.sample_rate as f64,
             &ctx.event_queue,
-            &mut Arc::downgrade(&self.param),
+            &self.param,
         );
         self.param.lock(ctx);
     }
@@ -419,7 +428,7 @@ impl<F: Float> Node<F> for ParamEventScheduleNode<F> {
 #[test]
 fn test() {
     let mut eq = crate::EventQueue::new();
-    let param = std::sync::Arc::new(Param::<f64>::new());
+    let param = EventControllable::new(Param::<f64>::new());
     let mut schedule = ParamEventSchedule::new();
     let mut pc = ProcContext::new(4);
 
@@ -431,7 +440,7 @@ fn test() {
     schedule.cancel_and_hold_at_time(15.0 / 4.0);
     schedule.exponential_ramp_to_value_at_time(19.0 / 4.0, 1.0);
 
-    schedule.send(100.0, &mut eq, &Arc::downgrade(&param));
+    schedule.send(100.0, &mut eq, &param);
 
     let mut node = param;
     pc.event_queue = eq;

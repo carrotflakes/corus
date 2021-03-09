@@ -1,21 +1,15 @@
 mod write_to_file;
 
-use std::sync::Arc;
-
-use corus::{
-    contrib::{
+use corus::{EventControllable, EventPusher, EventQueue, contrib::{
         amp_pan,
         benihora::{make_noise_node, Benihora, BenihoraEvent},
-    },
-    core::constant::Constant,
-    notenum_to_frequency, EventPusher, EventQueue,
-};
+    }, core::constant::Constant, notenum_to_frequency};
 
 const SAMPLE_RATE: usize = 44100;
 
 fn main() {
     let mut eq = EventQueue::new();
-    let benihora = Arc::new(Benihora::new(make_noise_node(), 2));
+    let benihora = EventControllable::new(Benihora::new(make_noise_node(), 2));
     let mut benihora_ctl = eq.get_controller(&benihora);
     // let mut benihora = EventControl::new(benihora);
     benihora_ctl.push_event(0.0, BenihoraEvent::MoveTangue(12.9, 2.43));

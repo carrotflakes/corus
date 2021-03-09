@@ -1,7 +1,5 @@
 mod write_to_file;
 
-use std::sync::{Arc, Mutex};
-
 use corus::{Node, contrib::{bypass_fader::bypass_fader, parallel_mix::ParallelMix, schroeder::schroeder_reverb}, core::{
         accumulator::Accumulator, biquad_filter::BiquadFilter, comb_filter::CombFilter,
         constant::Constant,
@@ -30,11 +28,11 @@ fn main() {
         &|node| schroeder_reverb(node),
         Constant::from(1.0),
     );
-    let node = Arc::new(Mutex::new(node));
-    let mut vec = vec![node as Arc<Mutex<dyn Node<_> + Send + Sync>>];
+    let node = Box::new(node);
+    let mut vec = vec![node as Box<dyn Node<_> + Send + Sync>];
     for i in 0..1000 {
         let node = Sine::new(Constant::from(220.0 + 10.0 * i as f64));
-        let node = Arc::new(Mutex::new(Amp::new(node, Constant::from(0.001))));
+        let node = Box::new(Amp::new(node, Constant::from(0.001)));
         vec.push(node);
         // vec.push(node as Arc<Mutex<dyn Node<_> + Send + Sync>>);
     }
