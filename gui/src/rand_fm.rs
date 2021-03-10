@@ -189,7 +189,7 @@ fn create_fm_synth(seed: u32) -> PolySynth<(u8, f64), (), MyVoice, Option<u8>> {
                     gain_ctrl.lock().set_value_at_time(time, velocity);
                     ctrl1
                         .lock()
-                        .note_on(time, notenum_to_frequency(notenum as u32));
+                        .note_on(time, notenum_to_frequency(notenum));
                 }),
                 Box::new(move |time, NoteOff(())| {
                     ctrl2.lock().note_off(time);

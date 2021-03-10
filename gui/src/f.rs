@@ -101,7 +101,7 @@ pub fn f<U: Ui>() {
                     keycode: Some(keycode),
                     ..
                 } => {
-                    let mut set = |nn: u32| {
+                    let mut set = |nn: u8| {
                         // osc_freq_ctrl
                         //     .lock()
                         //     .set_value_at_time(audio_time, notenum_to_frequency(nn));
