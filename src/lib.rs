@@ -11,7 +11,7 @@ pub use event_dispatcher::*;
 pub use node::*;
 pub use proc_context::*;
 
-pub fn notenum_to_frequency(notenum: u32) -> f64 {
+pub fn notenum_to_frequency(notenum: u8) -> f64 {
     440.0 * 2.0f64.powf((notenum as f64 - 69.0) / 12.0)
 }
 

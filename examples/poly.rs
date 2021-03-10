@@ -36,7 +36,7 @@ fn main() {
                 move |time, notenum| {
                     freq_param_ctrl
                         .lock()
-                        .set_value_at_time(time, notenum_to_frequency(notenum as u32));
+                        .set_value_at_time(time, notenum_to_frequency(notenum));
                     acc_ctrl
                         .lock()
                         .push_event(time, SetValueAtTime::new(C1f64::from(0.5)));

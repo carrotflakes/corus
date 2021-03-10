@@ -162,7 +162,7 @@ fn saw_builder(pitch: Share<f64, Controllable<f64, Param<f64, f64>>>) -> MyVoice
         Box::new(move |time, NoteOn((notenum, velocity))| {
             freq_param_ctrl
                 .lock()
-                .set_value_at_time(time, notenum_to_frequency(notenum as u32));
+                .set_value_at_time(time, notenum_to_frequency(notenum));
             gain_ctrl
                 .lock()
                 .set_value_at_time(time, db_to_amp((velocity - 1.0) * DB_MIN));
@@ -208,7 +208,7 @@ fn fm_synth_builder(seed: u32) -> MyVoice {
             gain_ctrl.lock().set_value_at_time(time, velocity);
             ctrl1
                 .lock()
-                .note_on(time, notenum_to_frequency(notenum as u32));
+                .note_on(time, notenum_to_frequency(notenum));
         }),
         Box::new(move |time, NoteOff(())| {
             ctrl2.lock().note_off(time);
@@ -251,7 +251,7 @@ fn benihora_builder() -> MyVoice {
             );
             ctrl1.lock().push_event(
                 time,
-                BenihoraEvent::SetFrequency(notenum_to_frequency(notenum as u32)),
+                BenihoraEvent::SetFrequency(notenum_to_frequency(notenum)),
             );
         }),
         Box::new(move |time, NoteOff(())| {
@@ -278,7 +278,7 @@ fn wavetable_builder(pitch: Share<f64, Controllable<f64, Param<f64, f64>>>) -> M
         Box::new(move |time, NoteOn((notenum, velocity))| {
             freq_param_ctrl
                 .lock()
-                .set_value_at_time(time, notenum_to_frequency(notenum as u32));
+                .set_value_at_time(time, notenum_to_frequency(notenum));
             gain_ctrl
                 .lock()
                 .set_value_at_time(time, db_to_amp((velocity - 1.0) * DB_MIN));
