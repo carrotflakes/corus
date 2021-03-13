@@ -4,9 +4,18 @@ mod into_stereo;
 pub use into_mono::IntoMono;
 pub use into_stereo::IntoStereo;
 
-use std::ops::{Add, Mul, Neg};
+use std::ops::{Add, Div, Mul, Neg};
 
-pub trait Signal: 'static + Sized + Clone + Add<Output = Self> + Mul<Output = Self> + Neg<Output = Self> {
+pub trait Signal:
+    'static
+    + Sized
+    + Clone
+    + Add<Output = Self>
+    + Mul<Output = Self>
+    + Mul<f64, Output = Self>
+    + Div<f64, Output = Self>
+    + Neg<Output = Self>
+{
     type Float;
 
     fn get(&self, channel: usize) -> Self::Float;
@@ -48,12 +57,21 @@ impl Neg for C2f64 {
     }
 }
 
-impl Mul<C1f64> for C2f64 {
+impl Mul<f64> for C2f64 {
     type Output = Self;
 
     #[inline]
-    fn mul(self, rhs: C1f64) -> Self::Output {
-        Self([self.0[0] * rhs.get_m(), self.0[1] * rhs.get_m()])
+    fn mul(self, rhs: f64) -> Self::Output {
+        Self([self.0[0] * rhs, self.0[1] * rhs])
+    }
+}
+
+impl Div<f64> for C2f64 {
+    type Output = Self;
+
+    #[inline]
+    fn div(self, rhs: f64) -> Self::Output {
+        Self([self.0[0] / rhs, self.0[1] / rhs])
     }
 }
 
@@ -134,35 +152,6 @@ pub trait Stereo<F>: Signal<Float = F> {
     fn from_lr(l: F, r: F) -> Self;
     fn get_l(&self) -> F;
     fn get_r(&self) -> F;
-}
-
-impl Signal for f32 {
-    type Float = f32;
-
-    #[inline]
-    fn get(&self, _channel: usize) -> Self::Float {
-        *self
-    }
-
-    #[inline]
-    fn map<F: Fn(f32) -> f32>(&self, f: F) -> Self {
-        f(*self)
-    }
-
-    #[inline]
-    fn map2_1<F: Fn(f32, f32) -> f32>(&self, self2: Self, f: F) -> Self {
-        f(*self, self2)
-    }
-
-    #[inline]
-    fn mul_identity() -> Self {
-        1.0
-    }
-
-    #[inline]
-    fn lerp(&self, other: &Self, r: Self::Float) -> Self {
-        self * (1.0 - r) + other * r
-    }
 }
 
 impl Mono<f64> for f64 {
