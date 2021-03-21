@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     signal::{C1f64, Signal},
-    Event,
+    EventListener,
 };
 
 use super::{Node, ProcContext};
@@ -82,15 +82,14 @@ where
     }
 }
 
-impl<T, A> Event for SetValueAtTime<T, A>
+impl<T, A> EventListener<SetValueAtTime<T, A>> for Accumulator<T, A>
 where
     T: Signal + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
     A: Node<T> + 'static,
 {
-    type Target = Accumulator<T, A>;
-
-    fn dispatch(&self, _time: f64, target: &mut Self::Target) {
-        target.value = self.value.clone();
+    #[inline]
+    fn apply_event(&mut self, _time: f64, event: &SetValueAtTime<T, A>) {
+        self.value = event.value.clone();
     }
 }
 

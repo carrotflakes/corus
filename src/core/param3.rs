@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::{Event, EventControllable, EventQueue};
+use crate::{EventListener, EventControllable, EventQueue};
 
 use super::{Node, ProcContext};
 
@@ -107,18 +107,16 @@ impl Float for f64 {
     }
 }
 
-impl<F: Float> Event for ParamState<F> {
-    type Target = Param<F>;
-
+impl<F: Float> EventListener<ParamState<F>> for Param<F> {
     #[inline]
-    fn dispatch(&self, _time: f64, target: &mut Param<F>) {
-        match self {
+    fn apply_event(&mut self, _time: f64, event: &ParamState<F>) {
+        match event {
             ParamState::Constant(value) => {
-                target.value = value.clone();
+                self.value = value.clone();
             }
             _ => {}
         }
-        target.state = self.clone();
+        self.state = event.clone();
     }
 }
 

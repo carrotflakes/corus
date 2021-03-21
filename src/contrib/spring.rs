@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{signal::C1f64, Event, Node, ProcContext};
+use crate::{signal::C1f64, EventListener, Node, ProcContext};
 
 pub struct Spring<A, B, C, D>
 where
@@ -86,20 +86,19 @@ pub enum SpringEvent<A, B, C, D> {
     ),
 }
 
-impl<A, B, C, D> Event for SpringEvent<A, B, C, D>
+impl<A, B, C, D> EventListener<SpringEvent<A, B, C, D>> for Spring<A, B, C, D>
 where
     A: 'static + Node<C1f64>,
     B: 'static + Node<C1f64>,
     C: 'static + Node<C1f64>,
     D: 'static + Node<C1f64>,
 {
-    type Target = Spring<A, B, C, D>;
-
-    fn dispatch(&self, _time: f64, target: &mut Self::Target) {
-        match self {
+    #[inline]
+    fn apply_event(&mut self, _time: f64, event: &SpringEvent<A, B, C, D>) {
+        match event {
             SpringEvent::Reset(displacement, velocity) => {
-                target.displacement = *displacement;
-                target.velocity = *velocity;
+                self.displacement = *displacement;
+                self.velocity = *velocity;
             }
             SpringEvent::_T(_, _, _, _) => {}
         }

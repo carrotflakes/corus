@@ -1,4 +1,4 @@
-use crate::Event;
+use crate::EventListener;
 
 use super::{Node, ProcContext};
 
@@ -46,16 +46,15 @@ pub enum ImpulseEvent<T: Clone + 'static + Default> {
     SetValue(T),
 }
 
-impl<T: Clone + 'static + Default> Event for ImpulseEvent<T> {
-    type Target = Impulse<T>;
-
-    fn dispatch(&self, _time: f64, node: &mut Self::Target) {
-        match self {
+impl<T: Clone + 'static + Default> EventListener<ImpulseEvent<T>> for Impulse<T> {
+    #[inline]
+    fn apply_event(&mut self, _time: f64, event: &ImpulseEvent<T>) {
+        match event {
             ImpulseEvent::Trigger => {
-                node.fired = false;
+                self.fired = false;
             }
             ImpulseEvent::SetValue(value) => {
-                node.value = value.clone();
+                self.value = value.clone();
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::Event;
+use crate::EventListener;
 
 use super::{Node, ProcContext};
 
@@ -32,13 +32,12 @@ pub enum ConstantEvent<T: Clone + 'static> {
     SetValue(T),
 }
 
-impl<T: Clone + 'static> Event for ConstantEvent<T> {
-    type Target = Constant<T>;
-
-    fn dispatch(&self, _time: f64, target: &mut Self::Target) {
-        match self {
+impl<T: Clone + 'static> EventListener<ConstantEvent<T>> for Constant<T> {
+    #[inline]
+    fn apply_event(&mut self, _time: f64, event: &ConstantEvent<T>) {
+        match event {
             ConstantEvent::SetValue(value) => {
-                target.value = value.clone();
+                self.value = value.clone();
             }
         }
     }

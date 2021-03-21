@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use super::{Node, ProcContext};
 
-use crate::{Event, EventQueue};
+use crate::{EventListener, EventQueue};
 
 pub struct ProcOnce<T, A>
 where
@@ -81,17 +81,15 @@ pub struct ProcOnceEvent<T, A, E>
 where
     T: 'static + Clone + Default,
     A: 'static + Node<T>,
-    E: Event<Target = A>,
 {
     event: E,
-    _t: PhantomData<T>,
+    _t: (PhantomData<T>, PhantomData<A>),
 }
 
 impl<T, A, E> ProcOnceEvent<T, A, E>
 where
     T: 'static + Clone + Default,
     A: 'static + Node<T>,
-    E: Event<Target = A>,
 {
     pub fn new(event: E) -> Self {
         Self {
@@ -101,15 +99,13 @@ where
     }
 }
 
-impl<T, A, E> Event for ProcOnceEvent<T, A, E>
+impl<T, A, E> EventListener<ProcOnceEvent<T, A, E>> for ProcOnce<T, A>
 where
     T: 'static + Clone + Default,
-    A: 'static + Node<T>,
-    E: Event<Target = A>,
+    A: Node<T> + EventListener<E>,
 {
-    type Target = A;
-
-    fn dispatch(&self, time: f64, target: &mut Self::Target) {
-        self.event.dispatch(time, target)
+    #[inline]
+    fn apply_event(&mut self, time: f64, event: &ProcOnceEvent<T, A, E>) {
+        self.node.apply_event(time, &event.event)
     }
 }

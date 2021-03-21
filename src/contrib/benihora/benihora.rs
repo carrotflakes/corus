@@ -83,17 +83,16 @@ pub enum BenihoraEvent {
     SetVibrato(F, F),
 }
 
-impl crate::Event for BenihoraEvent {
-    type Target = Benihora;
-
-    fn dispatch(&self, time: f64, node: &mut Self::Target) {
-        match self {
+impl crate::EventListener<BenihoraEvent> for Benihora {
+    #[inline]
+    fn apply_event(&mut self, time: f64, event: &BenihoraEvent) {
+        match event {
             BenihoraEvent::MoveTangue(index, diameter) => {
-                node.tract.mouth.tongue = node.tract.mouth.tangue_clamp(*index, *diameter);
-                node.tract.calculate_diameter();
+                self.tract.mouth.tongue = self.tract.mouth.tangue_clamp(*index, *diameter);
+                self.tract.calculate_diameter();
             }
             BenihoraEvent::SetOtherConstrictions(new_ocs) => {
-                let ocs = &mut node.tract.mouth.other_constrictions;
+                let ocs = &mut self.tract.mouth.other_constrictions;
                 for c in new_ocs.iter() {
                     if ocs
                         .iter()
@@ -118,21 +117,21 @@ impl crate::Event for BenihoraEvent {
                         c.end_time = Some(time);
                     }
                 }
-                node.tract.calculate_diameter();
+                self.tract.calculate_diameter();
             }
             BenihoraEvent::SetFrequency(frequency) => {
-                node.glottis.frequency.set(*frequency);
+                self.glottis.frequency.set(*frequency);
             }
             BenihoraEvent::SetTenseness(tenseness) => {
-                node.glottis.set_tenseness(*tenseness);
+                self.glottis.set_tenseness(*tenseness);
             }
             BenihoraEvent::SetStatus(breath, close) => {
-                node.glottis.breath = *breath;
-                node.glottis.glottis_close = *close;
+                self.glottis.breath = *breath;
+                self.glottis.glottis_close = *close;
             }
             BenihoraEvent::SetVibrato(amount, frequency) => {
-                node.glottis.frequency.vibrato_amount = *amount;
-                node.glottis.frequency.vibrato_frequency = *frequency;
+                self.glottis.frequency.vibrato_amount = *amount;
+                self.glottis.frequency.vibrato_frequency = *frequency;
             }
         }
     }

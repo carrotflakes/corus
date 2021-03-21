@@ -1,4 +1,4 @@
-use crate::{Event, core::Node, proc_context::ProcContext, signal::{C1f64, Mono}};
+use crate::{EventListener, core::Node, proc_context::ProcContext, signal::{C1f64, Mono}};
 
 pub struct Noise {
     pub freq: u32,
@@ -63,22 +63,21 @@ pub enum NoiseEvent {
     ResetReg,
 }
 
-impl Event for NoiseEvent {
-    type Target = Noise;
-
-    fn dispatch(&self, _time: f64, node: &mut Self::Target) {
-        match self {
+impl EventListener<NoiseEvent> for Noise {
+    #[inline]
+    fn apply_event(&mut self, _time: f64, event: &NoiseEvent) {
+        match event {
             NoiseEvent::OriginalFreq(f1, f2) => {
-                node.freq = Noise::compute_freq(*f1, *f2);
+                self.freq = Noise::compute_freq(*f1, *f2);
             }
             NoiseEvent::Freq(freq) => {
-                node.freq = *freq;
+                self.freq = *freq;
             }
             NoiseEvent::ShortFreq(short_freq) => {
-                node.short_freq = *short_freq;
+                self.short_freq = *short_freq;
             }
             NoiseEvent::ResetReg => {
-                node.reg = 1;
+                self.reg = 1;
             }
         }
     }

@@ -6,34 +6,32 @@ use std::{
 
 use crate::{proc_context::ProcContext, Node};
 
-pub trait Event: 'static {
-    type Target: 'static;
-
-    fn dispatch(&self, time: f64, target: &mut Self::Target);
+pub trait EventListener<E>: 'static {
+    fn apply_event(&mut self, time: f64, event: &E);
 }
 
-struct EventTargetPair<E>
+struct EventTargetPair<E, L>
 where
-    E: Event + Send + Sync,
-    <E as Event>::Target: Send + Sync,
+    E: Send + Sync,
+    L: EventListener<E> + Send + Sync,
 {
     event: E,
-    target: Arc<E::Target>,
+    target: Arc<L>,
 }
 
 trait EventDispatch: Send + Sync {
     fn dispatch(&mut self, time: f64);
 }
 
-impl<E> EventDispatch for EventTargetPair<E>
+impl<E, L> EventDispatch for EventTargetPair<E, L>
 where
-    E: Event + Send + Sync,
-    <E as Event>::Target: Send + Sync,
+    E: Send + Sync,
+    L: EventListener<E> + Send + Sync,
 {
     #[inline]
     fn dispatch(&mut self, time: f64) {
-        let target = unsafe { std::mem::transmute::<_, &mut E::Target>(Arc::as_ptr(&self.target)) };
-        self.event.dispatch(time, target);
+        let target = unsafe { std::mem::transmute::<_, &mut L>(Arc::as_ptr(&self.target)) };
+        target.apply_event(time, &self.event);
     }
 }
 
@@ -48,10 +46,10 @@ impl EventQueue {
         }
     }
 
-    pub fn get_controller<T, E>(&mut self, ec: &EventControllable<T, E::Target>) -> EventControl<E>
+    pub fn get_controller<T, E, L>(&mut self, ec: &EventControllable<T, L>) -> EventControl<L>
     where
-        E: Event + Send + Sync,
-        <E as Event>::Target: Node<T> + Send + Sync,
+        E: Send + Sync,
+        L: Node<T> + EventListener<E> + Send + Sync,
     {
         EventControl::new(self.events.clone(), ec.inner())
     }
@@ -67,10 +65,10 @@ impl EventQueue {
         }
     }
 
-    pub fn push_event<E>(&self, time: f64, event: E, target: Arc<E::Target>)
+    pub fn push_event<E, L>(&self, time: f64, event: E, target: Arc<L>)
     where
-        E: Event + Send + Sync,
-        <E as Event>::Target: Send + Sync,
+        E: 'static + Send + Sync,
+        L: EventListener<E> + Send + Sync,
     {
         let pair = Box::new(EventTargetPair { event, target });
         let mut events = self.events.lock().unwrap();
@@ -100,7 +98,7 @@ impl PartialEq for EventQueue {
     }
 }
 
-pub trait EventPusher<E: Event> {
+pub trait EventPusher<E> {
     fn push_event(&mut self, time: f64, event: E);
 }
 
@@ -152,29 +150,21 @@ where
 }
 
 #[derive(Clone)]
-pub struct EventControl<E: Event> {
+pub struct EventControl<L> {
     events: Arc<Mutex<VecDeque<(f64, Box<dyn EventDispatch>)>>>,
-    target: Arc<E::Target>,
-    _t: PhantomData<E>,
+    target: Arc<L>,
 }
 
-impl<E: Event> EventControl<E> {
-    fn new(
-        events: Arc<Mutex<VecDeque<(f64, Box<dyn EventDispatch>)>>>,
-        target: Arc<E::Target>,
-    ) -> Self {
-        Self {
-            events,
-            target,
-            _t: Default::default(),
-        }
+impl<L> EventControl<L> {
+    fn new(events: Arc<Mutex<VecDeque<(f64, Box<dyn EventDispatch>)>>>, target: Arc<L>) -> Self {
+        Self { events, target }
     }
 }
 
-impl<E> EventPusher<E> for EventControl<E>
+impl<E, L> EventPusher<E> for EventControl<L>
 where
-    E: Event + Send + Sync,
-    <E as Event>::Target: Send + Sync,
+    E: 'static + Send + Sync,
+    L: EventListener<E> + Send + Sync,
 {
     fn push_event(&mut self, time: f64, event: E) {
         let target = self.target.clone();
@@ -190,13 +180,13 @@ where
     }
 }
 
-pub struct EventControlInplace<E: Event> {
-    target: E::Target,
+pub struct EventControlInplace<E, L: EventListener<E>> {
+    target: L,
     events: VecDeque<(f64, E)>,
 }
 
-impl<E: Event> EventControlInplace<E> {
-    pub fn new(target: E::Target) -> Self {
+impl<E, L: EventListener<E>> EventControlInplace<E, L> {
+    pub fn new(target: L) -> Self {
         Self {
             target,
             events: Vec::new().into(),
@@ -204,7 +194,7 @@ impl<E: Event> EventControlInplace<E> {
     }
 }
 
-impl<E: Event> EventPusher<E> for EventControlInplace<E> {
+impl<E, L: EventListener<E>> EventPusher<E> for EventControlInplace<E, L> {
     fn push_event(&mut self, time: f64, event: E) {
         for (i, e) in self.events.iter().enumerate() {
             if time < e.0 {
@@ -216,14 +206,14 @@ impl<E: Event> EventPusher<E> for EventControlInplace<E> {
     }
 }
 
-impl<T: 'static, N: Node<T>, E: Event<Target = N>> Node<T> for EventControlInplace<E> {
+impl<T: 'static, L: Node<T> + EventListener<E>, E> Node<T> for EventControlInplace<E, L> {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         while let Some(e) = self.events.front_mut() {
             if ctx.current_time < e.0 {
                 break;
             }
-            e.1.dispatch(e.0, &mut self.target);
+            self.target.apply_event(e.0, &e.1);
             self.events.pop_front();
         }
         self.target.proc(ctx)
