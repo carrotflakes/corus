@@ -35,6 +35,7 @@ where
     }
 }
 
+#[derive(Default)]
 pub struct EventQueue {
     events: Arc<Mutex<VecDeque<(f64, Box<dyn EventDispatch>)>>>,
 }
@@ -65,20 +66,23 @@ impl EventQueue {
         }
     }
 
+    fn push_event_dispatch(&self, time: f64, event_dispatch: Box<dyn EventDispatch>) {
+        let mut events = self.events.lock().unwrap();
+        for (i, e) in events.iter().enumerate() {
+            if time < e.0 {
+                events.insert(i, (time, event_dispatch));
+                return;
+            }
+        }
+        events.push_back((time, event_dispatch));
+    }
+
     pub fn push_event<E, L>(&self, time: f64, event: E, target: Arc<L>)
     where
         E: 'static + Send + Sync,
         L: EventListener<E> + Send + Sync,
     {
-        let pair = Box::new(EventTargetPair { event, target });
-        let mut events = self.events.lock().unwrap();
-        for (i, e) in events.iter().enumerate() {
-            if time < e.0 {
-                events.insert(i, (time, pair));
-                return;
-            }
-        }
-        events.push_back((time, pair));
+        self.push_event_dispatch(time, Box::new(EventTargetPair { event, target }));
     }
 }
 
@@ -177,6 +181,79 @@ where
             }
         }
         events.push_back((time, pair));
+    }
+}
+
+#[derive(Default)]
+pub struct EventSchedule<A: 'static> {
+    events: EventQueue,
+    target: Arc<A>,
+}
+
+impl<E: 'static + Sync + Send, A: 'static + EventListener<E> + Sync + Send> EventPusher<E>
+    for EventSchedule<A>
+{
+    fn push_event(&mut self, time: f64, event: E) {
+        self.events.push_event(time, event, self.target.clone());
+    }
+}
+
+impl<A: 'static> Clone for EventSchedule<A> {
+    fn clone(&self) -> Self {
+        EventSchedule {
+            events: self.events.clone(),
+            target: self.target.clone(),
+        }
+    }
+}
+
+pub struct EventScheduleNode<T: 'static, A: 'static + Node<T>> {
+    target: EventControllable<T, A>,
+    schedule: EventSchedule<A>,
+}
+
+impl<T: 'static, A: 'static + Node<T>> EventScheduleNode<T, A> {
+    pub fn new(target: EventControllable<T, A>) -> Self {
+        Self {
+            schedule: EventSchedule {
+                events: Default::default(),
+                target: target.node.clone(),
+            },
+            target,
+        }
+    }
+
+    pub fn get_scheduler(&mut self) -> EventSchedule<A> {
+        self.schedule.clone()
+    }
+}
+
+impl<T, A> Node<T> for EventScheduleNode<T, A>
+where
+    T: 'static,
+    A: 'static + Node<T>,
+{
+    #[inline]
+    fn proc(&mut self, ctx: &ProcContext) -> T {
+        self.target.proc(ctx)
+    }
+
+    fn lock(&mut self, ctx: &ProcContext) {
+        let mut events = self.schedule.events.events.lock().unwrap();
+        let time = ctx.current_time + ctx.rest_proc_samples as f64 / ctx.sample_rate as f64;
+
+        while !events.is_empty() {
+            if time < events[0].0 {
+                break;
+            }
+            let first = events.pop_front().unwrap();
+            ctx.event_queue.push_event_dispatch(first.0, first.1);
+        }
+        self.target.lock(ctx);
+    }
+
+    fn unlock(&mut self) {
+        self.target.unlock();
     }
 }
 
