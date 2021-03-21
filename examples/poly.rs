@@ -1,7 +1,10 @@
 mod write_to_file;
 
 use corus::{
-    contrib::generic_poly_synth::{NoteOff, NoteOn, PolySynth, Voice},
+    contrib::{
+        envelope2::AdsrEnvelope,
+        generic_poly_synth::{NoteOff, NoteOn, PolySynth, Voice},
+    },
     core::{
         accumulator::{Accumulator, SetValueAtTime},
         add::Add,
@@ -27,35 +30,23 @@ fn main() {
         )));
         let mut acc_ctl = acc.controller();
         let saw = Add::new(acc, Constant::from(-0.5));
-        let mut env = ParamEventScheduleNode::new();
-        let env_ctl = env.get_scheduler();
+        let (env, mut env_on, mut env_off) =
+            AdsrEnvelope::<f64, f64>::new(0.01, 0.5, 0.2, 0.3).build();
         let node = Amp::new(saw, env);
         Voice(
             node,
-            Box::new({
-                let env_ctl = env_ctl.clone();
-                move |time, NoteOn(notenum)| {
-                    freq_ctl
-                        .lock()
-                        .unwrap()
-                        .set_value_at_time(time, notenum_to_frequency(notenum));
-                    acc_ctl
-                        .lock()
-                        .push_event(time, SetValueAtTime::new(C1f64::from(0.5)));
-                    let mut env = env_ctl.lock().unwrap();
-                    env.cancel_and_hold_at_time(time);
-                    env.set_value_at_time(time, 0.001);
-                    env.exponential_ramp_to_value_at_time(time + 0.01, 1.0);
-                    env.exponential_ramp_to_value_at_time(time + 0.2, 0.5);
-                }
+            Box::new(move |time, NoteOn(notenum)| {
+                freq_ctl
+                    .lock()
+                    .unwrap()
+                    .set_value_at_time(time, notenum_to_frequency(notenum));
+                acc_ctl
+                    .lock()
+                    .push_event(time, SetValueAtTime::new(C1f64::from(0.5)));
+                env_on(time);
             }),
-            Box::new({
-                let env_ctl = env_ctl.clone();
-                move |time, NoteOff(())| {
-                    let mut env = env_ctl.lock().unwrap();
-                    env.cancel_and_hold_at_time(time);
-                    env.set_target_at_time(time, 0.0, 0.1);
-                }
+            Box::new(move |time, NoteOff(())| {
+                env_off(time);
             }),
         )
     };
