@@ -6,7 +6,7 @@ pub fn rand_fm_synth(
     seed: u32,
 ) -> FmSynth<Constant<C1f64>, Constant<C1f64>> {
     let mut rand = Rand::new(seed);
-    let f = |rand: &mut Rand, root: bool, amp: f64, c: Vec<u8>| {
+    let f = |rand: &mut Rand, root: bool, inputs: [f64; 4]| {
         let rate_base = if root {
             1.0
         } else {
@@ -27,8 +27,7 @@ pub fn rand_fm_synth(
             Constant::new(C1f64::from_m(rate_base + (rand.next_f64() - 0.5) * 0.05)),
             Constant::new(C1f64::from_m((rand.next_f64() - 0.5) * 0.05)),
             adsr,
-            amp,
-            c,
+            inputs,
         )
     };
     let amps = [
@@ -37,9 +36,11 @@ pub fn rand_fm_synth(
         rand.next_f64().powi(3) * 100.0,
     ];
     FmSynth::new([
-        f(&mut rand, false, amps[0], vec![1]),
-        f(&mut rand, false, amps[1], vec![3]),
-        f(&mut rand, false, amps[2], vec![3]),
-        f(&mut rand, true, 1.0, vec![4]),
-    ])
+        f(&mut rand, false, [0.0, 0.0, 0.0, 0.0]),
+        f(&mut rand, false, [amps[0], 0.0, 0.0, 0.0]),
+        f(&mut rand, false, [0.0, 0.0, 0.0, 0.0]),
+        f(&mut rand, true, [0.0, amps[1], amps[2], 0.0]),
+    ],
+    [0.0, 0.0, 0.0, 1.0],
+    )
 }
