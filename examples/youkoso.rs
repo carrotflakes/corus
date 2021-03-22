@@ -39,8 +39,7 @@ fn main() {
         .next()
         .unwrap_or("./youkoso.mid".to_string());
 
-    let mut tracks: Vec<_> = (0..16).map(|i| new_track(i, 0)).collect();
-    let mut used_tracks = Vec::new();
+    let mut tracks: Vec<_> = (0..16).map(|i| Track::new(i, 0)).collect();
 
     let time = {
         let data = std::fs::read(&file).unwrap();
@@ -57,40 +56,37 @@ fn main() {
                     raw_velocity: _,
                 } => {
                     track
-                        .0
+                        .synth
                         .note_on(e.time, Some(notenum), (notenum, velocity as f64));
-                    track.3 = true;
+                    track.used = true;
                 }
                 ezmid::EventBody::NoteOff {
                     notenum,
                     velocity: _,
                     raw_velocity: _,
                 } => {
-                    track.0.note_off(e.time, Some(notenum), ());
+                    track.synth.note_off(e.time, Some(notenum), ());
                 }
                 ezmid::EventBody::Volume { volume, .. } => {
                     track
-                        .1
+                        .gain
                         .set_value_at_time(e.time, db_to_amp((volume as f64 - 1.0) * DB_MIN));
                 }
                 ezmid::EventBody::Pan { pan, .. } => {
-                    track.2.set_value_at_time(e.time, pan as f64);
+                    track.pan.set_value_at_time(e.time, pan as f64);
                 }
                 ezmid::EventBody::PitchBend {
-                    // TODO remains pitchbend after program changes
                     bend,
                     raw_bend: _,
                 } => {
                     track
-                        .4
+                        .pitch_ctl
                         .lock()
                         .set_value_at_time(e.time, 2.0f64.powf(bend as f64 / 12.0));
                 }
                 ezmid::EventBody::Tempo { tempo: _ } => {}
                 ezmid::EventBody::ProgramChange { program } => {
-                    let mut track_ = new_track(e.event.channel as usize, program);
-                    std::mem::swap(track, &mut track_);
-                    used_tracks.push(track_);
+                    track.change_program(program);
                 }
                 _ => {}
             }
@@ -98,14 +94,9 @@ fn main() {
         time + 1.0
     };
 
-    let synthes: Vec<_> = tracks
-        .into_iter()
-        .chain(used_tracks)
-        .filter(|t| t.3)
-        .map(|t| Box::new(amp_pan(t.0, t.1, t.2)) as Box<dyn Node<C2f64> + Send + Sync>)
-        .collect();
+    let synthes: Vec<_> = tracks.into_iter().flat_map(|t| t.finish()).collect();
 
-    println!("{} synthes", synthes.len());
+    println!("{} tracks", synthes.len());
 
     let node = Mix::new(synthes);
     // let node = Amp::new(node, Constant::new(C2f64([0.25, 0.25])));
@@ -125,29 +116,84 @@ fn main() {
 
 type MyVoice = Voice<Box<dyn Node<f64> + Send + Sync>, (u8, f64), ()>;
 
-fn new_track(
+pub struct Track {
     track: usize,
-    program: u8,
-) -> (
-    PolySynth<(u8, f64), (), MyVoice, Option<u8>>,
-    Param<f64, f64>,
-    Param<f64, f64>,
-    bool,
-    Controller<Param<f64, f64>>,
-) {
-    let (pitch, pitch_ctrl) = controllable_param(1.0);
-    let pitch = Share::new(pitch);
-    let synth = if track == 0 || track == 2 || track == 3 {
-        PolySynth::new(&mut || benihora_builder(), 1)
-    } else if track == 9 {
-        PolySynth::new(&mut noise_builder, 8)
-    } else {
-        // PolySynth::new(&mut || fm_synth_builder(program as u32), 8)
-        PolySynth::new(&mut || saw_builder(pitch.clone()), 8)
-    };
-    let gain = Param::with_value(1.0f64);
-    let pan = Param::with_value(0.0f64);
-    (synth, gain, pan, false, pitch_ctrl)
+    synth: PolySynth<(u8, f64), (), MyVoice, Option<u8>>,
+    gain: Param<f64, f64>,
+    pan: Param<f64, f64>,
+    used: bool,
+    pitch: Share<f64, Controllable<f64, Param<f64, f64>>>,
+    pitch_ctl: Controller<Param<f64, f64>>,
+    synths: Vec<PolySynth<(u8, f64), (), MyVoice, Option<u8>>>,
+}
+
+impl Track {
+    pub fn new(track: usize, program: u8) -> Self {
+        let (pitch, pitch_ctl) = controllable_param(1.0);
+        let pitch = Share::new(pitch);
+        let gain = Param::with_value(1.0f64);
+        let pan = Param::with_value(0.0f64);
+        Self {
+            track,
+            synth: Self::make_synth(track, program, pitch.clone()),
+            gain,
+            pan,
+            used: false,
+            pitch,
+            pitch_ctl,
+            synths: vec![],
+        }
+    }
+
+    fn make_synth(
+        track: usize,
+        program: u8,
+        pitch: Share<f64, Controllable<f64, Param<f64, f64>>>,
+    ) -> PolySynth<(u8, f64), (), MyVoice, Option<u8>> {
+        if track == 0 || track == 2 || track == 3 {
+            PolySynth::new(&mut || benihora_builder(), 1)
+        } else if track == 9 {
+            PolySynth::new(&mut noise_builder, 8)
+        } else {
+            // PolySynth::new(&mut || fm_synth_builder(program as u32), 8)
+            PolySynth::new(&mut || saw_builder(pitch.clone()), 8)
+        }
+    }
+
+    pub fn change_program(&mut self, program: u8) {
+        let mut synth = Self::make_synth(self.track, program, self.pitch.clone());
+        std::mem::swap(&mut synth, &mut self.synth);
+        if self.used {
+            self.synths.push(synth);
+            self.used = false;
+        }
+    }
+
+    pub fn finish(mut self) -> Option<Box<dyn Node<C2f64> + Send + Sync>> {
+        if self.used {
+            Some(if self.synths.is_empty() {
+                Box::new(amp_pan(self.synth, self.gain, self.pan))
+            } else {
+                let mut nodes = self.synths;
+                nodes.push(self.synth);
+                Box::new(amp_pan(Mix::new(nodes), self.gain, self.pan))
+            })
+        } else {
+            match self.synths.len() {
+                0 => None,
+                1 => Some(Box::new(amp_pan(
+                    self.synths.pop().unwrap(),
+                    self.gain,
+                    self.pan,
+                ))),
+                _ => Some(Box::new(amp_pan(
+                    Mix::new(self.synths),
+                    self.gain,
+                    self.pan,
+                ))),
+            }
+        }
+    }
 }
 
 fn saw_builder(pitch: Share<f64, Controllable<f64, Param<f64, f64>>>) -> MyVoice {
@@ -206,9 +252,7 @@ fn fm_synth_builder(seed: u32) -> MyVoice {
         Box::new(node) as Box<dyn Node<f64> + Send + Sync>,
         Box::new(move |time, NoteOn((notenum, velocity))| {
             gain_ctrl.lock().set_value_at_time(time, velocity);
-            ctrl1
-                .lock()
-                .note_on(time, notenum_to_frequency(notenum));
+            ctrl1.lock().note_on(time, notenum_to_frequency(notenum));
         }),
         Box::new(move |time, NoteOff(())| {
             ctrl2.lock().note_off(time);
