@@ -46,7 +46,7 @@ pub fn amp_pan<A, G, P>(
     node: A,
     gain: G,
     pan: P,
-) -> Pan<f64, C1f64, C1f64, C2f64, Amp<C1f64, A, G>, P>
+) -> Pan<f64, C1f64, C1f64, C2f64, Amp<f64, C1f64, A, G>, P>
 where
     A: Node<C1f64>,
     G: Node<C1f64>,

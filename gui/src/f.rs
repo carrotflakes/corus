@@ -5,9 +5,22 @@ use std::{
     time::Duration,
 };
 
-use corus::{Node, ProcContext, core::{amp::Amp, constant::Constant, controllable::Controllable, share::Share, sine::Sine}, notenum_to_frequency, signal::Mono, time::Sample};
+use corus::{
+    core::{constant::Constant, controllable::Controllable, mul::Mul, share::Share, sine::Sine},
+    notenum_to_frequency,
+    signal::Mono,
+    time::Sample,
+    Node, ProcContext,
+};
 
-use crate::{component::{Component, text_input_state::TextInputState, text_box::TextBox, text_box_container::TextBoxContainer}, context::Context, interface::{VideoSubsystem, *}};
+use crate::{
+    component::{
+        text_box::TextBox, text_box_container::TextBoxContainer, text_input_state::TextInputState,
+        Component,
+    },
+    context::Context,
+    interface::{VideoSubsystem, *},
+};
 
 pub fn f<U: Ui>() {
     let mut ui = U::init().unwrap();
@@ -17,9 +30,7 @@ pub fn f<U: Ui>() {
     let canvas = window.into_canvas().unwrap();
 
     let audio_ctx = Arc::new(Mutex::new(ProcContext::new(44100 as u64)));
-    let controllable = Controllable::new(Sine::new(
-        Constant::from(440.0),
-    ));
+    let controllable = Controllable::new(Sine::new(Constant::from(440.0)));
     let mut controller = controllable.controller();
     let controllable = Share::new(controllable);
 
@@ -28,10 +39,7 @@ pub fn f<U: Ui>() {
             *audio_ctx.lock().unwrap() = ProcContext::new(sample_rate as u64);
             Audio::new(
                 audio_ctx.clone(),
-                Box::new(Amp::new(
-                    controllable.clone(),
-                    Constant::from(0.05),
-                )),
+                Box::new(Mul::new(controllable.clone(), Constant::from(0.05))),
             )
         })
         .unwrap();
@@ -39,29 +47,12 @@ pub fn f<U: Ui>() {
     let font = ui.load_font("./clacon.ttf", 20).unwrap();
 
     let text_inputing_state = TextInputState::new(false, "".to_string());
-    let mut ctx = Context::<U>::new(
-        canvas,
-        font,
-        text_inputing_state,
-        video_subsys,
-    );
+    let mut ctx = Context::<U>::new(canvas, font, text_inputing_state, video_subsys);
 
     let mut my_component = TextBoxContainer::new(vec![
-        TextBox::new(
-            0,
-            "hello".to_string(),
-            Rect::new(100, 100, 100, 20),
-        ),
-        TextBox::new(
-            1,
-            "world".to_string(),
-            Rect::new(100, 130, 100, 20),
-        ),
-        TextBox::new(
-            2,
-            "!!!!".to_string(),
-            Rect::new(100, 160, 100, 20),
-        ),
+        TextBox::new(0, "hello".to_string(), Rect::new(100, 100, 100, 20)),
+        TextBox::new(1, "world".to_string(), Rect::new(100, 130, 100, 20)),
+        TextBox::new(2, "!!!!".to_string(), Rect::new(100, 160, 100, 20)),
     ]);
 
     'running: loop {
@@ -125,9 +116,7 @@ pub fn f<U: Ui>() {
                         _ => (),
                     }
                 }
-                Event::MouseButtonDown {
-                    ..
-                } => {}
+                Event::MouseButtonDown { .. } => {}
                 Event::MouseMotion { x, y, .. } => {
                     // mod_freq_rate_ctrl
                     //     .lock()
@@ -159,10 +148,7 @@ pub struct Audio {
 
 impl Audio {
     pub fn new(ctx: Arc<Mutex<ProcContext>>, node: Box<dyn Node<f64> + Send + Sync>) -> Self {
-        Self {
-            node,
-            ctx,
-        }
+        Self { node, ctx }
     }
 }
 

@@ -15,8 +15,9 @@ pub trait Signal:
     + Mul<f64, Output = Self>
     + Div<f64, Output = Self>
     + Neg<Output = Self>
+    + Default
 {
-    type Float;
+    type Float: 'static;
 
     fn get(&self, channel: usize) -> Self::Float;
     fn map<F: Fn(Self::Float) -> Self::Float>(&self, f: F) -> Self;

@@ -1,28 +1,21 @@
-use std::ops::{Mul, Neg};
-
-use crate::core::{
-    add::Add, all_pass_filter::AllPassFilter, amp::Amp, comb_filter::CombFilter,
-    constant::Constant, mix::Mix, share::Share, Node,
+use crate::{
+    core::{
+        add::Add, all_pass_filter::AllPassFilter, amp::Amp, comb_filter::CombFilter,
+        constant::Constant, mix::Mix, share::Share, Node,
+    },
+    signal::Signal,
 };
 
-pub fn schroeder_reverb<
-    T: Clone
-        + 'static
-        + Default
-        + Mul<Output = T>
-        + std::ops::Add<Output = T>
-        + Neg<Output = T>
-        + From<f64>,
-    N: Node<T> + 'static,
->(
+pub fn schroeder_reverb<T: Signal<Float = f64> + From<f64>, N: Node<T> + 'static>(
     node: N,
 ) -> Add<
     T,
     Share<T, N>,
     Amp<
+        f64,
         T,
         AllPassFilter<T, AllPassFilter<T, Mix<T, CombFilter<T, Share<T, N>>>>>,
-        Constant<T>,
+        Constant<f64>,
     >,
 > {
     let node = Share::new(node);

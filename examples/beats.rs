@@ -7,7 +7,7 @@ use corus::{
         envelope::{ArEnvelope, EnvelopeGenerator},
         retriggerable_sine,
     },
-    core::{amp::Amp, mix::Mix},
+    core::{mul::Mul, mix::Mix},
     signal::C1f64,
 };
 
@@ -22,7 +22,7 @@ fn main() {
         let (freq, mut freq_ctrl) = controllable_param(0.0);
         let (env, mut env_ctrl) = controllable_param(0.0);
         let (sine, mut sin_trig) = retriggerable_sine(freq);
-        let node = Amp::new(Box::new(sine), env);
+        let node = Mul::new(Box::new(sine), env);
         let mut note_on = |time: f64| {
             sin_trig(time);
             freq_ctrl.lock().cancel_and_hold_at_time(time);
@@ -49,7 +49,7 @@ fn main() {
         noise.short_freq = true;
         noise.freq = 5000;
         let (noise_env, mut note_on, _) = ArEnvelope::new(0.01, 0.2).generate();
-        let node = Amp::new(noise, noise_env);
+        let node = Mul::new(noise, noise_env);
         // note_on(0.0 / bps);
         note_on(1.0 / bps);
         // note_on(2.0 / bps);
@@ -61,7 +61,7 @@ fn main() {
         let mut noise = Noise::new();
         noise.freq = 12000;
         let (noise_env, mut note_on, _) = ArEnvelope::new(0.01, 0.2).generate();
-        let node = Amp::new(noise, noise_env);
+        let node = Mul::new(noise, noise_env);
         note_on(0.5 / bps);
         note_on(1.5 / bps);
         note_on(2.5 / bps);
@@ -70,6 +70,6 @@ fn main() {
     };
 
     let node = Mix::new(vec![kick, snare, hh]);
-    let node = Amp::new(node, Constant::from(0.2));
+    let node = Mul::new(node, Constant::from(0.2));
     write_to_file::write_to_file("beats.wav", SAMPLE_RATE, 4.0 / bps, node, None, None);
 }

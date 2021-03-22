@@ -9,6 +9,7 @@ pub mod controllable;
 pub mod impulse;
 pub mod map;
 pub mod mix;
+pub mod mul;
 pub mod pan;
 pub mod param;
 // pub mod param2;

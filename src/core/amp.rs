@@ -1,21 +1,27 @@
+use std::ops::Mul;
+
+use crate::signal::Signal;
+
 use super::{Node, ProcContext};
 
-pub struct Amp<T, A, B>
+pub struct Amp<F, T, A, B>
 where
-    T: Clone + 'static + std::ops::Mul<Output = T>,
+    F: 'static,
+    T: Signal<Float = F> + Mul<F, Output = T>,
     A: Node<T>,
-    B: Node<T>,
+    B: Node<F>,
 {
     input: A,
     gain: B,
     _t: std::marker::PhantomData<T>,
 }
 
-impl<T, A, B> Amp<T, A, B>
+impl<F, T, A, B> Amp<F, T, A, B>
 where
-    T: Clone + 'static + std::ops::Mul<Output = T>,
+    F: 'static,
+    T: Signal<Float = F> + Mul<F, Output = T>,
     A: Node<T>,
-    B: Node<T>,
+    B: Node<F>,
 {
     pub fn new(input: A, gain: B) -> Self {
         Amp {
@@ -26,11 +32,12 @@ where
     }
 }
 
-impl<T, A, B> Node<T> for Amp<T, A, B>
+impl<F, T, A, B> Node<T> for Amp<F, T, A, B>
 where
-    T: Clone + 'static + std::ops::Mul<Output = T>,
+    F: 'static,
+    T: Signal<Float = F> + Mul<F, Output = T>,
     A: Node<T>,
-    B: Node<T>,
+    B: Node<F>,
 {
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {

@@ -2,7 +2,7 @@ use std::{thread, time::Duration};
 
 use corus::{
     core::{
-        add::Add, amp::Amp, constant::Constant, controllable::Controllable, param::Param,
+        add::Add, mul::Mul, constant::Constant, controllable::Controllable, param::Param,
         share::Share, sine::Sine,
     },
     notenum_to_frequency,
@@ -42,11 +42,11 @@ pub fn fm() {
             let osc_freq = Share::new(osc_freq);
             crate::audio::Audio::new(
                 spec.freq as u64,
-                Box::new(Amp::new(
+                Box::new(Mul::new(
                     Sine::new(Add::new(
                         osc_freq.clone(),
-                        Amp::new(
-                            Sine::new(Amp::new(osc_freq.clone(), mod_freq_rate)),
+                        Mul::new(
+                            Sine::new(Mul::new(osc_freq.clone(), mod_freq_rate)),
                             mod_gain,
                         ),
                     )),

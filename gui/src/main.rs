@@ -6,6 +6,7 @@ mod fm;
 mod rand_fm;
 mod interface;
 mod framework;
+mod model;
 
 fn main() {
     f::f::<framework::Ui>();

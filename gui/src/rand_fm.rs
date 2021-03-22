@@ -7,7 +7,7 @@ use corus::{
         rand_fm_synth::rand_fm_synth,
     },
     core::{
-        amp::Amp, constant::Constant, controllable::Controllable, placeholder::Placeholder, Node,
+        mul::Mul, constant::Constant, controllable::Controllable, placeholder::Placeholder, Node,
     },
     notenum_to_frequency,
 };
@@ -182,7 +182,7 @@ fn create_fm_synth(seed: u32) -> PolySynth<(u8, f64), (), MyVoice, Option<u8>> {
             let synth = Controllable::new(rand_fm_synth(seed));
             let mut ctrl1 = synth.controller();
             let mut ctrl2 = synth.controller();
-            let node = Amp::new(synth, gain);
+            let node = Mul::new(synth, gain);
             Voice(
                 Box::new(node) as Box<dyn Node<f64> + Send + Sync>,
                 Box::new(move |time, NoteOn((notenum, velocity))| {

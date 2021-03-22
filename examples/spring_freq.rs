@@ -2,7 +2,7 @@ mod write_to_file;
 
 use corus::{
     contrib::spring::{Spring, SpringEvent},
-    core::{add::Add, amp::Amp, constant::Constant, param::Param, sine::Sine},
+    core::{add::Add, mul::Mul, constant::Constant, param::Param, sine::Sine},
     EventControlInplace, EventPusher,
 };
 
@@ -28,7 +28,7 @@ fn main() {
     }
     let node = Sine::new(Add::new(
         Constant::from(440.0),
-        Amp::new(spring, Constant::from(200.0)),
+        Mul::new(spring, Constant::from(200.0)),
     ));
     write_to_file::write_to_file("spring_freq.wav", 44100, 20.0, node, None, None);
 }
