@@ -4,14 +4,12 @@ use crate::proc_context::ProcContext;
 
 use super::Node;
 
-pub struct Controllable<T, A>
+pub struct Controllable<A>
 where
-    T: 'static,
-    A: Node<T> + 'static,
+    A: Node + 'static,
 {
     node: Arc<Mutex<A>>,
     ref_mut: Option<MutexGuard<'static, A>>,
-    _t: std::marker::PhantomData<T>,
 }
 
 pub struct Controller<A>
@@ -21,16 +19,14 @@ where
     node: Arc<Mutex<A>>,
 }
 
-impl<T, A> Controllable<T, A>
+impl<A> Controllable<A>
 where
-    T: 'static,
-    A: Node<T> + 'static,
+    A: Node + 'static,
 {
     pub fn new(node: A) -> Self {
         Self {
             node: Arc::new(Mutex::new(node)),
             ref_mut: None,
-            _t: Default::default(),
         }
     }
 
@@ -49,13 +45,14 @@ where
     // }
 }
 
-impl<T, A> Node<T> for Controllable<T, A>
+impl<A> Node for Controllable<A>
 where
-    T: 'static,
-    A: Node<T> + 'static,
+    A: Node + 'static,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         self.ref_mut
             .as_mut()
             .expect("Controllable unlocked!")
@@ -98,16 +95,14 @@ where
     }
 }
 
-unsafe impl<T, A> Send for Controllable<T, A>
+unsafe impl<A> Send for Controllable<A>
 where
-    T: 'static,
-    A: Node<T>,
+    A: Node,
 {
 }
 
-unsafe impl<T, A> Sync for Controllable<T, A>
+unsafe impl<A> Sync for Controllable<A>
 where
-    T: 'static,
-    A: Node<T> + Sync,
+    A: Node + Sync,
 {
 }

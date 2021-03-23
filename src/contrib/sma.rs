@@ -2,44 +2,46 @@ use crate::{ring_buffer::RingBuffer, signal::Signal};
 
 use super::{Node, ProcContext};
 
-pub struct Sma<T, A>
+pub struct Sma<A>
 where
-    T: Signal + Default,
-    A: Node<T>,
-    <T as Signal>::Float: From<f64>,
+    A: Node,
+    A::Output: Signal + Default,
+    <A::Output as Signal>::Float: From<f64>,
 {
     node: A,
     duration: f64,
-    buffer: RingBuffer<T>,
-    acc: T,
+    buffer: RingBuffer<A::Output>,
+    acc: A::Output,
     size: usize,
 }
 
-impl<T, A> Sma<T, A>
+impl<A> Sma<A>
 where
-    T: Signal + Default,
-    A: Node<T>,
-    <T as Signal>::Float: From<f64>,
+    A: Node,
+    A::Output: Signal + Default,
+    <A::Output as Signal>::Float: From<f64>,
 {
     pub fn new(node: A, duration: f64) -> Self {
         Sma {
             node,
             duration,
             buffer: RingBuffer::new(0),
-            acc: T::default(),
+            acc: A::Output::default(),
             size: 0,
         }
     }
 }
 
-impl<T, A> Node<T> for Sma<T, A>
+impl<A> Node for Sma<A>
 where
-    T: Signal + Default,
-    A: Node<T>,
-    <T as Signal>::Float: From<f64>,
+    A: Node,
+    A::Output: Signal + Default,
+    <A::Output as Signal>::Float: From<f64>,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let samples = (self.duration * ctx.sample_rate as f64) as usize;
         let v = self.node.proc(ctx);
         if self.size >= samples {
@@ -53,7 +55,8 @@ where
     }
 
     fn lock(&mut self, ctx: &ProcContext) {
-        self.buffer.fast_resize((self.duration * ctx.sample_rate as f64) as usize + 1);
+        self.buffer
+            .fast_resize((self.duration * ctx.sample_rate as f64) as usize + 1);
         self.node.lock(ctx);
     }
 

@@ -41,7 +41,7 @@ fn main() {
         note_on(2.0 / bps);
         note_on(3.0 / bps);
 
-        Box::new(node) as Box<dyn Node<C1f64>>
+        Box::new(node) as Box<dyn Node<Output = C1f64>>
     };
 
     let snare = {
@@ -54,7 +54,7 @@ fn main() {
         note_on(1.0 / bps);
         // note_on(2.0 / bps);
         note_on(3.0 / bps);
-        Box::new(node) as Box<dyn Node<C1f64>>
+        Box::new(node) as Box<dyn Node<Output = C1f64>>
     };
 
     let hh = {
@@ -66,7 +66,7 @@ fn main() {
         note_on(1.5 / bps);
         note_on(2.5 / bps);
         note_on(3.5 / bps);
-        Box::new(node) as Box<dyn Node<C1f64>>
+        Box::new(node) as Box<dyn Node<Output = C1f64>>
     };
 
     let node = Mix::new(vec![kick, snare, hh]);

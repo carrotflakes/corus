@@ -4,23 +4,23 @@ use crate::ring_buffer::RingBuffer;
 
 use super::{Node, ProcContext};
 
-pub struct AllPassFilter<T, A>
+pub struct AllPassFilter<A>
 where
-    T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T> + Neg,
-    A: Node<T>,
+    A: Node,
+    A::Output: 'static + Clone + Default + Mul<Output = A::Output> + Add<Output = A::Output> + Neg<Output = A::Output>,
 {
     node: A,
     pub delay: f32,
-    pub gain: T,
-    buffer: RingBuffer<T>,
+    pub gain: A::Output,
+    buffer: RingBuffer<A::Output>,
 }
 
-impl<T, A> AllPassFilter<T, A>
+impl<A> AllPassFilter<A>
 where
-    T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
-    A: Node<T>,
+    A: Node,
+    A::Output: 'static + Clone + Default + Mul<Output = A::Output> + Add<Output = A::Output> + Neg<Output = A::Output>,
 {
-    pub fn new(node: A, delay: f32, gain: T) -> Self {
+    pub fn new(node: A, delay: f32, gain: A::Output) -> Self {
         AllPassFilter {
             node,
             delay,
@@ -30,13 +30,15 @@ where
     }
 }
 
-impl<T, A> Node<T> for AllPassFilter<T, A>
+impl<A> Node for AllPassFilter<A>
 where
-    T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
-    A: Node<T>,
+    A: Node,
+    A::Output: 'static + Clone + Default + Mul<Output = A::Output> + Add<Output = A::Output> + Neg<Output = A::Output>,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> A::Output {
         let delay_len = (self.delay * ctx.sample_rate as f32) as usize;
         let desire_buffer_len = delay_len + 1;
         if self.buffer.size() != desire_buffer_len {
@@ -59,12 +61,12 @@ where
     }
 }
 
-impl<T, A> std::borrow::Borrow<RingBuffer<T>> for AllPassFilter<T, A>
+impl<A> std::borrow::Borrow<RingBuffer<A::Output>> for AllPassFilter<A>
 where
-    T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T> + Neg<Output = T>,
-    A: Node<T>,
+    A: Node,
+    A::Output: 'static + Clone + Default + Mul<Output = A::Output> + Add<Output = A::Output> + Neg<Output = A::Output>,
 {
-    fn borrow(&self) -> &RingBuffer<T> {
+    fn borrow(&self) -> &RingBuffer<A::Output> {
         &self.buffer
     }
 }

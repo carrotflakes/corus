@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use crate::{EventQueue, Node, time::AsSample};
 
 #[derive(Clone)]
@@ -23,34 +21,32 @@ impl ProcContext {
     }
 
     #[inline]
-    pub fn lock<'a, T: 'static, A: Node<T> + ?Sized, S: AsSample>(
+    pub fn lock<'a, A: Node + ?Sized, S: AsSample>(
         &'a mut self,
         node: &'a mut A,
         proc_length: S,
-    ) -> ProcGuard<'a, T, A> {
+    ) -> ProcGuard<'a, A> {
         self.rest_proc_samples = proc_length.as_sample(self.sample_rate);
         ProcGuard::new(self, node)
     }
 }
 
-pub struct ProcGuard<'a, T: 'static, A: Node<T> + ?Sized> {
+pub struct ProcGuard<'a, A: Node + ?Sized> {
     context: &'a mut ProcContext,
     node: &'a mut A,
-    _t: PhantomData<T>,
 }
 
-impl<'a, T: 'static, A: Node<T> + ?Sized> ProcGuard<'a, T, A> {
+impl<'a, A: Node + ?Sized> ProcGuard<'a, A> {
     fn new(context: &'a mut ProcContext, node: &'a mut A) -> Self {
         node.lock(context);
         Self {
             context,
             node,
-            _t: Default::default(),
         }
     }
 
     #[inline]
-    pub fn sample(&mut self) -> T {
+    pub fn sample(&mut self) -> A::Output {
         if self.context.rest_proc_samples == 0 {
             panic!("Exceeded the allowed number of samples");
         }
@@ -63,14 +59,14 @@ impl<'a, T: 'static, A: Node<T> + ?Sized> ProcGuard<'a, T, A> {
     }
 }
 
-impl<'a, T: 'static, A: Node<T> + ?Sized> Drop for ProcGuard<'a, T, A> {
+impl<'a, A: Node + ?Sized> Drop for ProcGuard<'a, A> {
     fn drop(&mut self) {
         self.node.unlock();
     }
 }
 
-impl<'a, T: 'static, A: Node<T> + ?Sized> Iterator for ProcGuard<'a, T, A> {
-    type Item = T;
+impl<'a, A: Node + ?Sized> Iterator for ProcGuard<'a, A> {
+    type Item = A::Output;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.context.rest_proc_samples != 0 {

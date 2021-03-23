@@ -16,8 +16,8 @@ type Env<T> = (
 
 pub struct Operator<A, B>
 where
-    A: Node<F>,
-    B: Node<F>,
+    A: Node<Output = F>,
+    B: Node<Output = F>,
 {
     freq_rate: A,
     freq_tune: B,
@@ -28,8 +28,8 @@ where
 
 pub struct FmSynth<A, B>
 where
-    A: Node<F>,
-    B: Node<F>,
+    A: Node<Output = F>,
+    B: Node<Output = F>,
 {
     pub operators: [Operator<A, B>; 4],
     pub frequency: ParamEventScheduleNode<F>,
@@ -39,8 +39,8 @@ where
 
 impl<A, B> FmSynth<A, B>
 where
-    A: Node<F>,
-    B: Node<F>,
+    A: Node<Output = F>,
+    B: Node<Output = F>,
 {
     pub fn new<E: EnvelopeGenerator<F>>(
         operators: [(A, B, E, [F; 4]); 4],
@@ -81,13 +81,15 @@ where
     }
 }
 
-impl<A, B> Node<F> for FmSynth<A, B>
+impl<A, B> Node for FmSynth<A, B>
 where
-    A: Node<F>,
-    B: Node<F>,
+    A: Node<Output = F>,
+    B: Node<Output = F>,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> F {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let dtime = 1.0 / ctx.sample_rate as f64;
         let frequency = self.frequency.proc(ctx).get_m();
         for (i, operator) in self.operators.iter_mut().enumerate() {

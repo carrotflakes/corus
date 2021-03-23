@@ -3,24 +3,23 @@ use std::{ops::Add, thread};
 use crate::{EventQueue, Node, ProcContext};
 
 // Non blocking
-pub struct ParallelMix<T, A>
+pub struct ParallelMix<A>
 where
-    T: Clone + 'static + Add<Output = T> + Default + Send + Sync,
-    A: Node<T> + Send + Sync + 'static,
+    A: Node + Send + Sync + 'static,
+    A::Output: Clone + Add<Output = A::Output> + Default + Send + Sync,
 {
     nodes: Vec<A>,
     event_queues: Vec<EventQueue>,
-    samples: Vec<T>,
+    samples: Vec<A::Output>,
     progresses: Vec<usize>,
     i: usize,
     len: usize,
-    _t: std::marker::PhantomData<T>,
 }
 
-impl<T, A> ParallelMix<T, A>
+impl<A> ParallelMix<A>
 where
-    T: Clone + 'static + Add<Output = T> + Default + Send + Sync,
-    A: Node<T> + Send + Sync + 'static,
+    A: Node + Send + Sync + 'static,
+    A::Output: Clone + Add<Output = A::Output> + Default + Send + Sync,
 {
     pub fn new(nodes: Vec<A>) -> Self {
         ParallelMix {
@@ -30,18 +29,19 @@ where
             progresses: Vec::new(),
             i: 0,
             len: 0,
-            _t: Default::default(),
         }
     }
 }
 
-impl<T, A> Node<T> for ParallelMix<T, A>
+impl<A> Node for ParallelMix<A>
 where
-    T: Clone + 'static + Add<Output = T> + Default + Send + Sync,
-    A: Node<T> + Send + Sync + 'static,
+    A: Node + Send + Sync + 'static,
+    A::Output: Clone + Add<Output = A::Output> + Default + Send + Sync,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, _ctx: &ProcContext) -> T {
+    fn proc(&mut self, _ctx: &ProcContext) -> Self::Output {
         let mut v = Default::default();
         for i in 0..self.nodes.len() {
             while self.progresses[i] <= self.i {
@@ -58,17 +58,26 @@ where
             node.lock(ctx);
         }
 
-        self.samples.resize_with(self.nodes.len() * ctx.rest_proc_samples as usize, Default::default);
+        self.samples.resize_with(
+            self.nodes.len() * ctx.rest_proc_samples as usize,
+            Default::default,
+        );
         self.progresses.resize(self.nodes.len(), 0);
         self.progresses.fill(0);
         self.i = 0;
         self.len = ctx.rest_proc_samples as usize;
         for (i, node) in self.nodes.iter_mut().enumerate() {
-            let node = unsafe {std::mem::transmute::<_, &'static mut A>(node)};
+            let node = unsafe { std::mem::transmute::<_, &'static mut A>(node) };
             let mut ctx = ctx.clone();
             ctx.event_queue = self.event_queues[i].clone();
-            let mut samples = unsafe {std::mem::transmute::<_, &'static mut [T]>(&mut self.samples[i * ctx.rest_proc_samples as usize..(i + 1) * ctx.rest_proc_samples as usize])};
-            let progress = unsafe {std::mem::transmute::<_, &'static mut usize>(&mut self.progresses[i])};
+            let mut samples = unsafe {
+                std::mem::transmute::<_, &'static mut [Self::Output]>(
+                    &mut self.samples[i * ctx.rest_proc_samples as usize
+                        ..(i + 1) * ctx.rest_proc_samples as usize],
+                )
+            };
+            let progress =
+                unsafe { std::mem::transmute::<_, &'static mut usize>(&mut self.progresses[i]) };
             thread::spawn(move || {
                 while ctx.rest_proc_samples > 0 {
                     samples[0] = node.proc(&ctx);

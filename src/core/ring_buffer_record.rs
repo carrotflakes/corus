@@ -2,45 +2,45 @@ use crate::ring_buffer::RingBuffer;
 
 use super::{Node, ProcContext};
 
-pub struct RingBufferRecord<T, A>
+pub struct RingBufferRecord<A>
 where
-    T: 'static + Clone + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + Default,
 {
     node: A,
-    buffer: RingBuffer<T>,
-    _a: std::marker::PhantomData<A>,
+    buffer: RingBuffer<A::Output>,
 }
 
-impl<T, A> RingBufferRecord<T, A>
+impl<A> RingBufferRecord<A>
 where
-    T: 'static + Clone + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + Default,
 {
     pub fn new(node: A, size: usize) -> Self {
         RingBufferRecord {
             node,
             buffer: RingBuffer::new(size),
-            _a: Default::default(),
         }
     }
 
-    pub fn get_buffer(&self) -> &RingBuffer<T> {
+    pub fn get_buffer(&self) -> &RingBuffer<A::Output> {
         &self.buffer
     }
 
-    pub fn get_buffer_mut(&mut self) -> &mut RingBuffer<T> {
+    pub fn get_buffer_mut(&mut self) -> &mut RingBuffer<A::Output> {
         &mut self.buffer
     }
 }
 
-impl<T, A> Node<T> for RingBufferRecord<T, A>
+impl<A> Node for RingBufferRecord<A>
 where
-    T: 'static + Clone + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + Default,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let v = self.node.proc(ctx);
         self.buffer.push(v.clone());
         v
@@ -55,12 +55,12 @@ where
     }
 }
 
-impl<T, A> std::borrow::Borrow<RingBuffer<T>> for RingBufferRecord<T, A>
+impl<A> std::borrow::Borrow<RingBuffer<A::Output>> for RingBufferRecord<A>
 where
-    T: 'static + Clone + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + Default,
 {
-    fn borrow(&self) -> &RingBuffer<T> {
+    fn borrow(&self) -> &RingBuffer<A::Output> {
         &self.buffer
     }
 }

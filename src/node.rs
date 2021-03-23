@@ -1,14 +1,18 @@
 use crate::proc_context::ProcContext;
 
-pub trait Node<T: 'static> {
-    fn proc(&mut self, ctx: &ProcContext) -> T;
+pub trait Node {
+    type Output: 'static;
+
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output;
     fn lock(&mut self, ctx: &ProcContext);
     fn unlock(&mut self);
 }
 
-impl<T: 'static, N: Node<T> + ?Sized> Node<T> for Box<N> {
+impl<N: Node + ?Sized> Node for Box<N> {
+    type Output = N::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         self.as_mut().proc(ctx)
     }
 

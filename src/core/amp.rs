@@ -4,43 +4,37 @@ use crate::signal::Signal;
 
 use super::{Node, ProcContext};
 
-pub struct Amp<F, T, A, B>
+pub struct Amp<A, B>
 where
-    F: 'static,
-    T: Signal<Float = F> + Mul<F, Output = T>,
-    A: Node<T>,
-    B: Node<F>,
+    A: Node,
+    B: Node<Output = <<A as Node>::Output as Signal>::Float>,
+    A::Output: Signal + Mul<B::Output, Output = A::Output>,
 {
     input: A,
     gain: B,
-    _t: std::marker::PhantomData<T>,
 }
 
-impl<F, T, A, B> Amp<F, T, A, B>
+impl<A, B> Amp<A, B>
 where
-    F: 'static,
-    T: Signal<Float = F> + Mul<F, Output = T>,
-    A: Node<T>,
-    B: Node<F>,
+    A: Node,
+    B: Node<Output = <<A as Node>::Output as Signal>::Float>,
+    A::Output: Signal + Mul<B::Output, Output = A::Output>,
 {
     pub fn new(input: A, gain: B) -> Self {
-        Amp {
-            input,
-            gain,
-            _t: Default::default(),
-        }
+        Amp { input, gain }
     }
 }
 
-impl<F, T, A, B> Node<T> for Amp<F, T, A, B>
+impl<A, B> Node for Amp<A, B>
 where
-    F: 'static,
-    T: Signal<Float = F> + Mul<F, Output = T>,
-    A: Node<T>,
-    B: Node<F>,
+    A: Node,
+    B: Node<Output = <<A as Node>::Output as Signal>::Float>,
+    A::Output: Signal + Mul<B::Output, Output = A::Output>,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> A::Output {
         self.input.proc(ctx) * self.gain.proc(ctx)
     }
 

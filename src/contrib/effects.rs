@@ -7,12 +7,12 @@ use crate::{
     signal::C2f64,
 };
 
-pub fn delay_fx<A: Node<C2f64> + 'static + Send + Sync>(
+pub fn delay_fx<A: Node<Output = C2f64> + 'static + Send + Sync>(
     node: A,
     sample_rate: usize,
     delay: f64,
     feedback: f64,
-) -> Share<C2f64, RingBufferRecord<C2f64, Placeholder<C2f64, Box<dyn Node<C2f64> + Send + Sync>>>> {
+) -> Share<RingBufferRecord<Placeholder<Box<dyn Node<Output = C2f64> + Send + Sync>>>> {
     let mut p = Placeholder::new(None);
     let mut ps = p.setter();
     let buffer = Share::new(RingBufferRecord::new(p, sample_rate));
@@ -23,7 +23,7 @@ pub fn delay_fx<A: Node<C2f64> + 'static + Send + Sync>(
                 RingBufferPlayback::new(Constant::from(delay), buffer.clone()),
                 Constant::from(feedback),
             ),
-        )) as Box<dyn Node<C2f64> + Send + Sync>);
+        )) as Box<dyn Node<Output = C2f64> + Send + Sync>);
     }
     buffer
 }

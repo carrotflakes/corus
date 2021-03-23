@@ -142,12 +142,12 @@ pub fn f<U: Ui>() {
 }
 
 pub struct Audio {
-    node: Box<dyn Node<f64> + Send + Sync>,
+    node: Box<dyn Node<Output = f64> + Send + Sync>,
     pub ctx: Arc<Mutex<ProcContext>>,
 }
 
 impl Audio {
-    pub fn new(ctx: Arc<Mutex<ProcContext>>, node: Box<dyn Node<f64> + Send + Sync>) -> Self {
+    pub fn new(ctx: Arc<Mutex<ProcContext>>, node: Box<dyn Node<Output = f64> + Send + Sync>) -> Self {
         Self { node, ctx }
     }
 }

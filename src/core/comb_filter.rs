@@ -1,26 +1,24 @@
-use std::ops::{Add, Mul};
-
-use crate::ring_buffer::RingBuffer;
+use crate::{ring_buffer::RingBuffer, signal::Signal};
 
 use super::{Node, ProcContext};
 
-pub struct CombFilter<T, A>
+pub struct CombFilter<A>
 where
-    T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T>,
-    A: Node<T>,
+    A: Node,
+    A::Output: Signal,
 {
     node: A,
     pub delay: f64,
-    pub gain: T,
-    buffer: RingBuffer<T>,
+    pub gain: A::Output,
+    buffer: RingBuffer<A::Output>,
 }
 
-impl<T, A> CombFilter<T, A>
+impl<A> CombFilter<A>
 where
-    T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T>,
-    A: Node<T>,
+    A: Node,
+    A::Output: Signal,
 {
-    pub fn new(node: A, delay: f64, gain: T) -> Self {
+    pub fn new(node: A, delay: f64, gain: A::Output) -> Self {
         CombFilter {
             node,
             delay,
@@ -30,13 +28,15 @@ where
     }
 }
 
-impl<T, A> Node<T> for CombFilter<T, A>
+impl<A> Node for CombFilter<A>
 where
-    T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T>,
-    A: Node<T>,
+    A: Node,
+    A::Output: Signal,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let delay_len = (self.delay * ctx.sample_rate as f64) as usize;
         let desire_buffer_len = delay_len + 1;
         if self.buffer.size() != desire_buffer_len {
@@ -59,12 +59,12 @@ where
     }
 }
 
-impl<T, A> std::borrow::Borrow<RingBuffer<T>> for CombFilter<T, A>
+impl<A> std::borrow::Borrow<RingBuffer<A::Output>> for CombFilter<A>
 where
-    T: 'static + Clone + Default + Mul<Output = T> + Add<Output = T>,
-    A: Node<T>,
+    A: Node,
+    A::Output: Signal,
 {
-    fn borrow(&self) -> &RingBuffer<T> {
+    fn borrow(&self) -> &RingBuffer<A::Output> {
         &self.buffer
     }
 }

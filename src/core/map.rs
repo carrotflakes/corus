@@ -1,42 +1,42 @@
 use super::{Node, ProcContext};
 
-pub struct Map<T, S, F, A>
+pub struct Map<O, F, A>
 where
-    T: Clone + 'static,
-    S: Clone + 'static,
-    F: Fn(T) -> S,
-    A: Node<T>,
+    O: Clone + 'static,
+    F: Fn(A::Output) -> O,
+    A: Node,
+    A::Output: Clone,
 {
     node: A,
     f: F,
-    _t: std::marker::PhantomData<T>,
 }
 
-impl<T, S, F, A> Map<T, S, F, A>
+impl<O, F, A> Map<O, F, A>
 where
-    T: Clone + 'static,
-    S: Clone + 'static,
-    F: Fn(T) -> S,
-    A: Node<T>,
+O: Clone + 'static,
+F: Fn(A::Output) -> O,
+A: Node,
+A::Output: Clone,
 {
     pub fn new(node: A, f: F) -> Self {
         Map {
             node,
             f,
-            _t: Default::default(),
         }
     }
 }
 
-impl<T, S, F, A> Node<S> for Map<T, S, F, A>
+impl<O, F, A> Node for Map<O, F, A>
 where
-    T: Clone + 'static,
-    S: Clone + 'static,
-    F: Fn(T) -> S,
-    A: Node<T>,
+O: Clone + 'static,
+F: Fn(A::Output) -> O,
+A: Node,
+A::Output: Clone,
 {
+    type Output = O;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> S {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         (self.f)(self.node.proc(ctx))
     }
 

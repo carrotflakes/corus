@@ -29,7 +29,7 @@ fn main() {
         Constant::from(1.0),
     );
     let node = Box::new(node);
-    let mut vec = vec![node as Box<dyn Node<_> + Send + Sync>];
+    let mut vec = vec![node as Box<dyn Node<Output = f64> + Send + Sync>];
     for i in 0..1000 {
         let node = Sine::new(Constant::from(220.0 + 10.0 * i as f64));
         let node = Box::new(Amp::new(node, Constant::from(0.001)));

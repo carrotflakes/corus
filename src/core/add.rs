@@ -1,39 +1,36 @@
 use super::{Node, ProcContext};
 
-pub struct Add<T, A, B>
+pub struct Add<A, B>
 where
-    T: Clone + 'static + std::ops::Add<Output = T>,
-    A: Node<T>,
-    B: Node<T>,
+    A: Node,
+    B: Node<Output = A::Output>,
+    A::Output: Clone + 'static + std::ops::Add<Output = A::Output>,
 {
     a: A,
     b: B,
-    _t: std::marker::PhantomData<T>,
 }
 
-impl<T, A, B> Add<T, A, B>
+impl<A, B> Add<A, B>
 where
-    T: Clone + 'static + std::ops::Add<Output = T>,
-    A: Node<T>,
-    B: Node<T>,
+    A: Node,
+    B: Node<Output = A::Output>,
+    A::Output: Clone + 'static + std::ops::Add<Output = A::Output>,
 {
     pub fn new(a: A, b: B) -> Self {
-        Add {
-            a,
-            b,
-            _t: Default::default(),
-        }
+        Add { a, b }
     }
 }
 
-impl<T, A, B> Node<T> for Add<T, A, B>
+impl<A, B> Node for Add<A, B>
 where
-    T: Clone + 'static + std::ops::Add<Output = T>,
-    A: Node<T>,
-    B: Node<T>,
+    A: Node,
+    B: Node<Output = A::Output>,
+    A::Output: Clone + 'static + std::ops::Add<Output = A::Output>,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         self.a.proc(ctx) + self.b.proc(ctx)
     }
 

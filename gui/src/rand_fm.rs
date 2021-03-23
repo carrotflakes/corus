@@ -34,7 +34,7 @@ pub fn rand_fm() {
     };
 
     let node = Controllable::new(Placeholder::new(Some(
-        Box::new(Constant::new(0.0)) as Box<dyn Node<f64>>
+        Box::new(Constant::new(0.0)) as Box<dyn Node<Output = f64>>
     )));
     let mut node_ctrl = node.controller();
 
@@ -111,13 +111,13 @@ pub fn rand_fm() {
                             seed += 1;
                             let synth = Controllable::new(create_fm_synth(seed));
                             synth_ctrl = synth.controller();
-                            node_ctrl.lock().set(Box::new(synth) as Box<dyn Node<f64>>);
+                            node_ctrl.lock().set(Box::new(synth) as Box<dyn Node<Output = f64>>);
                         }
                         Keycode::Q => {
                             seed -= 1;
                             let synth = Controllable::new(create_fm_synth(seed));
                             synth_ctrl = synth.controller();
-                            node_ctrl.lock().set(Box::new(synth) as Box<dyn Node<f64>>);
+                            node_ctrl.lock().set(Box::new(synth) as Box<dyn Node<Output = f64>>);
                         }
                         Keycode::Z => set(64),
                         Keycode::S => set(65),
@@ -173,7 +173,7 @@ pub fn rand_fm() {
     }
 }
 
-type MyVoice = Voice<Box<dyn Node<f64> + Send + Sync>, (u8, f64), ()>;
+type MyVoice = Voice<Box<dyn Node<Output = f64> + Send + Sync>, (u8, f64), ()>;
 
 fn create_fm_synth(seed: u32) -> PolySynth<(u8, f64), (), MyVoice, Option<u8>> {
     PolySynth::new(
@@ -184,7 +184,7 @@ fn create_fm_synth(seed: u32) -> PolySynth<(u8, f64), (), MyVoice, Option<u8>> {
             let mut ctrl2 = synth.controller();
             let node = Mul::new(synth, gain);
             Voice(
-                Box::new(node) as Box<dyn Node<f64> + Send + Sync>,
+                Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
                 Box::new(move |time, NoteOn((notenum, velocity))| {
                     gain_ctrl.lock().set_value_at_time(time, velocity);
                     ctrl1

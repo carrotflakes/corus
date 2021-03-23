@@ -10,22 +10,22 @@ use crate::{
 
 use super::{Node, ProcContext};
 
-pub struct Accumulator<T, A>
+pub struct Accumulator<A>
 where
-    T: Signal + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
-    A: Node<T>,
+    A: Node,
+    A::Output: Signal + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + Default + Clone,
 {
     node: A,
-    value: T,
-    upper: T,
+    value: A::Output,
+    upper: A::Output,
 }
 
-impl<T, A> Accumulator<T, A>
+impl<A> Accumulator<A>
 where
-    T: Signal + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
-    A: Node<T>,
+A: Node,
+A::Output: Signal + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + Default + Clone,
 {
-    pub fn new(node: A, upper: T) -> Self {
+    pub fn new(node: A, upper: A::Output) -> Self {
         Accumulator {
             node,
             value: Default::default(),
@@ -34,13 +34,15 @@ where
     }
 }
 
-impl<T, A> Node<T> for Accumulator<T, A>
+impl<A> Node for Accumulator<A>
 where
-    T: Signal<Float = f64> + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
-    A: Node<T>,
+A: Node,
+A::Output: Signal<Float = f64> + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + Default + Clone,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let sample_rate = ctx.sample_rate as f64;
         let d = self.node.proc(ctx).map(|f| f / sample_rate);
         self.value = self.value.clone() + d;
@@ -60,21 +62,21 @@ where
     }
 }
 
-pub struct SetValueAtTime<T, A>
+pub struct SetValueAtTime<A>
 where
-    T: Signal + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
-    A: Node<T> + 'static,
+A: Node,
+A::Output: Signal + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + Default + Clone,
 {
-    value: T,
+    value: A::Output,
     _t: PhantomData<A>,
 }
 
-impl<T, A> SetValueAtTime<T, A>
+impl<A> SetValueAtTime<A>
 where
-    T: Signal + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
-    A: Node<T> + 'static,
+A: Node,
+A::Output: Signal + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + Default + Clone,
 {
-    pub fn new(value: T) -> Self {
+    pub fn new(value: A::Output) -> Self {
         Self {
             value,
             _t: Default::default(),
@@ -82,13 +84,13 @@ where
     }
 }
 
-impl<T, A> EventListener<SetValueAtTime<T, A>> for Accumulator<T, A>
+impl<A> EventListener<SetValueAtTime<A>> for Accumulator<A>
 where
-    T: Signal + Mul<C1f64, Output = T> + Add<Output = T> + Default + Clone,
-    A: Node<T> + 'static,
+A: 'static + Node,
+A::Output: Signal + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + Default + Clone,
 {
     #[inline]
-    fn apply_event(&mut self, _time: f64, event: &SetValueAtTime<T, A>) {
+    fn apply_event(&mut self, _time: f64, event: &SetValueAtTime<A>) {
         self.value = event.value.clone();
     }
 }

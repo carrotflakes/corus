@@ -34,7 +34,9 @@ impl<F: Float> Param<F> {
     }
 }
 
-impl<F: Float> Node<F> for Param<F> {
+impl<F: Float> Node for Param<F> {
+    type Output = F;
+
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> F {
         let value = self.value.clone();
@@ -287,7 +289,7 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
         &mut self,
         time: f64,
         event_queue: &EventQueue,
-        param: &EventControllable<F, Param<F>>,
+        param: &EventControllable<Param<F>>,
     ) {
         while !self.events.is_empty() {
             let first = &self.events[0];
@@ -385,7 +387,7 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
 }
 
 pub struct ParamEventScheduleNode<F: Float> {
-    param: EventControllable<F, Param<F>>,
+    param: EventControllable<Param<F>>,
     schedule: Arc<Mutex<ParamEventSchedule<F>>>,
 }
 
@@ -403,7 +405,9 @@ impl<F: Float> ParamEventScheduleNode<F> {
     }
 }
 
-impl<F: Float> Node<F> for ParamEventScheduleNode<F> {
+impl<F: Float> Node for ParamEventScheduleNode<F> {
+    type Output = F;
+
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> F {
         self.param.proc(ctx)

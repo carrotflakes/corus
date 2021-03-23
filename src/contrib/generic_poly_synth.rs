@@ -7,7 +7,7 @@ use super::triggerable::Triggerable;
 pub struct PolySynth<
     P1,
     P2,
-    A: Node<C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
+    A: Node<Output = C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
     ID: PartialEq + Default,
 > {
     voices: Vec<VoiceContainer<P1, P2, A, ID>>,
@@ -17,7 +17,7 @@ pub struct PolySynth<
 struct VoiceContainer<
     P1,
     P2,
-    A: Node<C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
+    A: Node<Output = C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
     ID: PartialEq + Default,
 > {
     id: ID,
@@ -28,7 +28,7 @@ struct VoiceContainer<
 impl<
         P1,
         P2,
-        A: Node<C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
+        A: Node<Output = C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
         ID: PartialEq + Default,
     > VoiceContainer<P1, P2, A, ID>
 {
@@ -44,7 +44,7 @@ impl<
 impl<
         P1,
         P2,
-        A: Node<C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
+        A: Node<Output = C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
         ID: PartialEq + Default,
     > PolySynth<P1, P2, A, ID>
 {
@@ -79,10 +79,12 @@ impl<
 impl<
         P1,
         P2,
-        A: Node<C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
+        A: Node<Output = C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
         ID: PartialEq + Default,
-    > Node<C1f64> for PolySynth<P1, P2, A, ID>
+    > Node for PolySynth<P1, P2, A, ID>
 {
+    type Output = C1f64;
+
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
         let mut v = Default::default();
@@ -109,7 +111,7 @@ impl<
         T: Clone,
         P1,
         P2,
-        A: Node<C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>> + Triggerable<T>,
+        A: Node<Output = C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>> + Triggerable<T>,
         ID: PartialEq + Default,
     > Triggerable<T> for PolySynth<P1, P2, A, ID>
 {
@@ -123,14 +125,16 @@ impl<
 pub struct NoteOn<P>(pub P);
 pub struct NoteOff<P>(pub P);
 
-pub struct Voice<A: Node<f64>, P1, P2>(
+pub struct Voice<A: Node<Output = C1f64>, P1, P2>(
     pub A,
     pub Box<dyn FnMut(f64, NoteOn<P1>) + Send + Sync>,
     pub Box<dyn FnMut(f64, NoteOff<P2>) + Send + Sync>,
 );
 
-impl<A: Node<f64>, P1, P2> Node<f64> for Voice<A, P1, P2> {
-    fn proc(&mut self, ctx: &crate::ProcContext) -> f64 {
+impl<A: Node<Output = C1f64>, P1, P2> Node for Voice<A, P1, P2> {
+    type Output = C1f64;
+
+    fn proc(&mut self, ctx: &crate::ProcContext) -> Self::Output {
         self.0.proc(ctx)
     }
 
@@ -143,13 +147,13 @@ impl<A: Node<f64>, P1, P2> Node<f64> for Voice<A, P1, P2> {
     }
 }
 
-impl<A: Node<f64>, P1, P2> Triggerable<NoteOn<P1>> for Voice<A, P1, P2> {
+impl<A: Node<Output = f64>, P1, P2> Triggerable<NoteOn<P1>> for Voice<A, P1, P2> {
     fn bang(&mut self, time: f64, payload: NoteOn<P1>) {
         self.1(time, payload);
     }
 }
 
-impl<A: Node<f64>, P1, P2> Triggerable<NoteOff<P2>> for Voice<A, P1, P2> {
+impl<A: Node<Output = f64>, P1, P2> Triggerable<NoteOff<P2>> for Voice<A, P1, P2> {
     fn bang(&mut self, time: f64, payload: NoteOff<P2>) {
         self.2(time, payload);
     }

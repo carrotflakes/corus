@@ -1,36 +1,28 @@
-use std::marker::PhantomData;
-
 use crate::proc_context::ProcContext;
 
 use super::Node;
 
-pub struct Placeholder<T, A>
+pub struct Placeholder<A>
 where
-    T: 'static,
-    A: Node<T>,
+    A: Node,
 {
     node: Box<Option<A>>,
-    _t: PhantomData<T>,
 }
 
-pub struct PlaceholderSetter<T, A>
+pub struct PlaceholderSetter<A>
 where
-    T: 'static,
-    A: Node<T>,
+    A: Node,
 {
     ptr: *mut Option<A>,
-    _t: PhantomData<T>,
 }
 
-impl<T, A> Placeholder<T, A>
+impl<A> Placeholder<A>
 where
-    T: 'static,
-    A: Node<T>,
+    A: Node,
 {
     pub fn new(node: Option<A>) -> Self {
         Placeholder {
             node: Box::new(node),
-            _t: Default::default(),
         }
     }
 
@@ -38,18 +30,16 @@ where
         self.node.replace(node);
     }
 
-    pub fn setter(&mut self) -> PlaceholderSetter<T, A> {
+    pub fn setter(&mut self) -> PlaceholderSetter<A> {
         PlaceholderSetter {
             ptr: self.node.as_mut(),
-            _t: self._t,
         }
     }
 }
 
-impl<T, A> PlaceholderSetter<T, A>
+impl<A> PlaceholderSetter<A>
 where
-    T: 'static,
-    A: Node<T>,
+    A: Node,
 {
     pub unsafe fn set(&mut self, node: A) {
         let mut placeholder = Box::from_raw(self.ptr);
@@ -58,13 +48,14 @@ where
     }
 }
 
-impl<T, A> Node<T> for Placeholder<T, A>
+impl<A> Node for Placeholder<A>
 where
-    T: 'static,
-    A: Node<T>,
+    A: Node,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         self.node
             .as_mut()
             .as_mut()

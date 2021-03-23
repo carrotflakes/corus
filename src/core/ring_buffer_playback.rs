@@ -7,7 +7,7 @@ use super::{Node, ProcContext};
 pub struct RingBufferPlayback<T, A, B>
 where
     T: 'static + Clone + Default,
-    A: Node<f64>,
+    A: Node<Output = f64>,
     B: Borrow<RingBuffer<T>>,
 {
     node: A,
@@ -18,7 +18,7 @@ where
 impl<T, A, B> RingBufferPlayback<T, A, B>
 where
     T: 'static + Clone + Default,
-    A: Node<f64>,
+    A: Node<Output = f64>,
     B: Borrow<RingBuffer<T>>,
 {
     pub fn new(node: A, buffer: B) -> Self {
@@ -30,12 +30,14 @@ where
     }
 }
 
-impl<T, A, B> Node<T> for RingBufferPlayback<T, A, B>
+impl<T, A, B> Node for RingBufferPlayback<T, A, B>
 where
     T: 'static + Clone + Default,
-    A: Node<f64>,
+    A: Node<Output = f64>,
     B: Borrow<RingBuffer<T>>,
 {
+    type Output = T;
+
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         let t = self.node.proc(ctx);

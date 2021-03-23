@@ -24,13 +24,15 @@ where
     }
 }
 
-impl<T, B> Node<T> for BufferPlayback<T, B>
+impl<T, B> Node for BufferPlayback<T, B>
 where
     T: 'static + Clone + Default,
     B: Borrow<Vec<T>>,
 {
+    type Output = T;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let s = (ctx.current_time * ctx.sample_rate as f64) as usize;
         let buf = self.buffer.borrow();
         buf[s % buf.len()].clone()

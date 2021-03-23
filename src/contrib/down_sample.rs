@@ -1,13 +1,13 @@
-use crate::{EventQueue, Node, ProcContext, signal::Signal};
+use crate::{signal::Signal, EventQueue, Node, ProcContext};
 
-pub struct DownSample<T, A>
+pub struct DownSample<A>
 where
-    T: Signal,
-    A: Node<T>,
+    A: Node,
+    A::Output: Signal,
 {
     node: A,
-    value: T,
-    old_value: T,
+    value: A::Output,
+    old_value: A::Output,
     sample_rate: u64,
     next_update: f64,
     pub down_sample_type: DownSampleType,
@@ -18,12 +18,17 @@ pub enum DownSampleType {
     Bilinear,
 }
 
-impl<T, A> DownSample<T, A>
+impl<A> DownSample<A>
 where
-    T: Signal,
-    A: Node<T>,
+    A: Node,
+    A::Output: Signal,
 {
-    pub fn new(node: A, value: T, sample_rate: u64, down_sample_type: DownSampleType) -> Self {
+    pub fn new(
+        node: A,
+        value: A::Output,
+        sample_rate: u64,
+        down_sample_type: DownSampleType,
+    ) -> Self {
         DownSample {
             node,
             old_value: value.clone(),
@@ -35,13 +40,15 @@ where
     }
 }
 
-impl<T, A> Node<T> for DownSample<T, A>
+impl<A> Node for DownSample<A>
 where
-    T: Signal<Float = f64>,
-    A: Node<T>,
+    A: Node,
+    A::Output: Signal<Float = f64>,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         if self.next_update <= ctx.current_time {
             self.old_value = self.value.clone();
             self.value = self.node.proc(&ProcContext {

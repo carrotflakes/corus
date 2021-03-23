@@ -6,18 +6,13 @@ use crate::{
     signal::Signal,
 };
 
-pub fn schroeder_reverb<T: Signal<Float = f64> + From<f64>, N: Node<T> + 'static>(
+pub fn schroeder_reverb<N>(
     node: N,
-) -> Add<
-    T,
-    Share<T, N>,
-    Amp<
-        f64,
-        T,
-        AllPassFilter<T, AllPassFilter<T, Mix<T, CombFilter<T, Share<T, N>>>>>,
-        Constant<f64>,
-    >,
-> {
+) -> Add<Share<N>, Amp<AllPassFilter<AllPassFilter<Mix<CombFilter<Share<N>>>>>, Constant<f64>>>
+where
+    N: Node + 'static,
+    N::Output: Signal<Float = f64> + From<f64>,
+{
     let node = Share::new(node);
     let nodes: Vec<_> = (0..4)
         .map(|i| {

@@ -20,11 +20,13 @@ where
     }
 }
 
-impl<T, F> Node<T> for FnProcessor<T, F>
+impl<T, F> Node for FnProcessor<T, F>
 where
     T: 'static + Clone,
     F: FnMut() -> T,
 {
+    type Output = T;
+
     #[inline]
     fn proc(&mut self, _ctx: &ProcContext) -> T {
         (self.f)()

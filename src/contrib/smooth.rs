@@ -1,39 +1,37 @@
-use std::ops::{Add, Mul, Neg};
-
 use crate::{proc_context::ProcContext, signal::{C1f64, Signal}};
 
 use super::Node;
 
-pub struct Smooth<T, A>
+pub struct Smooth<A>
 where
-    T: Signal + Mul<Output = T> + Add<Output = T> + Neg + Default + Clone,
-    A: Node<T>,
+A: Node,
+A::Output: Signal,
 {
     node: A,
-    level: T,
-    value: T,
-    _t: std::marker::PhantomData<T>,
+    level: A::Output,
+    value: A::Output,
 }
 
-impl<T, A> Smooth<T, A>
+impl<A> Smooth<A>
 where
-    T: Signal + Mul<Output = T> + Add<Output = T> + Neg + Default + Clone,
-    A: Node<T>,
+A: Node,
+A::Output: Signal,
 {
-    pub fn new(node: A, level: T) -> Self {
+    pub fn new(node: A, level: A::Output) -> Self {
         Smooth {
             node,
             level,
             value: Default::default(),
-            _t: Default::default(),
         }
     }
 }
 
-impl<A> Node<C1f64> for Smooth<C1f64, A>
+impl<A> Node for Smooth<A>
 where
-    A: Node<C1f64>,
+    A: Node<Output = C1f64>,
 {
+    type Output = C1f64;
+
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
         let v = self.node.proc(ctx);

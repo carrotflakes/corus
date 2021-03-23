@@ -185,7 +185,9 @@ impl<F: Float, T: Mono<F>> Param<F, T> {
     }
 }
 
-impl<T: Mono<f64>> Node<T> for Param<f64, T> {
+impl<T: Mono<f64>> Node for Param<f64, T> {
+    type Output = T;
+
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> T {
         {

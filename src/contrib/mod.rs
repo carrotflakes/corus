@@ -46,28 +46,28 @@ pub fn amp_pan<A, G, P>(
     node: A,
     gain: G,
     pan: P,
-) -> Pan<f64, C1f64, C1f64, C2f64, Amp<f64, C1f64, A, G>, P>
+) -> Pan<C2f64, Amp<A, G>, P>
 where
-    A: Node<C1f64>,
-    G: Node<C1f64>,
-    P: Node<C1f64>,
+    A: Node<Output = C1f64>,
+    G: Node<Output = C1f64>,
+    P: Node<Output = C1f64>,
 {
     Pan::new(Amp::new(node, gain), pan)
 }
 
 pub fn controllable_param<T: Mono<f64>>(
     initial_value: f64,
-) -> (Controllable<T, Param<f64, T>>, Controller<Param<f64, T>>) {
+) -> (Controllable<Param<f64, T>>, Controller<Param<f64, T>>) {
     let c = Controllable::new(Param::new());
     let mut ctrl = c.controller();
     ctrl.lock().set_value_at_time(0.0, initial_value);
     (c, ctrl)
 }
 
-pub fn render_to_buffer<T: 'static, N: Node<T>, S: AsSample>(
+pub fn render_to_buffer<N: Node, S: AsSample>(
     sample_rate: u64,
     length: S,
     node: &mut N,
-) -> Vec<T> {
+) -> Vec<N::Output> {
     ProcContext::new(sample_rate).lock(node, length).collect()
 }

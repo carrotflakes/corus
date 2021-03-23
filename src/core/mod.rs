@@ -28,12 +28,12 @@ pub use crate::{Node, ProcContext};
 
 use self::{ring_buffer_record::RingBufferRecord, share::Share};
 
-impl<T, A> Borrow<RingBuffer<T>> for Share<T, RingBufferRecord<T, A>>
+impl<A> Borrow<RingBuffer<A::Output>> for Share<RingBufferRecord<A>>
 where
-    T: 'static + Clone + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: 'static + Clone + Default,
 {
-    fn borrow(&self) -> &RingBuffer<T> {
+    fn borrow(&self) -> &RingBuffer<A::Output> {
         &self.get_ref().get_ref().borrow()
     }
 }

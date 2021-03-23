@@ -17,7 +17,9 @@ impl<T: Clone + 'static> Constant<T> {
     }
 }
 
-impl<T: Clone + 'static> Node<T> for Constant<T> {
+impl<T: Clone + 'static> Node for Constant<T> {
+    type Output = T;
+
     #[inline]
     fn proc(&mut self, _ctx: &ProcContext) -> T {
         self.value.clone()

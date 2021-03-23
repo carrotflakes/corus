@@ -29,7 +29,9 @@ impl Noise {
     }
 }
 
-impl Node<C1f64> for Noise {
+impl Node for Noise {
+    type Output = C1f64;
+
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
         self.steps += self.freq as f64 / ctx.sample_rate as f64;
         for _ in 0..self.steps as usize {

@@ -2,18 +2,18 @@ use std::sync::Arc;
 
 use super::{proc_once::ProcOnce, Node, ProcContext};
 
-pub struct Share<T, A>
+pub struct Share<A>
 where
-    T: 'static + Clone + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + Default,
 {
-    proc_once: Arc<ProcOnce<T, A>>,
+    proc_once: Arc<ProcOnce<A>>,
 }
 
-impl<T, A> Share<T, A>
+impl<A> Share<A>
 where
-    T: 'static + Clone + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + Default,
 {
     pub fn new(node: A) -> Self {
         Share {
@@ -21,23 +21,25 @@ where
         }
     }
 
-    pub(crate) fn get_ref(&self) -> &ProcOnce<T, A> {
-        unsafe { std::mem::transmute::<_, &ProcOnce<T, A>>(Arc::as_ptr(&self.proc_once)) }
+    pub(crate) fn get_ref(&self) -> &ProcOnce<A> {
+        unsafe { std::mem::transmute::<_, &ProcOnce<A>>(Arc::as_ptr(&self.proc_once)) }
     }
 
     #[inline]
-    fn get_mut(&mut self) -> &mut ProcOnce<T, A> {
-        unsafe { std::mem::transmute::<_, &mut ProcOnce<T, A>>(Arc::as_ptr(&mut self.proc_once)) }
+    fn get_mut(&mut self) -> &mut ProcOnce<A> {
+        unsafe { std::mem::transmute::<_, &mut ProcOnce<A>>(Arc::as_ptr(&mut self.proc_once)) }
     }
 }
 
-impl<T, A> Node<T> for Share<T, A>
+impl<A> Node for Share<A>
 where
-    T: 'static + Clone + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + Default,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         self.get_mut().proc(ctx)
     }
 
@@ -50,10 +52,10 @@ where
     }
 }
 
-impl<T, A> Clone for Share<T, A>
+impl<A> Clone for Share<A>
 where
-    T: 'static + Clone + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + Default,
 {
     fn clone(&self) -> Self {
         Self {
@@ -62,12 +64,12 @@ where
     }
 }
 
-impl<T, A> From<Arc<ProcOnce<T, A>>> for Share<T, A>
+impl<A> From<Arc<ProcOnce<A>>> for Share<A>
 where
-    T: 'static + Clone + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + Default,
 {
-    fn from(node: Arc<ProcOnce<T, A>>) -> Self {
+    fn from(node: Arc<ProcOnce<A>>) -> Self {
         Share { proc_once: node }
     }
 }

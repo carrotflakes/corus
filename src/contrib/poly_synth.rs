@@ -4,19 +4,19 @@ use crate::{
     signal::C1f64,
 };
 
-pub struct PolySynth<A: Node<C1f64>> {
+pub struct PolySynth<A: Node<Output = C1f64>> {
     voices: Vec<Voice<A>>,
     current: usize,
 }
 
-pub struct Voice<A: Node<C1f64>> {
+pub struct Voice<A: Node<Output = C1f64>> {
     last_notenum: u8,
     node: A,
     note_on: Box<dyn FnMut(f64, u8)>,
     note_off: Box<dyn FnMut(f64)>,
 }
 
-impl<A: Node<C1f64>> Voice<A> {
+impl<A: Node<Output = C1f64>> Voice<A> {
     pub fn new(
         node: A,
         note_on: Box<dyn FnMut(f64, u8)>,
@@ -31,7 +31,7 @@ impl<A: Node<C1f64>> Voice<A> {
     }
 }
 
-impl<A: Node<C1f64>> PolySynth<A> {
+impl<A: Node<Output = C1f64>> PolySynth<A> {
     pub fn new(voice_builder: &dyn Fn() -> Voice<A>, voice_num: usize) -> Self {
         Self {
             voices: (0..voice_num).map(|_| voice_builder()).collect(),
@@ -56,9 +56,11 @@ impl<A: Node<C1f64>> PolySynth<A> {
     }
 }
 
-impl<A: Node<C1f64>> Node<C1f64> for PolySynth<A> {
+impl<A: Node<Output = C1f64>> Node for PolySynth<A> {
+    type Output = C1f64;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let mut v = Default::default();
         for voice in &mut self.voices {
             v = v + voice.node.proc(ctx);

@@ -2,18 +2,21 @@ use std::{collections::hash_map::DefaultHasher, hash::Hasher, io::Write};
 
 use corus::{EventQueue, Node, ProcContext, signal::{C2f64, IntoStereo, Stereo}, time::{AsSample, Second}};
 
-pub fn write_to_file<T: IntoStereo<f64>, N: Node<T> + 'static>(
+pub fn write_to_file<N>(
     name: &str,
     sample_rate: usize,
     len: f64,
     node: N,
     f64hash: Option<u64>,
     i16hash: Option<u64>,
-) {
+) where
+    N: Node + 'static,
+    N::Output: IntoStereo<f64>,
+{
     write_to_file_with_event_queue(name, sample_rate, len, node, f64hash, i16hash, EventQueue::new())
 }
 
-pub fn write_to_file_with_event_queue<T: IntoStereo<f64>, N: Node<T> + 'static>(
+pub fn write_to_file_with_event_queue<N>(
     name: &str,
     sample_rate: usize,
     len: f64,
@@ -21,7 +24,10 @@ pub fn write_to_file_with_event_queue<T: IntoStereo<f64>, N: Node<T> + 'static>(
     f64hash: Option<u64>,
     i16hash: Option<u64>,
     event_queue: EventQueue,
-) {
+) where
+    N: Node + 'static,
+    N::Output: IntoStereo<f64>,
+{
     let spec = hound::WavSpec {
         channels: 2,
         sample_rate: sample_rate as u32,

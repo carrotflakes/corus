@@ -1,54 +1,42 @@
-use std::marker::PhantomData;
-
-use crate::proc_context::ProcContext;
+use crate::{proc_context::ProcContext};
 
 use super::Node;
 
-pub struct Crossfader<F, T, A, B, C>
+pub struct Crossfader<A, B, C>
 where
-    F: 'static,
-    T: CrossfaderLevel<F>,
-    A: Node<T>,
-    B: Node<T>,
-    C: Node<F>,
+    A: Node,
+    B: Node<Output = A::Output>,
+    C: Node,
+    A::Output: CrossfaderLevel<C::Output>,
 {
     a: A,
     b: B,
     level: C,
-    _t: (
-        PhantomData<F>,
-        PhantomData<T>,
-    ),
 }
 
-impl<F, T, A, B, C> Crossfader<F, T, A, B, C>
+impl<A, B, C> Crossfader<A, B, C>
 where
-    F: 'static,
-    T: CrossfaderLevel<F>,
-    A: Node<T>,
-    B: Node<T>,
-    C: Node<F>,
+    A: Node,
+    B: Node<Output = A::Output>,
+    C: Node,
+    A::Output: CrossfaderLevel<C::Output>,
 {
     pub fn new(a: A, b: B, level: C) -> Self {
-        Crossfader {
-            a,
-            b,
-            level,
-            _t: Default::default(),
-        }
+        Crossfader { a, b, level }
     }
 }
 
-impl<F, T, A, B, C> Node<T> for Crossfader<F, T, A, B, C>
+impl<A, B, C> Node for Crossfader<A, B, C>
 where
-    F: 'static,
-    T: CrossfaderLevel<F>,
-    A: Node<T>,
-    B: Node<T>,
-    C: Node<F>,
+    A: Node,
+    B: Node<Output = A::Output>,
+    C: Node,
+    A::Output: CrossfaderLevel<C::Output>,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let a = self.a.proc(ctx);
         let b = self.b.proc(ctx);
         let level = self.level.proc(ctx);

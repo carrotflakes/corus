@@ -4,10 +4,10 @@ use crate::{signal::C1f64, EventListener, Node, ProcContext};
 
 pub struct Spring<A, B, C, D>
 where
-    A: Node<C1f64>,
-    B: Node<C1f64>,
-    C: Node<C1f64>,
-    D: Node<C1f64>,
+    A: Node<Output = C1f64>,
+    B: Node<Output = C1f64>,
+    C: Node<Output = C1f64>,
+    D: Node<Output = C1f64>,
 {
     frequency: A,
     decay: B,
@@ -19,10 +19,10 @@ where
 
 impl<A, B, C, D> Spring<A, B, C, D>
 where
-    A: Node<C1f64>,
-    B: Node<C1f64>,
-    C: Node<C1f64>,
-    D: Node<C1f64>,
+    A: Node<Output = C1f64>,
+    B: Node<Output = C1f64>,
+    C: Node<Output = C1f64>,
+    D: Node<Output = C1f64>,
 {
     pub fn new(frequency: A, decay: B, velocity_limit: C, target: D, displacement: f64) -> Self {
         Spring {
@@ -36,14 +36,16 @@ where
     }
 }
 
-impl<A, B, C, D> Node<C1f64> for Spring<A, B, C, D>
+impl<A, B, C, D> Node for Spring<A, B, C, D>
 where
-    A: Node<C1f64>,
-    B: Node<C1f64>,
-    C: Node<C1f64>,
-    D: Node<C1f64>,
+    A: Node<Output = C1f64>,
+    B: Node<Output = C1f64>,
+    C: Node<Output = C1f64>,
+    D: Node<Output = C1f64>,
 {
-    fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
+    type Output = C1f64;
+
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let frequency = self.frequency.proc(ctx);
         let decay = self.decay.proc(ctx);
         let velocity_limit = self.velocity_limit.proc(ctx) / ctx.sample_rate as f64;
@@ -88,10 +90,10 @@ pub enum SpringEvent<A, B, C, D> {
 
 impl<A, B, C, D> EventListener<SpringEvent<A, B, C, D>> for Spring<A, B, C, D>
 where
-    A: 'static + Node<C1f64>,
-    B: 'static + Node<C1f64>,
-    C: 'static + Node<C1f64>,
-    D: 'static + Node<C1f64>,
+    A: 'static + Node<Output = C1f64>,
+    B: 'static + Node<Output = C1f64>,
+    C: 'static + Node<Output = C1f64>,
+    D: 'static + Node<Output = C1f64>,
 {
     #[inline]
     fn apply_event(&mut self, _time: f64, event: &SpringEvent<A, B, C, D>) {

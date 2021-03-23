@@ -11,7 +11,7 @@ use super::{
 };
 
 pub struct Benihora {
-    node: Box<dyn Node<C1f64> + Send + Sync>,
+    node: Box<dyn Node<Output = f64> + Send + Sync>,
     glottis: Glottis,
     tract: Tract,
     block_time: f64,         // sec
@@ -20,7 +20,7 @@ pub struct Benihora {
 }
 
 impl Benihora {
-    pub fn new(node: Box<dyn Node<C1f64> + Send + Sync>, proc_num: usize) -> Self {
+    pub fn new(node: Box<dyn Node<Output = f64> + Send + Sync>, proc_num: usize) -> Self {
         Self {
             glottis: Glottis::new(),
             tract: Tract::new(),
@@ -32,7 +32,9 @@ impl Benihora {
     }
 }
 
-impl Node<C1f64> for Benihora {
+impl Node for Benihora {
+    type Output = C1f64;
+
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
         if self.block_updated_time + self.block_time <= ctx.current_time {
@@ -53,7 +55,8 @@ impl Node<C1f64> for Benihora {
         let turbulence_noise = v.get_m() as F * noise_mod; // v.0[1] is better...
         let mut vocal_out = 0.0;
         for i in 0..self.proc_num {
-            let time = ctx.current_time + (i as f64 / self.proc_num as f64) / ctx.sample_rate as f64;
+            let time =
+                ctx.current_time + (i as f64 / self.proc_num as f64) / ctx.sample_rate as f64;
             vocal_out += self.tract.run_step(
                 time,
                 glottal_output,

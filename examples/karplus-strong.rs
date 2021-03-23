@@ -45,7 +45,7 @@ fn main() {
                     ),
                     Constant::from(0.5),
                 ),
-            )) as Box<dyn Node<C1f64>>);
+            )) as Box<dyn Node<Output = C1f64>>);
         }
         buffer
     };

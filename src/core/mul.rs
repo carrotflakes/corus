@@ -1,39 +1,36 @@
 use super::{Node, ProcContext};
 
-pub struct Mul<T, A, B>
+pub struct Mul<A, B>
 where
-    T: Clone + 'static + std::ops::Mul<Output = T>,
-    A: Node<T>,
-    B: Node<T>,
+    A: Node,
+    B: Node<Output = A::Output>,
+    A::Output: Clone + 'static + std::ops::Mul<Output = A::Output>,
 {
     input1: A,
     input2: B,
-    _t: std::marker::PhantomData<T>,
 }
 
-impl<T, A, B> Mul<T, A, B>
+impl<A, B> Mul<A, B>
 where
-    T: Clone + 'static + std::ops::Mul<Output = T>,
-    A: Node<T>,
-    B: Node<T>,
+    A: Node,
+    B: Node<Output = A::Output>,
+    A::Output: Clone + 'static + std::ops::Mul<Output = A::Output>,
 {
     pub fn new(input1: A, input2: B) -> Self {
-        Mul {
-            input1,
-            input2,
-            _t: Default::default(),
-        }
+        Mul { input1, input2 }
     }
 }
 
-impl<T, A, B> Node<T> for Mul<T, A, B>
+impl<A, B> Node for Mul<A, B>
 where
-    T: Clone + 'static + std::ops::Mul<Output = T>,
-    A: Node<T>,
-    B: Node<T>,
+    A: Node,
+    B: Node<Output = A::Output>,
+    A::Output: Clone + 'static + std::ops::Mul<Output = A::Output>,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         self.input1.proc(ctx) * self.input2.proc(ctx)
     }
 

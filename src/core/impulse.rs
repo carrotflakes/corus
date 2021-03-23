@@ -22,10 +22,12 @@ where
     }
 }
 
-impl<T> Node<T> for Impulse<T>
+impl<T> Node for Impulse<T>
 where
     T: Clone + 'static + Default,
 {
+    type Output = T;
+
     #[inline]
     fn proc(&mut self, _ctx: &ProcContext) -> T {
         if self.fired {

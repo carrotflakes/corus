@@ -3,34 +3,36 @@ use std::{
     ops::{Add, Mul},
 };
 
-use crate::signal::{C1f64, IntoStereo, Signal};
+use crate::signal::{IntoStereo, Signal};
 
 use super::{Node, ProcContext};
 
-pub struct Pan<F, FP, T, O, A, B>
+pub struct Pan<O, A, B>
 where
-    FP: Clone + 'static,
-    T: Clone + 'static + Add<Output = T> + Mul<Output = T> + IntoStereo<F, Output = O>,
-    O: Clone + 'static + Add<Output = O> + Mul<Output = O> + Signal<Float = F>,
-    A: Node<T>,
-    B: Node<FP>,
+    O: Clone + 'static + Signal<Float = f64>,
+    A: Node,
+    A::Output: Clone
+        + 'static
+        + Add<Output = A::Output>
+        + Mul<Output = A::Output>
+        + IntoStereo<O::Float, Output = O>,
+    B: Node<Output = f64>,
 {
     a: A,
     b: B,
-    _t: (
-        PhantomData<FP>,
-        PhantomData<T>,
-        PhantomData<O>,
-    ),
+    _t: PhantomData<O>,
 }
 
-impl<F, FP, T, O, A, B> Pan<F, FP, T, O, A, B>
+impl<O, A, B> Pan<O, A, B>
 where
-    FP: Clone + 'static,
-    T: Clone + 'static + Add<Output = T> + Mul<Output = T> + IntoStereo<F, Output = O>,
-    O: Clone + 'static + Add<Output = O> + Mul<Output = O> + Signal<Float = F>,
-    A: Node<T>,
-    B: Node<FP>,
+    O: Clone + 'static + Signal<Float = f64>,
+    A: Node,
+    A::Output: Clone
+        + 'static
+        + Add<Output = A::Output>
+        + Mul<Output = A::Output>
+        + IntoStereo<O::Float, Output = O>,
+    B: Node<Output = f64>,
 {
     pub fn new(a: A, b: B) -> Self {
         Pan {
@@ -41,16 +43,22 @@ where
     }
 }
 
-impl<T, O, A, B> Node<O> for Pan<f64, C1f64, T, O, A, B>
+impl<O, A, B> Node for Pan<O, A, B>
 where
-    T: Clone + 'static + Add<Output = T> + Mul<Output = T> + IntoStereo<f64, Output = O>,
-    O: Clone + 'static + Add<Output = O> + Mul<Output = O> + Signal<Float = f64>,
-    A: Node<T>,
-    B: Node<C1f64>,
+    O: Clone + 'static + Signal<Float = f64>,
+    A: Node,
+    A::Output: Clone
+        + 'static
+        + Add<Output = A::Output>
+        + Mul<Output = A::Output>
+        + IntoStereo<O::Float, Output = O>,
+    B: Node<Output = f64>,
 {
+    type Output = O;
+
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> O {
-        let v: T = self.a.proc(ctx);
+        let v: A::Output = self.a.proc(ctx);
         let pan = self.b.proc(ctx);
         v.into_stereo_with_pan(pan.get(0))
     }
@@ -65,4 +73,3 @@ where
         self.b.unlock();
     }
 }
-

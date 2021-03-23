@@ -2,35 +2,33 @@ use std::ops::Add;
 
 use super::{Node, ProcContext};
 
-pub struct Mix<T, A>
+pub struct Mix<A>
 where
-    T: Clone + 'static + Add<Output = T> + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + 'static + Add<Output = A::Output> + Default,
 {
     nodes: Vec<A>,
-    _t: std::marker::PhantomData<T>,
 }
 
-impl<T, A> Mix<T, A>
+impl<A> Mix<A>
 where
-    T: Clone + 'static + Add<Output = T> + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + 'static + Add<Output = A::Output> + Default,
 {
     pub fn new(nodes: Vec<A>) -> Self {
-        Mix {
-            nodes,
-            _t: Default::default(),
-        }
+        Mix { nodes }
     }
 }
 
-impl<T, A> Node<T> for Mix<T, A>
+impl<A> Node for Mix<A>
 where
-    T: Clone + 'static + Add<Output = T> + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + 'static + Add<Output = A::Output> + Default,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let mut v = Default::default();
         for node in self.nodes.iter_mut() {
             v = v + node.proc(ctx);

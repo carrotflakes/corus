@@ -1,6 +1,5 @@
 use std::{
     collections::VecDeque,
-    marker::PhantomData,
     sync::{Arc, Mutex},
 };
 
@@ -47,10 +46,10 @@ impl EventQueue {
         }
     }
 
-    pub fn get_controller<T, E, L>(&mut self, ec: &EventControllable<T, L>) -> EventControl<L>
+    pub fn get_controller<E, L>(&mut self, ec: &EventControllable<L>) -> EventControl<L>
     where
         E: Send + Sync,
-        L: Node<T> + EventListener<E> + Send + Sync,
+        L: Node + EventListener<E> + Send + Sync,
     {
         EventControl::new(self.events.clone(), ec.inner())
     }
@@ -106,16 +105,14 @@ pub trait EventPusher<E> {
     fn push_event(&mut self, time: f64, event: E);
 }
 
-pub struct EventControllable<T: 'static, A: 'static + Node<T>> {
+pub struct EventControllable<A: 'static + Node> {
     node: Arc<A>,
-    _t: PhantomData<T>,
 }
 
-impl<T: 'static, A: 'static + Node<T>> EventControllable<T, A> {
+impl<A: 'static + Node> EventControllable<A> {
     pub fn new(node: A) -> Self {
         Self {
             node: Arc::new(node),
-            _t: Default::default(),
         }
     }
 
@@ -125,13 +122,14 @@ impl<T: 'static, A: 'static + Node<T>> EventControllable<T, A> {
     }
 }
 
-impl<T, A> Node<T> for EventControllable<T, A>
+impl<A> Node for EventControllable<A>
 where
-    T: 'static,
-    A: 'static + Node<T>,
+    A: 'static + Node,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         get_mut(&mut self.node).proc(ctx)
     }
 
@@ -145,10 +143,9 @@ where
 }
 
 #[inline]
-fn get_mut<T, A>(arc: &mut Arc<A>) -> &mut A
+fn get_mut<A>(arc: &mut Arc<A>) -> &mut A
 where
-    T: 'static,
-    A: 'static + Node<T>,
+    A: 'static + Node,
 {
     unsafe { std::mem::transmute::<_, &mut A>(Arc::as_ptr(arc)) }
 }
@@ -207,13 +204,13 @@ impl<A: 'static> Clone for EventSchedule<A> {
     }
 }
 
-pub struct EventScheduleNode<T: 'static, A: 'static + Node<T>> {
-    target: EventControllable<T, A>,
+pub struct EventScheduleNode<A: 'static + Node> {
+    target: EventControllable<A>,
     schedule: EventSchedule<A>,
 }
 
-impl<T: 'static, A: 'static + Node<T>> EventScheduleNode<T, A> {
-    pub fn new(target: EventControllable<T, A>) -> Self {
+impl<A: 'static + Node> EventScheduleNode<A> {
+    pub fn new(target: EventControllable<A>) -> Self {
         Self {
             schedule: EventSchedule {
                 events: Default::default(),
@@ -228,13 +225,14 @@ impl<T: 'static, A: 'static + Node<T>> EventScheduleNode<T, A> {
     }
 }
 
-impl<T, A> Node<T> for EventScheduleNode<T, A>
+impl<A> Node for EventScheduleNode<A>
 where
-    T: 'static,
-    A: 'static + Node<T>,
+    A: 'static + Node,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         self.target.proc(ctx)
     }
 
@@ -283,9 +281,11 @@ impl<E, L: EventListener<E>> EventPusher<E> for EventControlInplace<E, L> {
     }
 }
 
-impl<T: 'static, L: Node<T> + EventListener<E>, E> Node<T> for EventControlInplace<E, L> {
+impl<L: Node + EventListener<E>, E> Node for EventControlInplace<E, L> {
+    type Output = L::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         while let Some(e) = self.events.front_mut() {
             if ctx.current_time < e.0 {
                 break;

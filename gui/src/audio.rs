@@ -6,12 +6,12 @@ use corus::{
 use sdl2::audio::AudioCallback;
 
 pub struct Audio {
-    node: Box<dyn Node<C1f64> + Send>,
+    node: Box<dyn Node<Output = C1f64> + Send>,
     pub ctx: ProcContext,
 }
 
 impl Audio {
-    pub fn new(sample_rate: u64, node: Box<dyn Node<C1f64> + Send>) -> Self {
+    pub fn new(sample_rate: u64, node: Box<dyn Node<Output = C1f64> + Send>) -> Self {
         Self {
             node,
             ctx: ProcContext::new(sample_rate),

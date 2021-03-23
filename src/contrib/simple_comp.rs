@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use crate::{
     proc_context::ProcContext,
     signal::{C1f64, C2f64, IntoMono, Mono, Signal},
@@ -7,30 +5,27 @@ use crate::{
 
 use super::Node;
 
-pub struct SimpleComp<F, T, A, B, C, D>
+pub struct SimpleComp<T, A, B, C, D>
 where
-    F: 'static,
-    T: Signal<Float = F>,
-    A: Node<T>,
-    B: Node<F>,
-    C: Node<F>,
-    D: Node<F>,
+    T: Signal,
+    A: Node<Output = T>,
+    B: Node<Output = <A::Output as Signal>::Float>,
+    C: Node<Output = <A::Output as Signal>::Float>,
+    D: Node<Output = <A::Output as Signal>::Float>,
 {
     node: A,
     threshold: B,
     ratio: C,
     out_gain: D,
-    _t: (PhantomData<F>, PhantomData<T>),
 }
 
-impl<F, T, A, B, C, D> SimpleComp<F, T, A, B, C, D>
+impl<T, A, B, C, D> SimpleComp<T, A, B, C, D>
 where
-    F: 'static,
-    T: Signal<Float = F>,
-    A: Node<T>,
-    B: Node<F>,
-    C: Node<F>,
-    D: Node<F>,
+    T: Signal,
+    A: Node<Output = T>,
+    B: Node<Output = <A::Output as Signal>::Float>,
+    C: Node<Output = <A::Output as Signal>::Float>,
+    D: Node<Output = <A::Output as Signal>::Float>,
 {
     pub fn new(node: A, threshold: B, ratio: C, out_gain: D) -> Self {
         Self {
@@ -38,20 +33,21 @@ where
             threshold,
             ratio,
             out_gain,
-            _t: Default::default(),
         }
     }
 }
 
-impl<A, B, C, D> Node<C1f64> for SimpleComp<f64, C1f64, A, B, C, D>
+impl<A, B, C, D> Node for SimpleComp<C1f64, A, B, C, D>
 where
-    A: Node<C1f64>,
-    B: Node<f64>,
-    C: Node<f64>,
-    D: Node<f64>,
+    A: Node<Output = C1f64>,
+    B: Node<Output = f64>,
+    C: Node<Output = f64>,
+    D: Node<Output = f64>,
 {
+    type Output = C1f64;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let v = self.node.proc(ctx).get_m();
         let threshold = self.threshold.proc(ctx);
         let ratio = self.ratio.proc(ctx);
@@ -75,15 +71,17 @@ where
     }
 }
 
-impl<A, B, C, D> Node<C2f64> for SimpleComp<f64, C2f64, A, B, C, D>
+impl<A, B, C, D> Node for SimpleComp<C2f64, A, B, C, D>
 where
-    A: Node<C2f64>,
-    B: Node<f64>,
-    C: Node<f64>,
-    D: Node<f64>,
+    A: Node<Output = C2f64>,
+    B: Node<Output = f64>,
+    C: Node<Output = f64>,
+    D: Node<Output = f64>,
 {
+    type Output = C2f64;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> C2f64 {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let v = self.node.proc(ctx);
         let threshold = self.threshold.proc(ctx);
         let ratio = self.ratio.proc(ctx);

@@ -4,22 +4,22 @@ use super::{Node, ProcContext};
 
 use crate::{EventListener, EventQueue};
 
-pub struct ProcOnce<T, A>
+pub struct ProcOnce<A>
 where
-    T: 'static + Clone + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + Default,
 {
     node: A,
     time: f64,
-    value: T,
+    value: A::Output,
     pub(crate) lock_count: u32,
     bound_event_queue: Option<EventQueue>,
 }
 
-impl<T, A> ProcOnce<T, A>
+impl<A> ProcOnce<A>
 where
-    T: 'static + Clone + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + Default,
 {
     pub fn new(node: A) -> Self {
         ProcOnce {
@@ -40,13 +40,15 @@ where
     // }
 }
 
-impl<T, A> Node<T> for ProcOnce<T, A>
+impl<A> Node for ProcOnce<A>
 where
-    T: 'static + Clone + Default,
-    A: Node<T>,
+    A: Node,
+    A::Output: Clone + Default,
 {
+    type Output = A::Output;
+
     #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> T {
+    fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         if self.time != ctx.current_time {
             self.time = ctx.current_time;
             self.value = self.node.proc(ctx);
@@ -77,19 +79,19 @@ where
     }
 }
 
-pub struct ProcOnceEvent<T, A, E>
+pub struct ProcOnceEvent<A, E>
 where
-    T: 'static + Clone + Default,
-    A: 'static + Node<T>,
+    A: Node,
+    A::Output: Clone + Default,
 {
     event: E,
-    _t: (PhantomData<T>, PhantomData<A>),
+    _t: PhantomData<A>,
 }
 
-impl<T, A, E> ProcOnceEvent<T, A, E>
+impl<A, E> ProcOnceEvent<A, E>
 where
-    T: 'static + Clone + Default,
-    A: 'static + Node<T>,
+    A: Node,
+    A::Output: Clone + Default,
 {
     pub fn new(event: E) -> Self {
         Self {
@@ -99,13 +101,13 @@ where
     }
 }
 
-impl<T, A, E> EventListener<ProcOnceEvent<T, A, E>> for ProcOnce<T, A>
+impl<A, E> EventListener<ProcOnceEvent<A, E>> for ProcOnce<A>
 where
-    T: 'static + Clone + Default,
-    A: Node<T> + EventListener<E>,
+    A: Node + EventListener<E>,
+    A::Output: Clone + Default,
 {
     #[inline]
-    fn apply_event(&mut self, time: f64, event: &ProcOnceEvent<T, A, E>) {
+    fn apply_event(&mut self, time: f64, event: &ProcOnceEvent<A, E>) {
         self.node.apply_event(time, &event.event)
     }
 }

@@ -22,7 +22,7 @@ fn simplex1(x: F) -> F {
     perlin_noise(x * 1.2, -x * 0.7, 0.0) as F
 }
 
-pub fn make_noise_node() -> Box<dyn Node<C1f64> + Send + Sync> {
+pub fn make_noise_node() -> Box<dyn Node<Output = f64> + Send + Sync> {
     let node1 = BiquadFilter::new(
         {
             let mut rand = Rand::new(1);

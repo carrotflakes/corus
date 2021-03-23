@@ -4,20 +4,20 @@ use super::{Node, ProcContext};
 
 pub struct BiquadFilter<T, N, P>
 where
-    T: Clone + 'static + std::ops::Add<Output = T> + Signal + Default,
-    N: Node<T>,
-    P: Node<[f64; 6]>,
+    N: Node<Output = T>,
+    N::Output: Signal,
+    P: Node<Output = [f64; 6]>,
 {
     node: N,
     params: P,
-    samples: [T; 4],
+    samples: [N::Output; 4],
 }
 
 impl<T, N, P> BiquadFilter<T, N, P>
 where
-    T: Clone + 'static + std::ops::Add<Output = T> + Signal + Default,
-    N: Node<T>,
-    P: Node<[f64; 6]>,
+    N: Node<Output = T>,
+    N::Output: Signal,
+    P: Node<Output = [f64; 6]>,
 {
     pub fn new(node: N, params: P) -> Self {
         BiquadFilter {
@@ -29,12 +29,13 @@ where
 }
 
 // TODO: generic
-impl<N, P> Node<C1f64>
-    for BiquadFilter<C1f64, N, P>
+impl<N, P> Node for BiquadFilter<C1f64, N, P>
 where
-    N: Node<C1f64>,
-    P: Node<[f64; 6]>,
+    N: Node<Output = C1f64>,
+    P: Node<Output = [f64; 6]>,
 {
+    type Output = C1f64;
+
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
         let [a0, a1, a2, b0, b1, b2] = self.params.proc(ctx);
@@ -64,12 +65,13 @@ where
     }
 }
 
-impl<N, P> Node<C2f64>
-    for BiquadFilter<C2f64, N, P>
+impl<N, P> Node for BiquadFilter<C2f64, N, P>
 where
-    N: Node<C2f64>,
-    P: Node<[f64; 6]>,
+    N: Node<Output = C2f64>,
+    P: Node<Output = [f64; 6]>,
 {
+    type Output = C2f64;
+
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C2f64 {
         let [a0, a1, a2, b0, b1, b2] = self.params.proc(ctx);
@@ -104,11 +106,12 @@ where
     }
 }
 
-pub struct BiquadFilterParams<FT, A, B, C> where
+pub struct BiquadFilterParams<FT, A, B, C>
+where
     FT: BiquadFilterType,
-    A: Node<C1f64>,
-    B: Node<C1f64>,
-    C: Node<C1f64>,
+    A: Node<Output = f64>,
+    B: Node<Output = f64>,
+    C: Node<Output = f64>,
 {
     filter_type: FT,
     frequency: A,
@@ -119,31 +122,36 @@ pub struct BiquadFilterParams<FT, A, B, C> where
 impl<FT, A, B, C> BiquadFilterParams<FT, A, B, C>
 where
     FT: BiquadFilterType,
-    A: Node<C1f64>,
-    B: Node<C1f64>,
-    C: Node<C1f64>,
+    A: Node<Output = f64>,
+    B: Node<Output = f64>,
+    C: Node<Output = f64>,
 {
-    pub fn new(filter_type: FT, frequency: A, gain: B, q: C) -> Self { Self { filter_type, frequency, gain, q } }
+    pub fn new(filter_type: FT, frequency: A, gain: B, q: C) -> Self {
+        Self {
+            filter_type,
+            frequency,
+            gain,
+            q,
+        }
+    }
 }
 
-impl<FT, A, B, C> Node<[f64; 6]> for BiquadFilterParams<FT, A, B, C>
+impl<FT, A, B, C> Node for BiquadFilterParams<FT, A, B, C>
 where
     FT: BiquadFilterType,
-    A: Node<C1f64>,
-    B: Node<C1f64>,
-    C: Node<C1f64>,
+    A: Node<Output = f64>,
+    B: Node<Output = f64>,
+    C: Node<Output = f64>,
 {
+    type Output = [f64; 6];
+
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> [f64; 6] {
         let frequency = self.frequency.proc(ctx);
         let gain = self.gain.proc(ctx);
         let q = self.q.proc(ctx);
-        self.filter_type.compute_params(
-            ctx.sample_rate,
-            frequency.get_m(),
-            gain.get_m(),
-            q.get_m(),
-        )
+        self.filter_type
+            .compute_params(ctx.sample_rate, frequency.get_m(), gain.get_m(), q.get_m())
     }
 
     fn lock(&mut self, ctx: &ProcContext) {

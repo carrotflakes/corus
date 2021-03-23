@@ -28,7 +28,7 @@ fn main() {
         nodes.push(Box::new(Amp::new(
             Sine::new(Add::new(freq, modulator.clone())),
             Constant::from(1.0 / (i + 1) as f64),
-        )) as Box<dyn Node<C1f64>>);
+        )) as Box<dyn Node<Output = C1f64>>);
     }
 
     let mix = Mix::new(nodes);
@@ -44,7 +44,7 @@ fn main() {
                     RingBufferPlayback::new(Constant::from(0.5), buffer.clone()),
                     Constant::from(0.5),
                 ),
-            )) as Box<dyn Node<C1f64>>);
+            )) as Box<dyn Node<Output = C1f64>>);
         }
         buffer
     };
