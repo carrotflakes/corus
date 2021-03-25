@@ -13,6 +13,7 @@ pub mod fn_processor;
 pub mod generic_poly_synth;
 mod oscillators;
 pub mod parallel_mix;
+pub mod parallel_mix2;
 mod perlin_noise;
 pub mod poly_synth;
 pub mod rand;
