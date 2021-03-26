@@ -1,19 +1,12 @@
-use std::{
-    marker::PhantomData,
-    ops::{Add, Mul},
-};
+use std::marker::PhantomData;
 
-use crate::{
-    signal::{C1f64, Signal},
-    EventListener,
-};
+use crate::EventListener;
 
 use super::{Node, ProcContext};
 
 pub struct Accumulator<A>
 where
-    A: Node,
-    A::Output: Signal + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + Default + Clone,
+    A: Node<Output = f64>,
 {
     node: A,
     value: A::Output,
@@ -22,8 +15,7 @@ where
 
 impl<A> Accumulator<A>
 where
-A: Node,
-A::Output: Signal + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + Default + Clone,
+    A: Node<Output = f64>,
 {
     pub fn new(node: A, upper: A::Output) -> Self {
         Accumulator {
@@ -36,21 +28,15 @@ A::Output: Signal + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + D
 
 impl<A> Node for Accumulator<A>
 where
-A: Node,
-A::Output: Signal<Float = f64> + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + Default + Clone,
+    A: Node<Output = f64>,
 {
     type Output = A::Output;
 
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
-        let sample_rate = ctx.sample_rate as f64;
-        let d = self.node.proc(ctx).map(|f| f / sample_rate);
-        self.value = self.value.clone() + d;
-
-        self.value = self
-            .value
-            .map2_1(self.upper.clone(), |v, u| v.rem_euclid(u));
-        self.value.clone()
+        let d = self.node.proc(ctx) / ctx.sample_rate as f64;
+        self.value = (self.value + d).rem_euclid(self.upper);
+        self.value
     }
 
     fn lock(&mut self, ctx: &ProcContext) {
@@ -64,8 +50,7 @@ A::Output: Signal<Float = f64> + Mul<C1f64, Output = A::Output> + Add<Output = A
 
 pub struct SetValueAtTime<A>
 where
-A: Node,
-A::Output: Signal + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + Default + Clone,
+    A: Node<Output = f64>,
 {
     value: A::Output,
     _t: PhantomData<A>,
@@ -73,8 +58,7 @@ A::Output: Signal + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + D
 
 impl<A> SetValueAtTime<A>
 where
-A: Node,
-A::Output: Signal + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + Default + Clone,
+    A: Node<Output = f64>,
 {
     pub fn new(value: A::Output) -> Self {
         Self {
@@ -86,8 +70,7 @@ A::Output: Signal + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + D
 
 impl<A> EventListener<SetValueAtTime<A>> for Accumulator<A>
 where
-A: 'static + Node,
-A::Output: Signal + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + Default + Clone,
+    A: Node<Output = f64> + 'static,
 {
     #[inline]
     fn apply_event(&mut self, _time: f64, event: &SetValueAtTime<A>) {
@@ -98,10 +81,8 @@ A::Output: Signal + Mul<C1f64, Output = A::Output> + Add<Output = A::Output> + D
 #[test]
 fn test() {
     use crate::{EventControlInplace, EventPusher};
-    let mut accumulator = EventControlInplace::new(Accumulator::new(
-        super::constant::Constant::new(C1f64::from(1.0)),
-        C1f64::from(4.0),
-    ));
+    let mut accumulator =
+        EventControlInplace::new(Accumulator::new(super::constant::Constant::new(1.0), 4.0));
     let mut pc = ProcContext::new(4);
 
     accumulator.push_event(0.0, SetValueAtTime::new(1.0));

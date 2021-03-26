@@ -23,7 +23,6 @@ pub trait Signal:
 
     fn get(&self, channel: usize) -> Self::Float;
     fn map<F: Fn(Self::Float) -> Self::Float>(&self, f: F) -> Self;
-    fn map2_1<F: Fn(Self::Float, Self::Float) -> Self::Float>(&self, self2: Self, f: F) -> Self;
     fn mul_identity() -> Self;
     fn lerp(&self, other: &Self, r: Self::Float) -> Self;
 }
@@ -98,11 +97,6 @@ impl Signal for C1f64 {
     }
 
     #[inline]
-    fn map2_1<F: Fn(f64, f64) -> f64>(&self, self2: Self, f: F) -> Self {
-        f(self.get_m(), self2.get_m())
-    }
-
-    #[inline]
     fn mul_identity() -> Self {
         1.0
     }
@@ -124,11 +118,6 @@ impl Signal for C2f64 {
     #[inline]
     fn map<F: Fn(f64) -> f64>(&self, f: F) -> Self {
         Self([f(self.0[0]), f(self.0[1])])
-    }
-
-    #[inline]
-    fn map2_1<F: Fn(f64, f64) -> f64>(&self, self2: Self, f: F) -> Self {
-        Self([f(self.0[0], self2.0[0]), f(self.0[1], self2.0[1])])
     }
 
     #[inline]
