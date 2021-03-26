@@ -1,8 +1,4 @@
-use std::{
-    collections::VecDeque,
-    ops::{Add, Div, Mul, Sub},
-    sync::{Arc, Mutex},
-};
+use std::{collections::VecDeque, ops::{Add, Div, Mul, Neg, Sub}, sync::{Arc, Mutex}};
 
 use crate::{EventListener, EventControllable, EventQueue};
 
@@ -18,6 +14,10 @@ pub enum ParamState<F: Float> {
 
 pub struct Param<F: Float> {
     value: F,
+    sample_rate: u64,
+    pre_add: F,
+    post_add: F,
+    mul: F,
     state: ParamState<F>,
 }
 
@@ -29,6 +29,10 @@ impl<F: Float> Param<F> {
     pub fn with_value(value: F) -> Self {
         Param {
             value: value.clone(),
+            sample_rate: 0,
+            pre_add: 0.0.into(),
+            post_add: 0.0.into(),
+            mul: 1.0.into(),
             state: ParamState::Constant(value),
         }
     }
@@ -39,24 +43,36 @@ impl<F: Float> Node for Param<F> {
 
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> F {
-        let value = self.value.clone();
-        match self.state {
-            ParamState::Constant(_) => {}
-            ParamState::Linear(v) => {
-                self.value = self.value + v / F::from(ctx.sample_rate as f64); // TODO: pre-compute the value at Node.lock()
+        if ctx.sample_rate != self.sample_rate {
+            match self.state {
+                ParamState::Constant(v) => {
+                    self.pre_add = 0.0.into();
+                    self.post_add = v;
+                    self.mul = 0.0.into();
+                }
+                ParamState::Linear(v) => {
+                    self.pre_add = 0.0.into();
+                    self.post_add = v / F::from(ctx.sample_rate as f64);
+                    self.mul = 1.0.into();
+                }
+                ParamState::Exponential(v, vv) => {
+                    self.pre_add = 0.0.into();
+                    self.post_add = 0.0.into();
+                    self.mul = v.powf(F::from(1.0 / (vv * ctx.sample_rate as f64)));
+                }
+                ParamState::Target {
+                    target,
+                    time_constant,
+                } => {
+                    self.pre_add = -target;
+                    self.post_add = target;
+                    self.mul = F::from(1.0 / (1.0 / (time_constant * ctx.sample_rate as f64)).exp());
+                }
             }
-            ParamState::Exponential(v, vv) => {
-                self.value = self.value * v.powf(F::from(1.0 / (vv * ctx.sample_rate as f64)));
-            }
-            ParamState::Target {
-                target,
-                time_constant,
-            } => {
-                self.value = (self.value - target)
-                    / F::from((1.0 / (time_constant * ctx.sample_rate as f64)).exp())
-                    + target;
-            }
+            self.sample_rate = ctx.sample_rate;
         }
+        let value = self.value.clone();
+        self.value = (self.pre_add + self.value) * self.mul + self.post_add;
         value
     }
 
@@ -76,6 +92,7 @@ pub trait Float:
     + Div<Output = Self>
     + Add<Output = Self>
     + Sub<Output = Self>
+    + Neg<Output = Self>
     + Send
     + Sync
     + std::fmt::Debug
@@ -118,6 +135,7 @@ impl<F: Float> EventListener<ParamState<F>> for Param<F> {
             }
             _ => {}
         }
+        self.sample_rate = 0;
         self.state = event.clone();
     }
 }
