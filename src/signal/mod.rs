@@ -21,7 +21,6 @@ pub trait Signal:
 {
     type Float: 'static;
 
-    fn get(&self, channel: usize) -> Self::Float;
     fn map<F: Fn(Self::Float) -> Self::Float>(&self, f: F) -> Self;
     fn mul_identity() -> Self;
     fn lerp(&self, other: &Self, r: Self::Float) -> Self;
@@ -87,11 +86,6 @@ impl Signal for C1f64 {
     type Float = f64;
 
     #[inline]
-    fn get(&self, _channel: usize) -> Self::Float {
-        self.get_m()
-    }
-
-    #[inline]
     fn map<F: Fn(f64) -> f64>(&self, f: F) -> Self {
         f(self.get_m())
     }
@@ -109,11 +103,6 @@ impl Signal for C1f64 {
 
 impl Signal for C2f64 {
     type Float = f64;
-
-    #[inline]
-    fn get(&self, channel: usize) -> Self::Float {
-        self.0[channel]
-    }
 
     #[inline]
     fn map<F: Fn(f64) -> f64>(&self, f: F) -> Self {

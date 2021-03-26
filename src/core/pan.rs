@@ -56,7 +56,7 @@ where
     fn proc(&mut self, ctx: &ProcContext) -> O {
         let v: A::Output = self.a.proc(ctx);
         let pan = self.b.proc(ctx);
-        v.into_stereo_with_pan(pan.get(0))
+        v.into_stereo_with_pan(pan)
     }
 
     fn lock(&mut self, ctx: &ProcContext) {
