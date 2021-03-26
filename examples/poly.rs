@@ -31,7 +31,7 @@ fn main() {
         let mut acc_ctl = acc.controller();
         let saw = Add::new(acc, Constant::from(-0.5));
         let (env, mut env_on, mut env_off) =
-            AdsrEnvelope::<f64, f64>::new(0.01, 0.5, 0.2, 0.3).build();
+            AdsrEnvelope::<f64>::new(0.01, 0.5, 0.2, 0.3).build();
         let node = Amp::new(saw, env);
         Voice(
             node,

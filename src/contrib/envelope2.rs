@@ -1,6 +1,9 @@
 use std::marker::PhantomData;
 
-use crate::{core::param3::ParamEventScheduleNode, signal::Mono};
+use crate::{
+    core::param3::ParamEventScheduleNode,
+    signal::{Mono, Signal},
+};
 
 type F = f64;
 
@@ -15,18 +18,24 @@ pub trait EnvelopeGenerator<T: Mono> {
 }
 
 #[derive(Debug, Clone)]
-pub struct AdsrEnvelope<F: 'static + Clone + Default, T: Mono> {
+pub struct AdsrEnvelope<T: Signal<Float = f64> + Mono> {
     pub a: f64,
-    pub d: F,
+    pub d: T::Float,
     pub s: f64,
     pub r: f64,
     _t: PhantomData<T>,
 }
 
-impl<T: Mono + Send + Sync> AdsrEnvelope<F, T> {
-    pub fn new(a: f64, d: F, s: f64, r: f64) -> Self {
+impl<T: Signal<Float = f64> + Mono + Send + Sync> AdsrEnvelope<T> {
+    pub fn new(a: f64, d: T::Float, s: f64, r: f64) -> Self {
         assert!(0.0 < d);
-        Self { a, d, s, r, _t: Default::default() }
+        Self {
+            a,
+            d,
+            s,
+            r,
+            _t: Default::default(),
+        }
     }
 
     pub fn build(
@@ -69,15 +78,19 @@ impl<T: Mono + Send + Sync> AdsrEnvelope<F, T> {
 }
 
 #[derive(Debug, Clone)]
-pub struct ArEnvelope<T: Mono + Send + Sync> {
+pub struct ArEnvelope<T: Signal<Float = f64> + Mono + Send + Sync> {
     pub a: f64,
     pub r: f64,
     _t: PhantomData<T>,
 }
 
-impl<T: Mono + Send + Sync> ArEnvelope<T> {
+impl<T: Signal<Float = f64> + Mono + Send + Sync> ArEnvelope<T> {
     pub fn new(a: f64, r: f64) -> Self {
-        Self { a, r, _t: Default::default() }
+        Self {
+            a,
+            r,
+            _t: Default::default(),
+        }
     }
     pub fn build(
         &self,
@@ -107,7 +120,7 @@ impl<T: Mono + Send + Sync> ArEnvelope<T> {
     }
 }
 
-impl<T: Mono + Send + Sync> EnvelopeGenerator<T> for AdsrEnvelope<F, T> {
+impl<T: Signal<Float = f64> + Mono + Send + Sync> EnvelopeGenerator<T> for AdsrEnvelope<T> {
     fn generate(
         &self,
     ) -> (
@@ -120,7 +133,7 @@ impl<T: Mono + Send + Sync> EnvelopeGenerator<T> for AdsrEnvelope<F, T> {
     }
 }
 
-impl<T: Mono + Send + Sync> EnvelopeGenerator<T> for ArEnvelope<T> {
+impl<T: Signal<Float = f64> + Mono + Send + Sync> EnvelopeGenerator<T> for ArEnvelope<T> {
     fn generate(
         &self,
     ) -> (
