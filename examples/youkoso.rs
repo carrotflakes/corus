@@ -98,7 +98,8 @@ fn main() {
 
     println!("{} tracks", synthes.len());
 
-    let node = Mix::new(synthes);
+    let node = corus::contrib::parallel_mix2::ParallelMix::new(synthes, 8);
+    // let node = corus::contrib::parallel_mix::ParallelMix::new(synthes);
     // let node = Amp::new(node, Constant::new(C2f64([0.25, 0.25])));
     let node = delay_fx(node, SAMPLE_RATE as usize, 0.3, 0.3);
 
@@ -119,11 +120,11 @@ type MyVoice = Voice<Box<dyn Node<Output = f64> + Send + Sync>, (u8, f64), ()>;
 pub struct Track {
     track: usize,
     synth: PolySynth<(u8, f64), (), MyVoice, Option<u8>>,
-    gain: Param<f64, f64>,
-    pan: Param<f64, f64>,
+    gain: Param<f64>,
+    pan: Param<f64>,
     used: bool,
-    pitch: Share<Controllable<Param<f64, f64>>>,
-    pitch_ctl: Controller<Param<f64, f64>>,
+    pitch: Share<Controllable<Param<f64>>>,
+    pitch_ctl: Controller<Param<f64>>,
     synths: Vec<PolySynth<(u8, f64), (), MyVoice, Option<u8>>>,
 }
 
@@ -148,7 +149,7 @@ impl Track {
     fn make_synth(
         track: usize,
         program: u8,
-        pitch: Share<Controllable<Param<f64, f64>>>,
+        pitch: Share<Controllable<Param<f64>>>,
     ) -> PolySynth<(u8, f64), (), MyVoice, Option<u8>> {
         if track == 0 || track == 2 || track == 3 {
             PolySynth::new(&mut || benihora_builder(), 1)
@@ -196,7 +197,7 @@ impl Track {
     }
 }
 
-fn saw_builder(pitch: Share<Controllable<Param<f64, f64>>>) -> MyVoice {
+fn saw_builder(pitch: Share<Controllable<Param<f64>>>) -> MyVoice {
     let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
     let (gain, mut gain_ctrl) = controllable_param(1.0);
     let (acc, mut acc_reset) = resetable_acc(Amp::new(freq_param, pitch));
@@ -307,7 +308,7 @@ fn benihora_builder() -> MyVoice {
     )
 }
 
-fn wavetable_builder(pitch: Share<Controllable<Param<f64, f64>>>) -> MyVoice {
+fn wavetable_builder(pitch: Share<Controllable<Param<f64>>>) -> MyVoice {
     let wavetable = make_wavetable();
     let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
     let (gain, mut gain_ctrl) = controllable_param(1.0);

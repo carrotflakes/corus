@@ -2,23 +2,23 @@ use std::f64::consts::FRAC_PI_2;
 
 use super::{C1f64, C2f64, Mono, Signal, Stereo};
 
-pub trait IntoStereo<F>: Signal<Float = F> {
-    type Output: Stereo<F>;
+pub trait IntoStereo: Signal {
+    type Output: Stereo<Float = Self::Float>;
 
-    fn into_stereo(&self) -> <Self as IntoStereo<F>>::Output;
-    fn into_stereo_with_pan(&self, pan: F) -> <Self as IntoStereo<F>>::Output;
+    fn into_stereo(&self) -> <Self as IntoStereo>::Output;
+    fn into_stereo_with_pan(&self, pan: Self::Float) -> <Self as IntoStereo>::Output;
 }
 
-impl IntoStereo<f64> for C1f64 {
+impl IntoStereo for C1f64 {
     type Output = C2f64;
 
     #[inline]
-    fn into_stereo(&self) -> <Self as IntoStereo<f64>>::Output {
+    fn into_stereo(&self) -> <Self as IntoStereo>::Output {
         C2f64::from_lr(self.get_m(), self.get_m())
     }
 
     #[inline]
-    fn into_stereo_with_pan(&self, pan: f64) -> <Self as IntoStereo<f64>>::Output {
+    fn into_stereo_with_pan(&self, pan: f64) -> <Self as IntoStereo>::Output {
         let pan = pan.clamp(-1.0, 1.0);
         let x = (pan + 1.0) * 0.5 * FRAC_PI_2;
         let gain_l = x.cos();
@@ -27,16 +27,16 @@ impl IntoStereo<f64> for C1f64 {
     }
 }
 
-impl IntoStereo<f64> for C2f64 {
+impl IntoStereo for C2f64 {
     type Output = C2f64;
 
     #[inline]
-    fn into_stereo(&self) -> <Self as IntoStereo<f64>>::Output {
+    fn into_stereo(&self) -> <Self as IntoStereo>::Output {
         C2f64::from_lr(self.get_l(), self.get_r())
     }
 
     #[inline]
-    fn into_stereo_with_pan(&self, pan: f64) -> <Self as IntoStereo<f64>>::Output {
+    fn into_stereo_with_pan(&self, pan: f64) -> <Self as IntoStereo>::Output {
         let pan = pan.clamp(-1.0, 1.0);
         if pan <= 0.0 {
             let x = (pan + 1.0) * FRAC_PI_2;

@@ -15,7 +15,7 @@ where
         + 'static
         + Add<Output = A::Output>
         + Mul<Output = A::Output>
-        + IntoStereo<O::Float, Output = O>,
+        + IntoStereo<Output = O>,
     B: Node<Output = f64>,
 {
     a: A,
@@ -31,7 +31,7 @@ where
         + 'static
         + Add<Output = A::Output>
         + Mul<Output = A::Output>
-        + IntoStereo<O::Float, Output = O>,
+        + IntoStereo<Output = O>,
     B: Node<Output = f64>,
 {
     pub fn new(a: A, b: B) -> Self {
@@ -47,11 +47,7 @@ impl<O, A, B> Node for Pan<O, A, B>
 where
     O: Clone + 'static + Signal<Float = f64>,
     A: Node,
-    A::Output: Clone
-        + 'static
-        + Add<Output = A::Output>
-        + Mul<Output = A::Output>
-        + IntoStereo<O::Float, Output = O>,
+    A::Output: Signal<Float = f64> + IntoStereo<Output = O>,
     B: Node<Output = f64>,
 {
     type Output = O;

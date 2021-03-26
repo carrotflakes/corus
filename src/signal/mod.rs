@@ -140,22 +140,22 @@ impl Signal for C2f64 {
     }
 }
 
-pub trait Mono<F>: Signal<Float = F> + Mul<Output = Self> + Add<Output = Self> {
-    type Stereo: Stereo<F>;
+pub trait Mono: Signal {
+    type Stereo: Stereo<Float = Self::Float>;
 
-    fn from_m(m: F) -> Self;
-    fn get_m(&self) -> F;
+    fn from_m(m: Self::Float) -> Self;
+    fn get_m(&self) -> Self::Float;
 }
 
-pub trait Stereo<F>: Signal<Float = F> {
-    type Mono: Mono<F>;
+pub trait Stereo: Signal {
+    type Mono: Mono<Float = Self::Float>;
 
-    fn from_lr(l: F, r: F) -> Self;
-    fn get_l(&self) -> F;
-    fn get_r(&self) -> F;
+    fn from_lr(l: Self::Float, r: Self::Float) -> Self;
+    fn get_l(&self) -> Self::Float;
+    fn get_r(&self) -> Self::Float;
 }
 
-impl Mono<f64> for f64 {
+impl Mono for f64 {
     type Stereo = C2f64;
 
     #[inline]
@@ -169,7 +169,7 @@ impl Mono<f64> for f64 {
     }
 }
 
-impl Stereo<f64> for C2f64 {
+impl Stereo for C2f64 {
     type Mono = C1f64;
 
     #[inline]

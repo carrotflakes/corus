@@ -43,11 +43,7 @@ use crate::{
     ProcContext,
 };
 
-pub fn amp_pan<A, G, P>(
-    node: A,
-    gain: G,
-    pan: P,
-) -> Pan<C2f64, Amp<A, G>, P>
+pub fn amp_pan<A, G, P>(node: A, gain: G, pan: P) -> Pan<C2f64, Amp<A, G>, P>
 where
     A: Node<Output = C1f64>,
     G: Node<Output = C1f64>,
@@ -56,9 +52,9 @@ where
     Pan::new(Amp::new(node, gain), pan)
 }
 
-pub fn controllable_param<T: Mono<f64>>(
+pub fn controllable_param<T: Mono<Float = f64>>(
     initial_value: f64,
-) -> (Controllable<Param<f64, T>>, Controller<Param<f64, T>>) {
+) -> (Controllable<Param<T>>, Controller<Param<T>>) {
     let c = Controllable::new(Param::new());
     let mut ctrl = c.controller();
     ctrl.lock().set_value_at_time(0.0, initial_value);

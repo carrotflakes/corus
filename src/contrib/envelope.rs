@@ -9,18 +9,18 @@ use super::controllable_param;
 
 type F = f64;
 
-pub trait EnvelopeGenerator<T: Mono<F>> {
+pub trait EnvelopeGenerator<T: Mono<Float = F>> {
     fn generate(
         &self,
     ) -> (
-        Controllable<Param<F, T>>,
+        Controllable<Param<T>>,
         Box<dyn FnMut(f64) + Send + Sync>,
         Box<dyn FnMut(f64) + Send + Sync>,
     );
 }
 
 #[derive(Debug, Clone)]
-pub struct AdsrEnvelope<F: 'static + Clone + Default, T: Mono<F>> {
+pub struct AdsrEnvelope<F: 'static + Clone + Default, T: Mono> {
     pub a: f64,
     pub d: F,
     pub s: f64,
@@ -28,7 +28,7 @@ pub struct AdsrEnvelope<F: 'static + Clone + Default, T: Mono<F>> {
     _t: PhantomData<T>,
 }
 
-impl<T: Mono<F> + Send + Sync> AdsrEnvelope<F, T> {
+impl<T: Mono<Float = F> + Send + Sync> AdsrEnvelope<F, T> {
     pub fn new(a: f64, d: F, s: f64, r: f64) -> Self {
         Self { a, d, s, r, _t: Default::default() }
     }
@@ -36,7 +36,7 @@ impl<T: Mono<F> + Send + Sync> AdsrEnvelope<F, T> {
     pub fn build(
         &self,
     ) -> (
-        Controllable<Param<F, T>>,
+        Controllable<Param<T>>,
         impl FnMut(f64) + Send + Sync,
         impl FnMut(f64) + Send + Sync,
     ) {
@@ -71,20 +71,20 @@ impl<T: Mono<F> + Send + Sync> AdsrEnvelope<F, T> {
 }
 
 #[derive(Debug, Clone)]
-pub struct ArEnvelope<T: Mono<F> + Send + Sync> {
+pub struct ArEnvelope<T: Mono<Float = F> + Send + Sync> {
     pub a: f64,
     pub r: f64,
     _t: PhantomData<T>,
 }
 
-impl<T: Mono<F> + Send + Sync> ArEnvelope<T> {
+impl<T: Mono<Float = F> + Send + Sync> ArEnvelope<T> {
     pub fn new(a: f64, r: f64) -> Self {
         Self { a, r, _t: Default::default() }
     }
     pub fn build(
         &self,
     ) -> (
-        Controllable<Param<F, T>>,
+        Controllable<Param<T>>,
         impl FnMut(f64) + Send + Sync,
         impl FnMut(f64) + Send + Sync,
     ) {
@@ -108,11 +108,11 @@ impl<T: Mono<F> + Send + Sync> ArEnvelope<T> {
     }
 }
 
-impl<T: Mono<F> + Send + Sync> EnvelopeGenerator<T> for AdsrEnvelope<F, T> {
+impl<T: Mono<Float = F> + Send + Sync> EnvelopeGenerator<T> for AdsrEnvelope<F, T> {
     fn generate(
         &self,
     ) -> (
-        Controllable<Param<F, T>>,
+        Controllable<Param<T>>,
         Box<dyn FnMut(f64) + Send + Sync>,
         Box<dyn FnMut(f64) + Send + Sync>,
     ) {
@@ -121,11 +121,11 @@ impl<T: Mono<F> + Send + Sync> EnvelopeGenerator<T> for AdsrEnvelope<F, T> {
     }
 }
 
-impl<T: Mono<F> + Send + Sync> EnvelopeGenerator<T> for ArEnvelope<T> {
+impl<T: Mono<Float = F> + Send + Sync> EnvelopeGenerator<T> for ArEnvelope<T> {
     fn generate(
         &self,
     ) -> (
-        Controllable<Param<F, T>>,
+        Controllable<Param<T>>,
         Box<dyn FnMut(f64) + Send + Sync>,
         Box<dyn FnMut(f64) + Send + Sync>,
     ) {

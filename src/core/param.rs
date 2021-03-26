@@ -18,18 +18,26 @@ pub struct Event<F: Float> {
     body: EventBody<F>,
 }
 
-pub struct Param<F: Float, T: Mono<F>> {
-    first_event: Event<F>,
-    events: VecDeque<Event<F>>,
+pub struct Param<T>
+where
+    T: Mono,
+    T::Float: Float,
+{
+    first_event: Event<T::Float>,
+    events: VecDeque<Event<T::Float>>,
     _t: PhantomData<T>,
 }
 
-impl<F: Float, T: Mono<F>> Param<F, T> {
+impl<T: Mono> Param<T>
+where
+    T: Mono,
+    T::Float: Float,
+{
     pub fn new() -> Self {
         Self::with_value(Default::default())
     }
 
-    pub fn with_value(value: F) -> Self {
+    pub fn with_value(value: T::Float) -> Self {
         Param {
             first_event: Event {
                 time: 0.0,
@@ -40,7 +48,7 @@ impl<F: Float, T: Mono<F>> Param<F, T> {
         }
     }
 
-    pub fn push_event(&mut self, event: Event<F>) {
+    pub fn push_event(&mut self, event: Event<T::Float>) {
         for (i, e) in self.events.iter().enumerate() {
             if event.time < e.time {
                 self.events.insert(i, event);
@@ -50,28 +58,28 @@ impl<F: Float, T: Mono<F>> Param<F, T> {
         self.events.push_back(event);
     }
 
-    pub fn set_value_at_time(&mut self, time: f64, value: F) {
+    pub fn set_value_at_time(&mut self, time: f64, value: T::Float) {
         self.push_event(Event {
             time,
             body: EventBody::SetValueAtTime { value },
         });
     }
 
-    pub fn linear_ramp_to_value_at_time(&mut self, time: f64, value: F) {
+    pub fn linear_ramp_to_value_at_time(&mut self, time: f64, value: T::Float) {
         self.push_event(Event {
             time,
             body: EventBody::LinearRampToValueAtTime { value },
         });
     }
 
-    pub fn exponential_ramp_to_value_at_time(&mut self, time: f64, value: F) {
+    pub fn exponential_ramp_to_value_at_time(&mut self, time: f64, value: T::Float) {
         self.push_event(Event {
             time,
             body: EventBody::ExponentialRampToValueAtTime { value },
         });
     }
 
-    pub fn set_target_at_time(&mut self, time: f64, target: F, time_constant: f64) {
+    pub fn set_target_at_time(&mut self, time: f64, target: T::Float, time_constant: f64) {
         self.push_event(Event {
             time,
             body: EventBody::SetTargetAtTime {
@@ -81,7 +89,7 @@ impl<F: Float, T: Mono<F>> Param<F, T> {
         });
     }
 
-    fn cancel_scheduled_values_(&mut self, time: f64) -> Option<Event<F>> {
+    fn cancel_scheduled_values_(&mut self, time: f64) -> Option<Event<T::Float>> {
         if let Some(i) = self.events.iter().position(|e| time <= e.time) {
             let e = self.events[i].clone();
             self.events.truncate(i);
@@ -115,7 +123,7 @@ impl<F: Float, T: Mono<F>> Param<F, T> {
     }
 
     #[inline]
-    pub fn compute_value(&self, time: f64) -> F {
+    pub fn compute_value(&self, time: f64) -> T::Float {
         let mut before = Some(&self.first_event);
         let mut after = None;
         for event in &self.events {
@@ -185,7 +193,7 @@ impl<F: Float, T: Mono<F>> Param<F, T> {
     }
 }
 
-impl<T: Mono<f64>> Node for Param<f64, T> {
+impl<T: Mono<Float = f64>> Node for Param<T> {
     type Output = T;
 
     #[inline]
@@ -252,7 +260,7 @@ impl Float for f64 {
 
 #[test]
 fn test() {
-    let mut param = Param::<f64, f64>::new();
+    let mut param = Param::<f64>::new();
     let mut pc = ProcContext::new(4);
 
     param.set_value_at_time(2.0 / 4.0, 1.0);

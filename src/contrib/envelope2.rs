@@ -4,7 +4,7 @@ use crate::{core::param3::ParamEventScheduleNode, signal::Mono};
 
 type F = f64;
 
-pub trait EnvelopeGenerator<T: Mono<F>> {
+pub trait EnvelopeGenerator<T: Mono> {
     fn generate(
         &self,
     ) -> (
@@ -15,7 +15,7 @@ pub trait EnvelopeGenerator<T: Mono<F>> {
 }
 
 #[derive(Debug, Clone)]
-pub struct AdsrEnvelope<F: 'static + Clone + Default, T: Mono<F>> {
+pub struct AdsrEnvelope<F: 'static + Clone + Default, T: Mono> {
     pub a: f64,
     pub d: F,
     pub s: f64,
@@ -23,7 +23,7 @@ pub struct AdsrEnvelope<F: 'static + Clone + Default, T: Mono<F>> {
     _t: PhantomData<T>,
 }
 
-impl<T: Mono<F> + Send + Sync> AdsrEnvelope<F, T> {
+impl<T: Mono + Send + Sync> AdsrEnvelope<F, T> {
     pub fn new(a: f64, d: F, s: f64, r: f64) -> Self {
         assert!(0.0 < d);
         Self { a, d, s, r, _t: Default::default() }
@@ -69,13 +69,13 @@ impl<T: Mono<F> + Send + Sync> AdsrEnvelope<F, T> {
 }
 
 #[derive(Debug, Clone)]
-pub struct ArEnvelope<T: Mono<F> + Send + Sync> {
+pub struct ArEnvelope<T: Mono + Send + Sync> {
     pub a: f64,
     pub r: f64,
     _t: PhantomData<T>,
 }
 
-impl<T: Mono<F> + Send + Sync> ArEnvelope<T> {
+impl<T: Mono + Send + Sync> ArEnvelope<T> {
     pub fn new(a: f64, r: f64) -> Self {
         Self { a, r, _t: Default::default() }
     }
@@ -107,7 +107,7 @@ impl<T: Mono<F> + Send + Sync> ArEnvelope<T> {
     }
 }
 
-impl<T: Mono<F> + Send + Sync> EnvelopeGenerator<T> for AdsrEnvelope<F, T> {
+impl<T: Mono + Send + Sync> EnvelopeGenerator<T> for AdsrEnvelope<F, T> {
     fn generate(
         &self,
     ) -> (
@@ -120,7 +120,7 @@ impl<T: Mono<F> + Send + Sync> EnvelopeGenerator<T> for AdsrEnvelope<F, T> {
     }
 }
 
-impl<T: Mono<F> + Send + Sync> EnvelopeGenerator<T> for ArEnvelope<T> {
+impl<T: Mono + Send + Sync> EnvelopeGenerator<T> for ArEnvelope<T> {
     fn generate(
         &self,
     ) -> (
