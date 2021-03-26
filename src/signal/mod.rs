@@ -1,7 +1,9 @@
+mod c1f64arr;
 mod into_mono;
 mod into_stereo;
 mod mono_stereo;
 
+pub use c1f64arr::C1f64Arr;
 pub use into_mono::IntoMono;
 pub use into_stereo::IntoStereo;
 pub use mono_stereo::{Mono, Stereo};
