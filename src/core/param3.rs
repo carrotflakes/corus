@@ -23,10 +23,10 @@ pub struct Param<F: Float> {
 
 impl<F: Float> Param<F> {
     pub fn new() -> Self {
-        Self::with_value(Default::default())
+        Self::from_value(Default::default())
     }
 
-    pub fn with_value(value: F) -> Self {
+    pub fn from_value(value: F) -> Self {
         Param {
             value: value.clone(),
             sample_rate: 0,
@@ -411,7 +411,11 @@ pub struct ParamEventScheduleNode<F: Float> {
 
 impl<F: Float> ParamEventScheduleNode<F> {
     pub fn new() -> Self {
-        let param = EventControllable::new(Param::new());
+        Self::from_value(F::default())
+    }
+
+    pub fn from_value(value: F) -> Self {
+        let param = EventControllable::new(Param::from_value(value));
         ParamEventScheduleNode {
             schedule: Arc::new(Mutex::new(ParamEventSchedule::new())),
             param,

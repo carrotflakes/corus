@@ -220,7 +220,7 @@ impl<A: 'static + Node> EventScheduleNode<A> {
         }
     }
 
-    pub fn get_scheduler(&mut self) -> EventSchedule<A> {
+    pub fn get_scheduler(&self) -> EventSchedule<A> {
         self.schedule.clone()
     }
 }
