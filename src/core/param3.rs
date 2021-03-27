@@ -422,7 +422,7 @@ impl<F: Float> ParamEventScheduleNode<F> {
         }
     }
 
-    pub fn get_scheduler(&mut self) -> Arc<Mutex<ParamEventSchedule<F>>> {
+    pub fn get_scheduler(&self) -> Arc<Mutex<ParamEventSchedule<F>>> {
         self.schedule.clone()
     }
 }
