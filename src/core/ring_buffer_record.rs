@@ -23,10 +23,12 @@ where
         }
     }
 
+    #[inline]
     pub fn get_buffer(&self) -> &RingBuffer<A::Output> {
         &self.buffer
     }
 
+    #[inline]
     pub fn get_buffer_mut(&mut self) -> &mut RingBuffer<A::Output> {
         &mut self.buffer
     }
@@ -60,6 +62,7 @@ where
     A: Node,
     A::Output: Clone + Default,
 {
+    #[inline]
     fn borrow(&self) -> &RingBuffer<A::Output> {
         &self.buffer
     }
