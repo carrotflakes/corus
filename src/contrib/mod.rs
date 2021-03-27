@@ -18,6 +18,7 @@ mod perlin_noise;
 pub mod poly_synth;
 pub mod rand;
 pub mod rand_fm_synth;
+pub mod rms;
 pub mod schroeder;
 pub mod simple_comp;
 pub mod sma;
