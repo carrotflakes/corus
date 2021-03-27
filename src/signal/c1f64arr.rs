@@ -80,6 +80,15 @@ impl<const N: usize> Default for C1f64Arr<N> {
 impl<const N: usize> Signal for C1f64Arr<N> {
     type Float = f64;
 
+    #[inline]
+    fn map<F: Fn(f64) -> f64>(&self, f: F) -> Self {
+        let mut a = [0.0; N];
+        for i in 0..N {
+            a[i] = f(self.0[i]);
+        }
+        Self(a)
+    }
+
     fn mul_identity() -> Self {
         C1f64Arr([1.0; N])
     }
