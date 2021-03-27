@@ -12,7 +12,7 @@ fn main() {
     println!("load {:?} ...", &file);
     let buf = write_to_file::read_wav_file(&file);
 
-    let acc = Accumulator::new(Var::from(-1.0), 100.0);
+    let acc = Accumulator::new(Var::new(-1.0), 100.0);
     let node = Map::new(acc, move |f| {
         buf[((f * SAMPLE_RATE as f64) as usize).rem_euclid(buf.len())]
     });

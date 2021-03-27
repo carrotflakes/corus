@@ -1,23 +1,25 @@
 use std::marker::PhantomData;
 
-use crate::EventListener;
+use crate::{signal::Signal, EventListener};
 
 use super::{Node, ProcContext};
 
 pub struct Accumulator<A>
 where
-    A: Node<Output = f64>,
+    A: Node,
+    A::Output: Signal<Float = f64>,
 {
     node: A,
     value: A::Output,
-    upper: A::Output,
+    upper: <A::Output as Signal>::Float,
 }
 
 impl<A> Accumulator<A>
 where
-    A: Node<Output = f64>,
+    A: Node,
+    A::Output: Signal<Float = f64>,
 {
-    pub fn new(node: A, upper: A::Output) -> Self {
+    pub fn new(node: A, upper: <A::Output as Signal>::Float) -> Self {
         Accumulator {
             node,
             value: Default::default(),
@@ -28,15 +30,16 @@ where
 
 impl<A> Node for Accumulator<A>
 where
-    A: Node<Output = f64>,
+    A: Node,
+    A::Output: Signal<Float = f64>,
 {
     type Output = A::Output;
 
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let d = self.node.proc(ctx) / ctx.sample_rate as f64;
-        self.value = (self.value + d).rem_euclid(self.upper);
-        self.value
+        self.value = (self.value.clone() + d).map(|x| x.rem_euclid(self.upper));
+        self.value.clone()
     }
 
     fn lock(&mut self, ctx: &ProcContext) {
@@ -50,7 +53,8 @@ where
 
 pub struct SetValueAtTime<A>
 where
-    A: Node<Output = f64>,
+    A: Node,
+    A::Output: Signal<Float = f64>,
 {
     value: A::Output,
     _t: PhantomData<A>,
@@ -58,7 +62,8 @@ where
 
 impl<A> SetValueAtTime<A>
 where
-    A: Node<Output = f64>,
+    A: Node,
+    A::Output: Signal<Float = f64>,
 {
     pub fn new(value: A::Output) -> Self {
         Self {
@@ -70,7 +75,8 @@ where
 
 impl<A> EventListener<SetValueAtTime<A>> for Accumulator<A>
 where
-    A: Node<Output = f64> + 'static,
+    A: Node + 'static,
+    A::Output: Signal<Float = f64>,
 {
     #[inline]
     fn apply_event(&mut self, _time: f64, event: &SetValueAtTime<A>) {

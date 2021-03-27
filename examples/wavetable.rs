@@ -11,7 +11,7 @@ const SAMPLE_RATE: usize = 44100;
 
 fn main() {
     let buf = vec![0.0, 0.2, 0.5, 0.3, 0.4, 0.3, 0.3, 0.1, 0.1, 0.1, -1.0];
-    let acc = Accumulator::new(Var::from(-1.0), 1.0);
+    let acc = Accumulator::new(Var::new(-1.0), 1.0);
     let node = Map::new(acc, move |f| {
         buf[((f * buf.len() as f64 * 140.0) as usize).rem_euclid(buf.len())]
     });

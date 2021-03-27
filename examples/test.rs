@@ -14,7 +14,7 @@ use corus::{
 
 fn main() {
     let node = Map::new(
-        Accumulator::new(Var::from(440.0), C1f64::from(1.0)),
+        Accumulator::new(Var::new(440.0), C1f64::from(1.0)),
         |v| v + C1f64::from(-0.5),
     );
     let mut freq = Param::new();
