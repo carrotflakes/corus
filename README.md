@@ -7,11 +7,11 @@ TODO:
 - interpolation
 - rich reverb
 - wavetable
-- pararell mix
+- sampler
 - chip
 
 ## Cardinal nodes
-- Constant: produce a constant value.
+- Var: produce a constant value.
 - Param: produce a automated f64.
 - Amp: amplify a signal.
 - Add: mix two signals.
