@@ -12,7 +12,7 @@ use corus::{
         accumulator::{Accumulator, SetValueAtTime},
         add::Add,
         amp::Amp,
-        constant::Constant,
+        var::Var,
         mix::Mix,
         mul::Mul,
         param3::{ParamEventSchedule, ParamEventScheduleNode},
@@ -198,7 +198,7 @@ fn saw_builder(pitch: Share<ParamEventScheduleNode<f64>>) -> MyVoice {
     let mut acc_ctl = acc.get_scheduler();
     let mut acc_reset = move |time: f64| acc_ctl.push_event(time, SetValueAtTime::new(0.5));
 
-    let saw = Add::new(acc, Constant::from(-0.5));
+    let saw = Add::new(acc, Var::from(-0.5));
     let (env, mut env_on, mut env_off) = AdsrEnvelope::<f64>::new(0.01, 0.5, 0.2, 0.3).build();
     let node = Amp::new(saw, Amp::new(env, gain));
     Voice(

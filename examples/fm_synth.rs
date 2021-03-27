@@ -2,7 +2,7 @@ mod write_to_file;
 
 use corus::{
     contrib::{envelope2::AdsrEnvelope, fm_synth::FmSynth},
-    core::constant::Constant,
+    core::var::Var,
 };
 
 fn main() {
@@ -10,10 +10,10 @@ fn main() {
 
     #[rustfmt::skip]
     let mut node = FmSynth::new([
-        (Constant::new(1.0f64), Constant::from(0.0), AdsrEnvelope::new(0.01, 0.5, 0.3, 0.3), [0.0; 4]),
-        (Constant::from(1.01), Constant::from(0.0), AdsrEnvelope::new(0.5, 0.5, 0.7, 0.3), [0.0; 4]),
-        (Constant::from(0.0), Constant::from(4.0), AdsrEnvelope::new(0.1, 0.5, 0.3, 0.3), [0.0; 4]),
-        (Constant::from(1.0), Constant::from(0.0), AdsrEnvelope::new(0.02, 0.5, 0.3, 0.3), [0.0, 2000.0, 5.0, 0.0]),
+        (Var::new(1.0f64), Var::from(0.0), AdsrEnvelope::new(0.01, 0.5, 0.3, 0.3), [0.0; 4]),
+        (Var::from(1.01), Var::from(0.0), AdsrEnvelope::new(0.5, 0.5, 0.7, 0.3), [0.0; 4]),
+        (Var::from(0.0), Var::from(4.0), AdsrEnvelope::new(0.1, 0.5, 0.3, 0.3), [0.0; 4]),
+        (Var::from(1.0), Var::from(0.0), AdsrEnvelope::new(0.02, 0.5, 0.3, 0.3), [0.0, 2000.0, 5.0, 0.0]),
     ],
     [0.0, 0.0, 0.0, 1.0],
     );

@@ -6,7 +6,7 @@ use std::{
 };
 
 use corus::{
-    core::{constant::Constant, controllable::Controllable, mul::Mul, share::Share, sine::Sine},
+    core::{var::Var, controllable::Controllable, mul::Mul, share::Share, sine::Sine},
     notenum_to_frequency,
     signal::Mono,
     time::Sample,
@@ -30,7 +30,7 @@ pub fn f<U: Ui>() {
     let canvas = window.into_canvas().unwrap();
 
     let audio_ctx = Arc::new(Mutex::new(ProcContext::new(44100 as u64)));
-    let controllable = Controllable::new(Sine::new(Constant::from(440.0)));
+    let controllable = Controllable::new(Sine::new(Var::from(440.0)));
     let mut controller = controllable.controller();
     let controllable = Share::new(controllable);
 
@@ -39,7 +39,7 @@ pub fn f<U: Ui>() {
             *audio_ctx.lock().unwrap() = ProcContext::new(sample_rate as u64);
             Audio::new(
                 audio_ctx.clone(),
-                Box::new(Mul::new(controllable.clone(), Constant::from(0.05))),
+                Box::new(Mul::new(controllable.clone(), Var::from(0.05))),
             )
         })
         .unwrap();
@@ -96,7 +96,7 @@ pub fn f<U: Ui>() {
                         // osc_freq_ctrl
                         //     .lock()
                         //     .set_value_at_time(audio_time, notenum_to_frequency(nn));
-                        *controller.lock() = Sine::new(Constant::from(notenum_to_frequency(nn)));
+                        *controller.lock() = Sine::new(Var::from(notenum_to_frequency(nn)));
                     };
                     match keycode {
                         Keycode::Z => set(64),

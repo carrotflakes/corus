@@ -6,7 +6,7 @@ use corus::{
         add::Add,
         amp::Amp,
         biquad_filter::{BiquadFilter, BiquadFilterParams},
-        constant::Constant,
+        var::Var,
         param::Param,
         placeholder::Placeholder,
         share::Share,
@@ -35,21 +35,21 @@ fn main() {
                 node,
                 Amp::new(
                     BiquadFilter::new(
-                        RingBufferPlayback::new(Constant::from(0.01), buffer.clone()),
+                        RingBufferPlayback::new(Var::from(0.01), buffer.clone()),
                         BiquadFilterParams::new(
                             corus::core::biquad_filter::LowPass,
-                            Constant::from(880.0),
-                            Constant::from(1.0),
-                            Constant::from(2.0),
+                            Var::from(880.0),
+                            Var::from(1.0),
+                            Var::from(2.0),
                         ),
                     ),
-                    Constant::from(0.5),
+                    Var::from(0.5),
                 ),
             )) as Box<dyn Node<Output = C1f64>>);
         }
         buffer
     };
-    let node = amp_pan(node, Constant::from(0.5), Constant::from(0.0));
+    let node = amp_pan(node, Var::from(0.5), Var::from(0.0));
 
     write_to_file::write_to_file("karplus-strong.wav", SAMPLE_RATE, 3.0, node, None, None);
 }

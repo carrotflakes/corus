@@ -9,7 +9,7 @@ use corus::{
         accumulator::{Accumulator, SetValueAtTime},
         add::Add,
         amp::Amp,
-        constant::Constant,
+        var::Var,
         controllable::Controllable,
         param3::ParamEventScheduleNode,
     },
@@ -29,7 +29,7 @@ fn main() {
             C1f64::from(1.0),
         )));
         let mut acc_ctl = acc.controller();
-        let saw = Add::new(acc, Constant::from(-0.5));
+        let saw = Add::new(acc, Var::from(-0.5));
         let (env, mut env_on, mut env_off) =
             AdsrEnvelope::<f64>::new(0.01, 0.5, 0.2, 0.3).build();
         let node = Amp::new(saw, env);
@@ -69,7 +69,7 @@ fn main() {
     synth.note_on(1.3, 71, 71);
     synth.note_off(1.6, 71, ());
 
-    let node = Amp::new(synth, Constant::from(0.1));
+    let node = Amp::new(synth, Var::from(0.1));
 
     write_to_file::write_to_file("poly.wav", sample_rate, 3.0, node, None, None);
 }

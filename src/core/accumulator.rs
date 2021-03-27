@@ -82,7 +82,7 @@ where
 fn test() {
     use crate::{EventControlInplace, EventPusher};
     let mut accumulator =
-        EventControlInplace::new(Accumulator::new(super::constant::Constant::new(1.0), 4.0));
+        EventControlInplace::new(Accumulator::new(super::var::Var::new(1.0), 4.0));
     let mut pc = ProcContext::new(4);
 
     accumulator.push_event(0.0, SetValueAtTime::new(1.0));

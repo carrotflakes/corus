@@ -11,7 +11,7 @@ use corus::{
     signal::C1f64,
 };
 
-use corus::core::{constant::Constant, Node};
+use corus::core::{var::Var, Node};
 
 const SAMPLE_RATE: usize = 44100;
 
@@ -70,6 +70,6 @@ fn main() {
     };
 
     let node = Mix::new(vec![kick, snare, hh]);
-    let node = Mul::new(node, Constant::from(0.2));
+    let node = Mul::new(node, Var::from(0.2));
     write_to_file::write_to_file("beats.wav", SAMPLE_RATE, 4.0 / bps, node, None, None);
 }

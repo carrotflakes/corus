@@ -2,7 +2,7 @@ use std::{thread, time::Duration};
 
 use corus::{
     core::{
-        add::Add, mul::Mul, constant::Constant, controllable::Controllable, param::Param,
+        add::Add, mul::Mul, var::Var, controllable::Controllable, param::Param,
         share::Share, sine::Sine,
     },
     notenum_to_frequency,
@@ -50,7 +50,7 @@ pub fn fm() {
                             mod_gain,
                         ),
                     )),
-                    Constant::from(0.2),
+                    Var::from(0.2),
                 )),
             )
         })

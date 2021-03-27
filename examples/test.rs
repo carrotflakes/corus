@@ -4,7 +4,7 @@ use corus::{
     contrib::{bypass_fader::bypass_fader, schroeder::schroeder_reverb},
     core::{
         accumulator::Accumulator, biquad_filter::BiquadFilter, comb_filter::CombFilter,
-        constant::Constant,
+        var::Var,
     },
     core::{
         biquad_filter::BiquadFilterParams, map::Map, param::Param, share::Share,
@@ -14,7 +14,7 @@ use corus::{
 
 fn main() {
     let node = Map::new(
-        Accumulator::new(Constant::from(440.0), C1f64::from(1.0)),
+        Accumulator::new(Var::from(440.0), C1f64::from(1.0)),
         |v| v + C1f64::from(-0.5),
     );
     let mut freq = Param::new();
@@ -25,15 +25,15 @@ fn main() {
         BiquadFilterParams::new(
             corus::core::biquad_filter::Peaking,
             freq,
-            Constant::from(10.0),
-            Constant::from(10.0),
+            Var::from(10.0),
+            Var::from(10.0),
         ),
     );
     let node = CombFilter::new(node, 0.01, 0.9.into());
     let node = bypass_fader(
         Share::new(node),
         &|node| schroeder_reverb(node),
-        Constant::from(1.0),
+        Var::from(1.0),
     );
     write_to_file::write_to_file("test.wav", 44100, 3.0, node, None, None);
 }

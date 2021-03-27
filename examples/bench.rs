@@ -2,7 +2,7 @@ mod write_to_file;
 
 use corus::{
     core::{
-        add::Add, amp::Amp, constant::Constant, controllable::Controllable, mix::Mix, param::Param,
+        add::Add, amp::Amp, var::Var, controllable::Controllable, mix::Mix, param::Param,
         placeholder::Placeholder, share::Share,
         ring_buffer_playback::RingBufferPlayback, ring_buffer_record::RingBufferRecord, sine::Sine,
         Node,
@@ -15,8 +15,8 @@ const SAMPLE_RATE: usize = 44100;
 fn main() {
     let mut nodes = Vec::new();
     let modulator = Share::new(Amp::new(
-        Sine::new(Constant::from(4.0)),
-        Constant::from(20.0),
+        Sine::new(Var::from(4.0)),
+        Var::from(20.0),
     ));
     for i in 0..100 {
         let freq = Controllable::new(Param::new());
@@ -27,7 +27,7 @@ fn main() {
         freq_ctrl.lock().exponential_ramp_to_value_at_time(2.0, f);
         nodes.push(Box::new(Amp::new(
             Sine::new(Add::new(freq, modulator.clone())),
-            Constant::from(1.0 / (i + 1) as f64),
+            Var::from(1.0 / (i + 1) as f64),
         )) as Box<dyn Node<Output = C1f64>>);
     }
 
@@ -41,15 +41,15 @@ fn main() {
             ps.set(Box::new(Add::new(
                 mix,
                 Amp::new(
-                    RingBufferPlayback::new(Constant::from(0.5), buffer.clone()),
-                    Constant::from(0.5),
+                    RingBufferPlayback::new(Var::from(0.5), buffer.clone()),
+                    Var::from(0.5),
                 ),
             )) as Box<dyn Node<Output = C1f64>>);
         }
         buffer
     };
 
-    let node = Amp::new(mix, Constant::from(0.1));
+    let node = Amp::new(mix, Var::from(0.1));
 
     write_to_file::write_to_file("bench.wav", SAMPLE_RATE, 4.0, node, None, None);
 }

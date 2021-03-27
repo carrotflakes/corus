@@ -3,7 +3,7 @@ mod write_to_file;
 use corus::{EventControllable, EventPusher, EventQueue, contrib::{
         amp_pan,
         benihora::{make_noise_node, Benihora, BenihoraEvent},
-    }, core::constant::Constant, notenum_to_frequency};
+    }, core::var::Var, notenum_to_frequency};
 
 const SAMPLE_RATE: usize = 44100;
 
@@ -98,6 +98,6 @@ fn main() {
     benihora_ctl.push_event(16.0, BenihoraEvent::SetVibrato(0.01, 4.0));
     benihora_ctl.push_event(17.0, BenihoraEvent::SetVibrato(0.03, 4.0));
 
-    let node = amp_pan(benihora, Constant::from(1.0), Constant::from(0.0));
+    let node = amp_pan(benihora, Var::from(1.0), Var::from(0.0));
     write_to_file::write_to_file_with_event_queue("benihora.wav", SAMPLE_RATE, 20.0, node, None, None, eq);
 }

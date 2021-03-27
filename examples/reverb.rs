@@ -25,7 +25,7 @@ fn main() {
     // let node = Impulse::new(C1f64::from(1.0));
     // let node = CombFilter::new(node, 0.01, 0.99.into());
     // let node = AllPassFilter::new(node, 0.01, 0.99.into());
-    // let node = Amp::new(node, Constant::from(0.3));
+    // let node = Amp::new(node, Var::from(0.3));
     let node = schroeder_reverb(node);
     let file = format!("{}-reverbed.wav", file[..file.len() - 4].to_string());
 

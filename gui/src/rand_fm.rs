@@ -7,7 +7,7 @@ use corus::{
         rand_fm_synth::rand_fm_synth,
     },
     core::{
-        mul::Mul, constant::Constant, controllable::Controllable, placeholder::Placeholder, Node,
+        mul::Mul, var::Var, controllable::Controllable, placeholder::Placeholder, Node,
     },
     notenum_to_frequency,
 };
@@ -34,7 +34,7 @@ pub fn rand_fm() {
     };
 
     let node = Controllable::new(Placeholder::new(Some(
-        Box::new(Constant::new(0.0)) as Box<dyn Node<Output = f64>>
+        Box::new(Var::new(0.0)) as Box<dyn Node<Output = f64>>
     )));
     let mut node_ctrl = node.controller();
 

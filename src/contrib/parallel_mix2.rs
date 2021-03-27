@@ -248,10 +248,10 @@ where
 #[test]
 fn test() {
     let nodes = vec![
-        crate::core::sine::Sine::new(crate::core::constant::Constant::from(1.0)),
-        crate::core::sine::Sine::new(crate::core::constant::Constant::from(2.0)),
-        crate::core::sine::Sine::new(crate::core::constant::Constant::from(3.0)),
-        crate::core::sine::Sine::new(crate::core::constant::Constant::from(4.0)),
+        crate::core::sine::Sine::new(crate::core::var::Var::from(1.0)),
+        crate::core::sine::Sine::new(crate::core::var::Var::from(2.0)),
+        crate::core::sine::Sine::new(crate::core::var::Var::from(3.0)),
+        crate::core::sine::Sine::new(crate::core::var::Var::from(4.0)),
     ];
     let mut mix = ParallelMix::new(nodes, 3);
     let mut ctx = ProcContext::new(10);

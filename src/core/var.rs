@@ -3,21 +3,21 @@ use crate::EventListener;
 use super::{Node, ProcContext};
 
 #[derive(Clone)]
-pub struct Constant<T: Clone + 'static> {
+pub struct Var<T: Clone + 'static> {
     value: T,
 }
 
-impl<T: Clone + 'static> Constant<T> {
+impl<T: Clone + 'static> Var<T> {
     pub fn new(value: T) -> Self {
-        Constant { value }
+        Var { value }
     }
 
     pub fn from<S: Clone + 'static + Into<T>>(src: S) -> Self {
-        Constant { value: src.into() }
+        Var { value: src.into() }
     }
 }
 
-impl<T: Clone + 'static> Node for Constant<T> {
+impl<T: Clone + 'static> Node for Var<T> {
     type Output = T;
 
     #[inline]
@@ -30,15 +30,15 @@ impl<T: Clone + 'static> Node for Constant<T> {
     fn unlock(&mut self) {}
 }
 
-pub enum ConstantEvent<T: Clone + 'static> {
+pub enum VarEvent<T: Clone + 'static> {
     SetValue(T),
 }
 
-impl<T: Clone + 'static> EventListener<ConstantEvent<T>> for Constant<T> {
+impl<T: Clone + 'static> EventListener<VarEvent<T>> for Var<T> {
     #[inline]
-    fn apply_event(&mut self, _time: f64, event: &ConstantEvent<T>) {
+    fn apply_event(&mut self, _time: f64, event: &VarEvent<T>) {
         match event {
-            ConstantEvent::SetValue(value) => {
+            VarEvent::SetValue(value) => {
                 self.value = value.clone();
             }
         }

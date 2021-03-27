@@ -1,10 +1,10 @@
-use crate::{core::constant::Constant, signal::{C1f64, Mono}};
+use crate::{core::var::Var, signal::{C1f64, Mono}};
 
 use super::{envelope2::AdsrEnvelope, fm_synth::FmSynth, rand::Rand};
 
 pub fn rand_fm_synth(
     seed: u32,
-) -> FmSynth<Constant<C1f64>, Constant<C1f64>> {
+) -> FmSynth<Var<C1f64>, Var<C1f64>> {
     let mut rand = Rand::new(seed);
     let f = |rand: &mut Rand, root: bool, inputs: [f64; 4]| {
         let rate_base = if root {
@@ -21,11 +21,11 @@ pub fn rand_fm_synth(
             rand.next_f64().powi(4),
             d,
             (1.0 + rand.next_f64().powi(2) * 2.0) / d, //rand.next_f64().powi(2),
-            rand.next_f64().powi(2) * 2.0,
+            rand.next_f64().powi(2) * if root { 2.0 } else { 5.0 },
         );
         (
-            Constant::new(C1f64::from_m(rate_base + (rand.next_f64() - 0.5) * 0.05)),
-            Constant::new(C1f64::from_m((rand.next_f64() - 0.5) * 0.05)),
+            Var::new(C1f64::from_m(rate_base + (rand.next_f64() - 0.5) * 0.05)),
+            Var::new(C1f64::from_m((rand.next_f64() - 0.5) * 0.05)),
             adsr,
             inputs,
         )

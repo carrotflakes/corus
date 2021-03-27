@@ -6,7 +6,7 @@ use super::{Node, ProcContext};
 
 #[derive(Clone, Copy)]
 pub enum ParamState<F: Float> {
-    Constant(F),
+    Var(F),
     Linear(F),
     Exponential(F, f64),
     Target { target: F, time_constant: f64 },
@@ -33,7 +33,7 @@ impl<F: Float> Param<F> {
             pre_add: 0.0.into(),
             post_add: 0.0.into(),
             mul: 1.0.into(),
-            state: ParamState::Constant(value),
+            state: ParamState::Var(value),
         }
     }
 }
@@ -45,7 +45,7 @@ impl<F: Float> Node for Param<F> {
     fn proc(&mut self, ctx: &ProcContext) -> F {
         if ctx.sample_rate != self.sample_rate {
             match self.state {
-                ParamState::Constant(v) => {
+                ParamState::Var(v) => {
                     self.pre_add = 0.0.into();
                     self.post_add = v;
                     self.mul = 0.0.into();
@@ -130,7 +130,7 @@ impl<F: Float> EventListener<ParamState<F>> for Param<F> {
     #[inline]
     fn apply_event(&mut self, _time: f64, event: &ParamState<F>) {
         match event {
-            ParamState::Constant(value) => {
+            ParamState::Var(value) => {
                 self.value = value.clone();
             }
             _ => {}
@@ -318,7 +318,7 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
                 ParamEvent::SetValueAtTime { value } => {
                     event_queue.push_event(
                         first.0,
-                        ParamState::Constant(value.clone()),
+                        ParamState::Var(value.clone()),
                         param.inner(),
                     );
                     self.last_value = value;
@@ -334,7 +334,7 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
                     );
                     event_queue.push_event(
                         first.0,
-                        ParamState::Constant(value.clone()),
+                        ParamState::Var(value.clone()),
                         param.inner(),
                     );
                     self.last_value = value;
@@ -350,7 +350,7 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
                     );
                     event_queue.push_event(
                         first.0,
-                        ParamState::Constant(value.clone()),
+                        ParamState::Var(value.clone()),
                         param.inner(),
                     );
                     self.last_value = value;

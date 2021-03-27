@@ -2,15 +2,15 @@ mod write_to_file;
 
 use corus::{
     contrib::delay::Delay,
-    core::constant::Constant,
+    core::var::Var,
     core::{add::Add, amp::Amp, sine::Sine},
 };
 
 fn main() {
-    let node = Sine::new(Constant::from(440.0));
+    let node = Sine::new(Var::from(440.0));
     let delay = Amp::new(
-        Add::new(Sine::new(Constant::from(4.0)), Constant::from(1.0)),
-        Constant::from(400.0),
+        Add::new(Sine::new(Var::from(4.0)), Var::from(1.0)),
+        Var::from(400.0),
     );
     let node = Delay::new(
         node,

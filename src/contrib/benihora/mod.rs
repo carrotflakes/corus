@@ -8,7 +8,7 @@ use crate::{
     core::{
         add::Add,
         biquad_filter::{BandPass, BiquadFilter, BiquadFilterParams},
-        constant::Constant,
+        var::Var,
         Node,
     },
     signal::{C1f64, Mono},
@@ -30,9 +30,9 @@ pub fn make_noise_node() -> Box<dyn Node<Output = f64> + Send + Sync> {
         },
         BiquadFilterParams::new(
             BandPass,
-            Constant::from(500.0),
-            Constant::from(0.0),
-            Constant::from(2.5),
+            Var::from(500.0),
+            Var::from(0.0),
+            Var::from(2.5),
         ),
     ); // q 0.5
     let node2 = BiquadFilter::new(
@@ -42,9 +42,9 @@ pub fn make_noise_node() -> Box<dyn Node<Output = f64> + Send + Sync> {
         },
         BiquadFilterParams::new(
             BandPass,
-            Constant::from(1000.0),
-            Constant::from(0.0),
-            Constant::from(2.5),
+            Var::from(1000.0),
+            Var::from(0.0),
+            Var::from(2.5),
         ),
     ); // q 0.5
     Box::new(Add::new(node1, node2))

@@ -1,6 +1,6 @@
 use crate::{
     core::{
-        add::Add, amp::Amp, constant::Constant, placeholder::Placeholder,
+        add::Add, amp::Amp, var::Var, placeholder::Placeholder,
         ring_buffer_playback::RingBufferPlayback, ring_buffer_record::RingBufferRecord,
         share::Share, Node,
     },
@@ -20,8 +20,8 @@ pub fn delay_fx<A: Node<Output = C2f64> + 'static + Send + Sync>(
         ps.set(Box::new(Add::new(
             node,
             Amp::new(
-                RingBufferPlayback::new(Constant::from(delay), buffer.clone()),
-                Constant::from(feedback),
+                RingBufferPlayback::new(Var::from(delay), buffer.clone()),
+                Var::from(feedback),
             ),
         )) as Box<dyn Node<Output = C2f64> + Send + Sync>);
     }

@@ -16,7 +16,7 @@ use corus::{
         add::Add,
         amp::Amp,
         biquad_filter::{BiquadFilter, BiquadFilterParams, LowPass},
-        constant::Constant,
+        var::Var,
         controllable::{Controllable, Controller},
         map::Map,
         mix::Mix,
@@ -100,7 +100,7 @@ fn main() {
 
     let node = corus::contrib::parallel_mix2::ParallelMix::new(synthes, 8);
     // let node = corus::contrib::parallel_mix::ParallelMix::new(synthes);
-    // let node = Amp::new(node, Constant::new(C2f64([0.25, 0.25])));
+    // let node = Amp::new(node, Var::new(C2f64([0.25, 0.25])));
     let node = delay_fx(node, SAMPLE_RATE as usize, 0.3, 0.3);
 
     let file = format!("{}.wav", file[..file.len() - 4].to_string());
@@ -201,7 +201,7 @@ fn saw_builder(pitch: Share<Controllable<Param<f64>>>) -> MyVoice {
     let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
     let (gain, mut gain_ctrl) = controllable_param(1.0);
     let (acc, mut acc_reset) = resetable_acc(Amp::new(freq_param, pitch));
-    let saw = Add::new(acc, Constant::from(-0.5));
+    let saw = Add::new(acc, Var::from(-0.5));
     let (env, mut env_on, mut env_off) = AdsrEnvelope::new(0.01, 0.5, 0.2, 0.3).build();
     let node = Amp::new(saw, Amp::new(env, gain));
     Voice(
@@ -272,12 +272,12 @@ fn benihora_builder() -> MyVoice {
         .push_event(0.0, BenihoraEvent::SetStatus(false, false));
     let benihora = corus::contrib::simple_comp::SimpleComp::new(
         benihora,
-        Constant::from(0.2),
-        Constant::from(0.5),
-        Constant::from(0.75),
+        Var::from(0.2),
+        Var::from(0.5),
+        Var::from(0.75),
     );
     Voice(
-        Box::new(Amp::new(benihora, Constant::from(1.5))) as Box<dyn Node<Output = f64> + Send + Sync>,
+        Box::new(Amp::new(benihora, Var::from(1.5))) as Box<dyn Node<Output = f64> + Send + Sync>,
         Box::new(move |time, NoteOn((notenum, velocity))| {
             let time = time - 0.05;
             ctrl1
@@ -336,7 +336,7 @@ fn wavetable_builder(pitch: Share<Controllable<Param<f64>>>) -> MyVoice {
 
 fn make_wavetable() -> Vec<f64> {
     let buf = vec![0.0, 0.2, 0.5, 0.3, 0.4, 0.3, 0.3, 0.1, 0.1, 0.1, -1.0];
-    let acc = Accumulator::new(Constant::from(-1.0), 1.0);
+    let acc = Accumulator::new(Var::from(-1.0), 1.0);
     let node = Map::new(acc, move |f| {
         buf[((f * buf.len() as f64) as usize).rem_euclid(buf.len())]
     });
@@ -344,9 +344,9 @@ fn make_wavetable() -> Vec<f64> {
         node,
         BiquadFilterParams::new(
             LowPass,
-            Constant::from(500.0),
-            Constant::from(0.0),
-            Constant::from(1.0),
+            Var::from(500.0),
+            Var::from(0.0),
+            Var::from(1.0),
         ),
     );
     let buf: Vec<_> = ProcContext::new(1000)

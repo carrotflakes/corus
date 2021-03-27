@@ -10,7 +10,7 @@ use super::{Node, ProcContext};
 
 #[derive(Clone)]
 pub enum ParamState<F: Float> {
-    Constant(F),
+    Var(F),
     Linear(F),
     Exponential(F),
     Target { target: F, time_constant: f64 },
@@ -29,7 +29,7 @@ impl<F: Float> Param<F> {
     pub fn with_value(value: F) -> Self {
         Param {
             value: value.clone(),
-            state: ParamState::Constant(value),
+            state: ParamState::Var(value),
         }
     }
 }
@@ -39,7 +39,7 @@ impl Node<f64> for Param<f64> {
     fn proc(&mut self, ctx: &ProcContext) -> f64 {
         let value = self.value.clone();
         match self.state {
-            ParamState::Constant(_) => {}
+            ParamState::Var(_) => {}
             ParamState::Linear(v) => {
                 self.value = self.value + v / ctx.sample_rate as f64;
             }
@@ -94,7 +94,7 @@ impl<F: Float> Event for ParamState<F> {
     #[inline]
     fn dispatch(&self, _time: f64, target: &mut Param<F>) {
         match self {
-            ParamState::Constant(value) => {
+            ParamState::Var(value) => {
                 target.value = value.clone();
             }
             _ => {}
@@ -273,7 +273,7 @@ impl<F: Float, EP: EventPusher<ParamState<F>>> ParamEventSchedule<F, EP> {
                 ParamEvent::SetValueAtTime { value } => {
                     if first.0 < time {
                         self.event_pusher
-                            .push_event(first.0, ParamState::Constant(value.clone()));
+                            .push_event(first.0, ParamState::Var(value.clone()));
                         before_value = value.clone();
                         self.last_event = first.clone();
                     }
@@ -288,7 +288,7 @@ impl<F: Float, EP: EventPusher<ParamState<F>>> ParamEventSchedule<F, EP> {
                     );
                     if first.0 < time {
                         self.event_pusher
-                            .push_event(first.0, ParamState::Constant(value.clone()));
+                            .push_event(first.0, ParamState::Var(value.clone()));
                         before_value = value.clone();
                         self.last_event = (first.0, ParamEvent::SetValueAtTime { value });
                     }
@@ -303,7 +303,7 @@ impl<F: Float, EP: EventPusher<ParamState<F>>> ParamEventSchedule<F, EP> {
                     );
                     if first.0 < time {
                         self.event_pusher
-                            .push_event(first.0, ParamState::Constant(value.clone()));
+                            .push_event(first.0, ParamState::Var(value.clone()));
                         before_value = value.clone();
                         self.last_event = (first.0, ParamEvent::SetValueAtTime { value });
                     }
