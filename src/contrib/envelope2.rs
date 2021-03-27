@@ -45,7 +45,7 @@ impl<T: Signal<Float = f64> + Mono + Send + Sync> AdsrEnvelope<T> {
         impl FnMut(f64) + Send + Sync,
         impl FnMut(f64) + Send + Sync,
     ) {
-        let mut env = ParamEventScheduleNode::new();
+        let env = ParamEventScheduleNode::new();
         let env_ctl = env.get_scheduler();
         (
             env,
@@ -99,7 +99,7 @@ impl<T: Signal<Float = f64> + Mono + Send + Sync> ArEnvelope<T> {
         impl FnMut(f64) + Send + Sync,
         impl FnMut(f64) + Send + Sync,
     ) {
-        let mut env = ParamEventScheduleNode::new();
+        let env = ParamEventScheduleNode::new();
         let env_ctl = env.get_scheduler();
         (
             env,

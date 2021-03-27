@@ -2,6 +2,7 @@ use std::{collections::hash_map::DefaultHasher, hash::Hasher, io::Write};
 
 use corus::{EventQueue, Node, ProcContext, signal::{C2f64, IntoStereo, Signal, Stereo}, time::{AsSample, Second}};
 
+#[allow(dead_code)]
 pub fn write_to_file<N>(
     name: &str,
     sample_rate: usize,

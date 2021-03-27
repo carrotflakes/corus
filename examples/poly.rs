@@ -22,7 +22,7 @@ fn main() {
     let sample_rate = 44100;
 
     let mut builder = || {
-        let mut freq = ParamEventScheduleNode::new();
+        let freq = ParamEventScheduleNode::new();
         let freq_ctl = freq.get_scheduler();
         let acc = Controllable::new(EventControlInplace::new(Accumulator::new(
             freq,

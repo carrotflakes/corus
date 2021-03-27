@@ -7,7 +7,7 @@ use corus::{
 };
 
 fn main() {
-    let mut freq = ParamEventScheduleNode::new();
+    let freq = ParamEventScheduleNode::new();
     let freq_ctl = freq.get_scheduler();
     freq_ctl
         .lock()

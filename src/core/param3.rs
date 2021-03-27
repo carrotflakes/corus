@@ -477,7 +477,7 @@ fn test() {
 
 #[test]
 fn test2() {
-    let mut param = ParamEventScheduleNode::new();
+    let param = ParamEventScheduleNode::new();
     let mut pc = ProcContext::new(4);
     {
         let schedule = param.get_scheduler();

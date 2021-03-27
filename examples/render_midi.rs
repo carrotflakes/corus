@@ -225,7 +225,7 @@ pub fn controllable_param(
     ParamEventScheduleNode<f64>,
     Arc<Mutex<ParamEventSchedule<f64>>>,
 ) {
-    let mut c = ParamEventScheduleNode::from_value(v);
+    let c = ParamEventScheduleNode::from_value(v);
     let ctl = c.get_scheduler();
     (c, ctl)
 }
