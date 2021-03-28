@@ -43,7 +43,7 @@ impl Glottis {
         self.loudness = self.tenseness.ui_tenseness.powf(0.25);
     }
 
-    pub fn run_step(&mut self, time: f64, sample_rate: usize, lambda: F, input: F) -> F {
+    pub fn run_step(&mut self, time: f64, sample_rate: usize, lambda: F, input: F) -> (F, F) {
         let tenseness = self.tenseness.get(lambda);
 
         self.time_in_waveform += 1.0 / sample_rate as F;
@@ -57,15 +57,15 @@ impl Glottis {
             * self
                 .waveform
                 .normalized_lf_waveform(self.time_in_waveform / self.waveform_length);
+        let noise = self.get_noise_modulator(lambda) * input;
         let aspiration = self.intensity
             * (1.0 - tenseness.sqrt())
-            * self.get_noise_modulator(lambda)
-            * input
+            * noise
             * (0.2 + 0.02 * simplex1(time * 1.99));
-        out + aspiration
+        (out + aspiration, noise)
     }
 
-    pub fn get_noise_modulator(&mut self, lambda: F) -> F {
+    fn get_noise_modulator(&mut self, lambda: F) -> F {
         let tenseness = self.tenseness.get(lambda); // ?
         let voiced =
             0.1 + 0.2 * 0.0f64.max((PI * 2.0 * self.time_in_waveform / self.waveform_length).sin());
@@ -117,12 +117,8 @@ impl FrequencyCtrl {
         vibrato += 0.02 * simplex1(time * 4.07);
         vibrato += 0.04 * simplex1(time * 2.15);
 
-        if self.ui_frequency > self.smooth_frequency {
-            self.smooth_frequency = (self.smooth_frequency * 1.1).min(self.ui_frequency)
-        }
-        if self.ui_frequency < self.smooth_frequency {
-            self.smooth_frequency = (self.smooth_frequency / 1.1).max(self.ui_frequency)
-        }
+        self.smooth_frequency = self.smooth_frequency * 0.5 + self.ui_frequency * 0.5;
+
         self.old_frequency = self.new_frequency;
         self.new_frequency = self.smooth_frequency * (1.0 + vibrato);
     }
