@@ -1,17 +1,21 @@
 mod write_to_file;
 
-use corus::{EventControllable, EventPusher, EventQueue, contrib::{
+use corus::{
+    contrib::{
         amp_pan,
         benihora::{make_noise_node, Benihora, BenihoraEvent},
-    }, core::var::Var, notenum_to_frequency};
+    },
+    core::var::Var,
+    notenum_to_frequency, EventControllable, EventPusher, EventScheduleNode,
+};
 
 const SAMPLE_RATE: usize = 44100;
 
 fn main() {
-    let mut eq = EventQueue::new();
-    let benihora = EventControllable::new(Benihora::new(make_noise_node(), 2));
-    let mut benihora_ctl = eq.get_controller(&benihora);
-    // let mut benihora = EventControl::new(benihora);
+    let benihora = Benihora::new(make_noise_node(), 2);
+    let benihora = EventScheduleNode::new(EventControllable::new(benihora));
+    let mut benihora_ctl = benihora.get_scheduler();
+
     benihora_ctl.push_event(0.0, BenihoraEvent::MoveTangue(12.9, 2.43));
     benihora_ctl.push_event(1.0, BenihoraEvent::MoveTangue(19.4, 3.43));
     benihora_ctl.push_event(2.0, BenihoraEvent::MoveTangue(22.8, 2.05));
@@ -99,5 +103,5 @@ fn main() {
     benihora_ctl.push_event(17.0, BenihoraEvent::SetVibrato(0.03, 4.0));
 
     let node = amp_pan(benihora, Var::from(1.0), Var::from(0.0));
-    write_to_file::write_to_file_with_event_queue("benihora.wav", SAMPLE_RATE, 20.0, node, None, None, eq);
+    write_to_file::write_to_file("benihora.wav", SAMPLE_RATE, 20.0, node, None, None);
 }
