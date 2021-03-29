@@ -100,5 +100,34 @@ pub fn read_wav_file(file: &str) -> Vec<C2f64> {
     buf
 }
 
+/// Usage: cargo run --release --example foo | pacat
+#[allow(dead_code)]
+pub fn write_to_stdout<N>(
+    mut node: N,
+    len: f64
+) where
+    N: Node + 'static,
+    N::Output: Signal<Float = f64> + IntoStereo,
+{
+    use std::io::{self, BufWriter};
+    let stdout = io::stdout();
+    let mut handle = BufWriter::new(stdout.lock());
+
+    let mut pc = ProcContext::new(44100 as u64);
+    for s in pc
+        .lock(&mut node, Second(len))
+    {
+        let s = s.into_stereo();
+        if !(s.get_l() as f64).is_finite() || !(s.get_r() as f64).is_finite() {
+            panic!("signal is not finite, l: {:?}, r: {:?}", s.get_l(), s.get_r());
+        }
+        let l = (s.get_l() * std::i16::MAX as f64) as i16;
+        let r = (s.get_r() * std::i16::MAX as f64) as i16;
+        handle.write_all(&l.to_ne_bytes()).unwrap();
+        handle.write_all(&r.to_ne_bytes()).unwrap();
+        handle.flush().unwrap();
+    }
+}
+
 #[allow(dead_code)]
 fn main() {}
