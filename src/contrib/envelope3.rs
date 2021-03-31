@@ -5,17 +5,24 @@ use super::{Node, ProcContext};
 pub struct Envelope {
     points: Vec<(f64, f64, f64)>, // length, level, handle
     release_length: f64,
-    release_handle: f64,
+    release_handle_rate: f64,
     note_on_time: f64,
     note_off_time: f64,
 }
 
 impl Envelope {
-    pub fn new(points: Vec<(f64, f64, f64)>, release_length: f64, release_handle: f64) -> Self {
+    pub fn new(points_src: &[(f64, f64, f64)], release_length: f64, release_handle_rate: f64) -> Self {
+        let mut points = Vec::with_capacity(points_src.len());
+        let mut last_level = 0.0;
+        for (length, level, handle_rate) in points_src {
+            assert!(0.0 < *length);
+            points.push((*length, *level, handle_rate * (level - last_level) + last_level));
+            last_level = *level;
+        }
         Self {
             points,
             release_length,
-            release_handle,
+            release_handle_rate,
             note_on_time: 0.0,
             note_off_time: 0.0,
         }
@@ -48,7 +55,7 @@ impl Node for Envelope {
             let level = self.compute_level(self.note_off_time - self.note_on_time);
             bezier2(
                 level,
-                self.release_handle * level,
+                self.release_handle_rate * level,
                 0.0,
                 (ctx.current_time - self.note_off_time) / self.release_length,
             )
