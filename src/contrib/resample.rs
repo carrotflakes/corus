@@ -1,6 +1,6 @@
 use crate::{signal::Signal, EventQueue, Node, ProcContext};
 
-pub struct DownSample<A>
+pub struct Resample<A>
 where
     A: Node,
     A::Output: Signal,
@@ -10,15 +10,15 @@ where
     old_value: A::Output,
     sample_rate: u64,
     next_update: f64,
-    pub down_sample_type: DownSampleType,
+    pub resample_type: ResampleType,
 }
 
-pub enum DownSampleType {
+pub enum ResampleType {
     NearestNeighbor,
     Bilinear,
 }
 
-impl<A> DownSample<A>
+impl<A> Resample<A>
 where
     A: Node,
     A::Output: Signal,
@@ -27,20 +27,20 @@ where
         node: A,
         value: A::Output,
         sample_rate: u64,
-        down_sample_type: DownSampleType,
+        resample_type: ResampleType,
     ) -> Self {
-        DownSample {
+        Resample {
             node,
             old_value: value.clone(),
             value,
             sample_rate,
             next_update: 0.0,
-            down_sample_type,
+            resample_type,
         }
     }
 }
 
-impl<A> Node for DownSample<A>
+impl<A> Node for Resample<A>
 where
     A: Node,
     A::Output: Signal<Float = f64>,
@@ -60,9 +60,9 @@ where
             });
             self.next_update += 1.0 / self.sample_rate as f64;
         }
-        match self.down_sample_type {
-            DownSampleType::NearestNeighbor => self.value.clone(),
-            DownSampleType::Bilinear => {
+        match self.resample_type {
+            ResampleType::NearestNeighbor => self.value.clone(),
+            ResampleType::Bilinear => {
                 let r = ctx.current_time * self.sample_rate as f64
                     - self.next_update * self.sample_rate as f64
                     + 1.0;
