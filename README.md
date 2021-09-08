@@ -21,6 +21,18 @@ TODO:
 - Controller: allows dynamic changes to inner node.
 - Map: map the signal by arbitrary function.
 
+## Offline rendering
+
+``` rust
+let mut node = Sine::new(Var::new(440.0));
+let ctx = ProcContext::new(44100);
+for s in ctx.lock(&mut node, Second(10.0)) {
+    s
+}
+```
+
+## Online rendering
+
 ## Author
 
 * carrotflakes (carrotflakes@gmail.com)

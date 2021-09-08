@@ -6,17 +6,18 @@ use corus::{
     contrib::{
         amp_pan,
         envelope2::AdsrEnvelope,
+        envelope3::{Envelope, EnvelopeEvent},
         generic_poly_synth::{NoteOff, NoteOn, PolySynth, Voice},
     },
     core::{
         accumulator::{Accumulator, SetValueAtTime},
         add::Add,
         amp::Amp,
-        var::Var,
         mix::Mix,
         mul::Mul,
         param3::{ParamEventSchedule, ParamEventScheduleNode},
         share::Share,
+        var::Var,
         Node,
     },
     db_to_amp, notenum_to_frequency,
@@ -191,16 +192,17 @@ fn saw_builder(pitch: Share<ParamEventScheduleNode<f64>>) -> MyVoice {
     let (freq, freq_ctl) = controllable_param(1.0);
     let (gain, gain_ctl) = controllable_param(1.0);
 
-    let acc = EventScheduleNode::new(EventControllable::new(Accumulator::new(
-        Mul::new(freq, pitch),
-        1.0,
-    )));
-    let mut acc_ctl = acc.get_scheduler();
-    let mut acc_reset = move |time: f64| acc_ctl.push_event(time, SetValueAtTime::new(0.5));
+    let (acc, mut acc_ctl) = controllable(Accumulator::new(Mul::new(freq, pitch), 1.0));
 
     let saw = Add::new(acc, Var::from(-0.5));
-    let (env, mut env_on, mut env_off) = AdsrEnvelope::<f64>::new(0.01, 0.5, 0.2, 0.3).build();
-    let node = Amp::new(saw, Amp::new(env, gain));
+    // let (env, mut env_on, mut env_off) = AdsrEnvelope::<f64>::new(0.01, 0.5, 0.2, 0.3).build();
+    let (env, mut env_ctl1) = controllable(Envelope::new(
+        &[(0.01, 1.0, -1.0), (0.2, 0.5, 1.0)],
+        0.3,
+        1.0,
+    ));
+    let mut env_ctl2 = env_ctl1.clone();
+    let node = Amp::new(saw, Mul::new(env, gain));
     Voice(
         Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
         Box::new(move |time, NoteOn((notenum, velocity))| {
@@ -212,10 +214,10 @@ fn saw_builder(pitch: Share<ParamEventScheduleNode<f64>>) -> MyVoice {
                 .lock()
                 .unwrap()
                 .set_value_at_time(time, db_to_amp((velocity - 1.0) * DB_MIN));
-            acc_reset(time);
-            env_on(time);
+            acc_ctl.push_event(time, SetValueAtTime::new(0.5));
+            env_ctl1.push_event(time, EnvelopeEvent::NoteOn);
         }),
-        Box::new(move |time, NoteOff(())| env_off(time)),
+        Box::new(move |time, NoteOff(())| env_ctl2.push_event(time, EnvelopeEvent::NoteOff)),
     )
 }
 
@@ -225,7 +227,13 @@ pub fn controllable_param(
     ParamEventScheduleNode<f64>,
     Arc<Mutex<ParamEventSchedule<f64>>>,
 ) {
-    let c = ParamEventScheduleNode::from_value(v);
-    let ctl = c.get_scheduler();
-    (c, ctl)
+    let param = ParamEventScheduleNode::from_value(v);
+    let ctl = param.get_scheduler();
+    (param, ctl)
+}
+
+pub fn controllable<A: Node>(node: A) -> (EventScheduleNode<A>, corus::EventSchedule<A>) {
+    let node = EventScheduleNode::new(EventControllable::new(node));
+    let ctl = node.get_scheduler();
+    (node, ctl)
 }
