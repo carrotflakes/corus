@@ -25,7 +25,7 @@ where
         Sma {
             node,
             duration,
-            buffer: RingBuffer::new(0),
+            buffer: RingBuffer::new(1),
             acc: A::Output::default(),
             size: 0,
         }

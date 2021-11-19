@@ -5,6 +5,7 @@ pub struct RingBuffer<T: Clone + Default> {
 
 impl<T: Clone + Default> RingBuffer<T> {
     pub fn new(size: usize) -> Self {
+        assert!(size > 0);
         Self {
             buffer: vec![Default::default(); size],
             pos: size - 1,

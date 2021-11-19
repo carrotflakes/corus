@@ -25,7 +25,7 @@ where
             node,
             delay,
             gain,
-            buffer: RingBuffer::new(0),
+            buffer: RingBuffer::new(1),
         }
     }
 }
