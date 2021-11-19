@@ -4,6 +4,7 @@ pub mod bypass_fader;
 pub mod chip;
 pub mod crossfader;
 pub mod delay;
+pub mod differentiator;
 mod effects;
 pub mod envelope;
 pub mod envelope2;
