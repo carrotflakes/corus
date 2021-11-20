@@ -4,11 +4,11 @@ Primitive sound synthesis toolkit.
 
 TODO:
 
-- interpolation
 - rich reverb
 - wavetable
 - sampler
 - chip
+- signal with unit (Hz, second, sample)
 
 ## Cardinal nodes
 - Var: produce a constant value.

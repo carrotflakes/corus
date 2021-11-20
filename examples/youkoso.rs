@@ -1,5 +1,7 @@
 mod write_to_file;
 
+use std::sync::Arc;
+
 use corus::{
     contrib::{
         amp_pan,
@@ -7,26 +9,31 @@ use corus::{
         controllable_param, delay_fx,
         envelope::{AdsrEnvelope, ArEnvelope},
         generic_poly_synth::{NoteOff, NoteOn, PolySynth, Voice},
+        integrator::{Integrator, IntegratorEvent},
         perlin_noise,
         rand_fm_synth::rand_fm_synth,
         resetable_acc,
+        spring::Spring,
     },
     core::{
         accumulator::Accumulator,
         add::Add,
         amp::Amp,
         biquad_filter::{BiquadFilter, BiquadFilterParams, LowPass},
-        var::Var,
         controllable::{Controllable, Controller},
         map::Map,
         mix::Mix,
+        mul::Mul,
         param::Param,
         share::Share,
+        var::Var,
         Node,
     },
-    db_to_amp, notenum_to_frequency,
+    db_to_amp,
+    interpolation::Interpolation,
+    notenum_to_frequency,
     signal::C2f64,
-    time::Sample,
+    time::{Sample, Second},
     EventControlInplace, EventPusher, ProcContext,
 };
 
@@ -75,10 +82,7 @@ fn main() {
                 ezmid::EventBody::Pan { pan, .. } => {
                     track.pan.set_value_at_time(e.time, pan as f64);
                 }
-                ezmid::EventBody::PitchBend {
-                    bend,
-                    raw_bend: _,
-                } => {
+                ezmid::EventBody::PitchBend { bend, raw_bend: _ } => {
                     track
                         .pitch_ctl
                         .lock()
@@ -109,8 +113,8 @@ fn main() {
         SAMPLE_RATE,
         time,
         node,
-        Some(0xa8d1aaef001f739e),
-        Some(0x5e00288a0955b590),
+        Some(0x7d5e69e844e2cdfa),
+        Some(0x807725449da675af),
     );
     println!("saved {:?}", &file);
 }
@@ -155,6 +159,9 @@ impl Track {
             PolySynth::new(&mut || benihora_builder(), 1)
         } else if track == 9 {
             PolySynth::new(&mut noise_builder, 8)
+        } else if 9 < track {
+            let buffer = Arc::new(make_sample());
+            PolySynth::new(&mut || sampler_builder(pitch.clone(), buffer.clone()), 8)
         } else {
             // PolySynth::new(&mut || fm_synth_builder(program as u32), 8)
             PolySynth::new(&mut || saw_builder(pitch.clone()), 8)
@@ -342,15 +349,70 @@ fn make_wavetable() -> Vec<f64> {
     });
     let mut node = BiquadFilter::new(
         node,
-        BiquadFilterParams::new(
-            LowPass,
-            Var::from(500.0),
-            Var::from(0.0),
-            Var::from(1.0),
-        ),
+        BiquadFilterParams::new(LowPass, Var::from(500.0), Var::from(0.0), Var::from(1.0)),
     );
     let buf: Vec<_> = ProcContext::new(1000)
         .lock(&mut node, Sample(1000))
         .collect();
     buf
+}
+
+fn sampler_builder(pitch: Share<Controllable<Param<f64>>>, buffer: Arc<Vec<f64>>) -> MyVoice {
+    let (freq_param, mut freq_param_ctrl) = controllable_param(1.0);
+    let (gain, mut gain_ctrl) = controllable_param(1.0);
+    let (int, mut int_reset) = resetable_integrator(Amp::new(freq_param, pitch));
+    let node = Map::new(int, move |x| {
+        Interpolation::Bilinear.tap(&buffer, x / 440.0) // 440.0 = buffers frequency
+    });
+    let (env, mut env_on, mut env_off) = AdsrEnvelope::new(0.0, 1.0, 0.0, 0.3).build();
+    let node = Amp::new(node, Amp::new(env, gain));
+    Voice(
+        Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
+        Box::new(move |time, NoteOn((notenum, velocity))| {
+            freq_param_ctrl
+                .lock()
+                .set_value_at_time(time, notenum_to_frequency(notenum));
+            gain_ctrl
+                .lock()
+                .set_value_at_time(time, db_to_amp((velocity - 1.0) * DB_MIN));
+            int_reset(time);
+            env_on(time);
+        }),
+        Box::new(move |time, NoteOff(())| env_off(time)),
+    )
+}
+
+fn make_sample() -> Vec<f64> {
+    let freq = Var::from(440.0);
+    let mut spring = Spring::new(
+        Var::from(5.0),
+        Var::from(0.01),
+        Var::from(100.0),
+        Var::from(0.0),
+    );
+    spring.set(1.0, 0.0);
+    let freq = Add::new(freq, Mul::new(spring, Var::from(20.0)));
+    let mut node = Spring::new(freq, Var::from(0.1), Var::from(10000.0), Var::from(0.0));
+    node.set(0.0, 0.1);
+
+    let buf: Vec<_> = ProcContext::new(SAMPLE_RATE as u64)
+        .lock(&mut node, Second(1.0))
+        .collect();
+    // dbg!(&buf[0..100]);
+    buf
+}
+
+pub fn resetable_integrator<A: Node<Output = f64> + 'static>(
+    frequency: A,
+) -> (
+    Controllable<EventControlInplace<IntegratorEvent<f64>, Integrator<A>>>,
+    impl FnMut(f64),
+) {
+    let int = Controllable::new(EventControlInplace::new(Integrator::new(frequency)));
+    let mut int_ctrl = int.controller();
+    (int, move |time: f64| {
+        int_ctrl
+            .lock()
+            .push_event(time, IntegratorEvent::SetValue(0.0))
+    })
 }

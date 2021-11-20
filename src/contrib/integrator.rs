@@ -1,9 +1,9 @@
-use crate::signal::Signal;
+use crate::{EventListener, signal::Signal};
 
 use super::{Node, ProcContext};
 
-/// Non-frequency-aware differentiator.
-pub struct Differentiator<A>
+/// Non-frequency-aware integrator.
+pub struct Integrator<A>
 where
     A: Node,
     A::Output: Signal + Default + std::ops::Sub<Output = A::Output>,
@@ -13,21 +13,21 @@ where
     prev: A::Output,
 }
 
-impl<A> Differentiator<A>
+impl<A> Integrator<A>
 where
     A: Node,
     A::Output: Signal + Default + std::ops::Sub<Output = A::Output>,
     <A::Output as Signal>::Float: From<f64>,
 {
     pub fn new(node: A) -> Self {
-        Differentiator {
+        Integrator {
             node,
             prev: A::Output::default(),
         }
     }
 }
 
-impl<A> Node for Differentiator<A>
+impl<A> Node for Integrator<A>
 where
     A: Node,
     A::Output: Signal + Default + std::ops::Sub<Output = A::Output>,
@@ -38,9 +38,8 @@ where
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let v = self.node.proc(ctx);
-        let prev = self.prev.clone();
-        self.prev = v.clone();
-        v - prev
+        self.prev = self.prev.clone() + v;
+        self.prev.clone()
     }
 
     fn lock(&mut self, ctx: &ProcContext) {
@@ -49,5 +48,20 @@ where
 
     fn unlock(&mut self) {
         self.node.unlock();
+    }
+}
+
+pub enum IntegratorEvent<T> {
+    SetValue(T),
+}
+
+impl<T: Signal, A: 'static + Node<Output = T>> EventListener<IntegratorEvent<T>> for Integrator<A> {
+    #[inline]
+    fn apply_event(&mut self, _time: f64, event: &IntegratorEvent<T>) {
+        match event {
+            IntegratorEvent::SetValue(value) => {
+                self.prev = value.clone();
+            }
+        }
     }
 }
