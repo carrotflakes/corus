@@ -21,7 +21,7 @@ fn main() {
     target.set_value_at_time(5.0, 0.0);
     target.set_value_at_time(6.0, 1.0);
     target.set_value_at_time(7.0, 0.0);
-    let spring = Spring::new(freq, decay, velocity_limit, target, 1.0);
+    let spring = Spring::new(freq, decay, velocity_limit, target);
     let mut spring = EventControlInplace::new(spring);
     for i in 0..9 {
         spring.push_event(i as f64, SpringEvent::Reset(0.0, 0.01));

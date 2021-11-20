@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use crate::{signal::C1f64, EventListener, Node, ProcContext};
 
 pub struct Spring<A, B, C, D>
@@ -24,15 +22,20 @@ where
     C: Node<Output = C1f64>,
     D: Node<Output = C1f64>,
 {
-    pub fn new(frequency: A, decay: B, velocity_limit: C, target: D, displacement: f64) -> Self {
+    pub fn new(frequency: A, decay: B, velocity_limit: C, target: D) -> Self {
         Spring {
             frequency,
             decay,
             velocity_limit,
             target,
-            displacement,
+            displacement: 0.0,
             velocity: 0.0,
         }
+    }
+
+    pub fn set(&mut self, displacement: f64, velocity: f64) {
+        self.displacement = displacement;
+        self.velocity = velocity;
     }
 }
 
@@ -78,17 +81,11 @@ where
     }
 }
 
-pub enum SpringEvent<A, B, C, D> {
+pub enum SpringEvent {
     Reset(f64, f64),
-    _T(
-        PhantomData<A>,
-        PhantomData<B>,
-        PhantomData<C>,
-        PhantomData<D>,
-    ),
 }
 
-impl<A, B, C, D> EventListener<SpringEvent<A, B, C, D>> for Spring<A, B, C, D>
+impl<A, B, C, D> EventListener<SpringEvent> for Spring<A, B, C, D>
 where
     A: 'static + Node<Output = C1f64>,
     B: 'static + Node<Output = C1f64>,
@@ -96,13 +93,12 @@ where
     D: 'static + Node<Output = C1f64>,
 {
     #[inline]
-    fn apply_event(&mut self, _time: f64, event: &SpringEvent<A, B, C, D>) {
+    fn apply_event(&mut self, _time: f64, event: &SpringEvent) {
         match event {
             SpringEvent::Reset(displacement, velocity) => {
                 self.displacement = *displacement;
                 self.velocity = *velocity;
             }
-            SpringEvent::_T(_, _, _, _) => {}
         }
     }
 }
