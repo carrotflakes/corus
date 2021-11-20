@@ -21,7 +21,7 @@ pub trait Signal:
     + Neg<Output = Self>
     + Default
 {
-    type Float: 'static;
+    type Float: 'static + From<f64> + Copy;
 
     /// element-wise mapping
     fn map<F: Fn(Self::Float) -> Self::Float>(&self, f: F) -> Self;
