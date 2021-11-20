@@ -60,7 +60,6 @@ where
         let d = decay.powf(1.0 / ctx.sample_rate as f64);
 
         self.displacement = self.displacement + self.velocity;
-        self.displacement *= d;
         if self.bound < self.displacement {
             self.displacement = self.bound;
             self.velocity = 0.0;
@@ -69,6 +68,7 @@ where
             self.velocity = 0.0;
         } else {
             self.velocity -= (self.displacement - target) * k;
+            self.velocity *= d;
             self.velocity = self.velocity.clamp(-velocity_limit, velocity_limit);
         }
         self.displacement

@@ -113,8 +113,8 @@ fn main() {
         SAMPLE_RATE,
         time,
         node,
-        Some(0x7d5e69e844e2cdfa),
-        Some(0x807725449da675af),
+        Some(0x879ad3132982c2f3),
+        Some(0xc2d7b181c08f62fc),
     );
     println!("saved {:?}", &file);
 }
@@ -383,16 +383,14 @@ fn sampler_builder(pitch: Share<Controllable<Param<f64>>>, buffer: Arc<Vec<f64>>
 }
 
 fn make_sample() -> Vec<f64> {
-    let freq = Var::from(440.0);
-    let mut spring = Spring::new(
+    let mut freq = Spring::new(
         Var::from(5.0),
         Var::from(0.01),
-        Var::from(100.0),
-        Var::from(0.0),
-        1.0,
+        Var::from(1000.0),
+        Var::from(440.0),
+        1000.0,
     );
-    spring.set(1.0, 0.0);
-    let freq = Add::new(freq, Mul::new(spring, Var::from(20.0)));
+    freq.set(400.0, 0.0);
     let mut node = Spring::new(freq, Var::from(0.1), Var::from(10000.0), Var::from(0.0), 1.0);
     node.set(0.0, 0.1);
 

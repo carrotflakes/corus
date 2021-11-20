@@ -14,7 +14,7 @@ fn main() {
     decay.set_value_at_time(0.0, 0.001);
     let mut velocity_limit = Param::with_value(6000.0);
     velocity_limit.set_value_at_time(10.0, 600.0);
-    let mut target = Param::with_value(50.0);
+    let mut target = Param::with_value(100.0);
     target.set_value_at_time(1.0, notenum_to_frequency(60));
     target.set_value_at_time(2.0, notenum_to_frequency(62));
     target.set_value_at_time(3.0, notenum_to_frequency(64));
