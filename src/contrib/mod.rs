@@ -1,3 +1,5 @@
+pub mod analog_differentiator;
+pub mod analog_integrator;
 pub mod benihora;
 pub mod buffer_playback;
 pub mod bypass_fader;
