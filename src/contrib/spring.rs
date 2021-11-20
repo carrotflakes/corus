@@ -11,6 +11,7 @@ where
     decay: B,
     velocity_limit: C,
     target: D,
+    bound: f64,
     displacement: f64,
     velocity: f64,
 }
@@ -22,12 +23,13 @@ where
     C: Node<Output = C1f64>,
     D: Node<Output = C1f64>,
 {
-    pub fn new(frequency: A, decay: B, velocity_limit: C, target: D) -> Self {
+    pub fn new(frequency: A, decay: B, velocity_limit: C, target: D, bound: f64) -> Self {
         Spring {
             frequency,
             decay,
             velocity_limit,
             target,
+            bound,
             displacement: 0.0,
             velocity: 0.0,
         }
@@ -59,11 +61,11 @@ where
 
         self.displacement = self.displacement + self.velocity;
         self.displacement *= d;
-        if 1.0 < self.displacement {
-            self.displacement = 1.0;
+        if self.bound < self.displacement {
+            self.displacement = self.bound;
             self.velocity = 0.0;
-        } else if self.displacement < -1.0 {
-            self.displacement = -1.0;
+        } else if self.displacement < -self.bound {
+            self.displacement = -self.bound;
             self.velocity = 0.0;
         } else {
             self.velocity -= (self.displacement - target) * k;

@@ -389,10 +389,11 @@ fn make_sample() -> Vec<f64> {
         Var::from(0.01),
         Var::from(100.0),
         Var::from(0.0),
+        1.0,
     );
     spring.set(1.0, 0.0);
     let freq = Add::new(freq, Mul::new(spring, Var::from(20.0)));
-    let mut node = Spring::new(freq, Var::from(0.1), Var::from(10000.0), Var::from(0.0));
+    let mut node = Spring::new(freq, Var::from(0.1), Var::from(10000.0), Var::from(0.0), 1.0);
     node.set(0.0, 0.1);
 
     let buf: Vec<_> = ProcContext::new(SAMPLE_RATE as u64)
