@@ -1,3 +1,5 @@
+use crate::EventListener;
+
 use super::{Node, ProcContext};
 
 pub struct Sine<A>
@@ -29,9 +31,7 @@ where
     fn proc(&mut self, ctx: &ProcContext) -> Self::Output {
         let f = self.frequency.proc(ctx);
         let p = self.phase;
-        self.phase = (self.phase + f / ctx.sample_rate as f64)
-            .fract()
-            .into();
+        self.phase = (self.phase + f / ctx.sample_rate as f64).fract().into();
         (p * std::f64::consts::PI * 2.0).sin().into()
     }
 
@@ -41,5 +41,20 @@ where
 
     fn unlock(&mut self) {
         self.frequency.unlock();
+    }
+}
+
+pub enum SineEvent {
+    SetPhase(f64),
+}
+
+impl<A: 'static + Node<Output = f64>> EventListener<SineEvent> for Sine<A> {
+    #[inline]
+    fn apply_event(&mut self, _time: f64, event: &SineEvent) {
+        match event {
+            SineEvent::SetPhase(value) => {
+                self.phase = value.clone();
+            }
+        }
     }
 }
