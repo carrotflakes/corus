@@ -8,13 +8,14 @@ pub use into_mono::IntoMono;
 pub use into_stereo::IntoStereo;
 pub use mono_stereo::{Mono, Stereo};
 
-use std::ops::{Add, Div, Mul, Neg};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 pub trait Signal:
     'static
     + Sized
     + Clone
     + Add<Output = Self>
+    + Sub<Output = Self>
     + Mul<Output = Self>
     + Mul<f64, Output = Self>
     + Div<f64, Output = Self>
@@ -40,6 +41,15 @@ impl Add for C2f64 {
     #[inline]
     fn add(self, rhs: Self) -> Self::Output {
         Self([self.0[0] + rhs.0[0], self.0[1] + rhs.0[1]])
+    }
+}
+
+impl Sub for C2f64 {
+    type Output = Self;
+
+    #[inline]
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self([self.0[0] - rhs.0[0], self.0[1] - rhs.0[1]])
     }
 }
 

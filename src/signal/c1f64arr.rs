@@ -1,6 +1,6 @@
 use super::Signal;
 
-use std::ops::{Add, Div, Mul, Neg};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Debug, Clone, Copy)]
 pub struct C1f64Arr<const N: usize>(pub [f64; N]);
@@ -13,6 +13,19 @@ impl<const N: usize> Add for C1f64Arr<N> {
         let mut arr = [Default::default(); N];
         for i in 0..N {
             arr[i] = self.0[i] + rhs.0[i];
+        }
+        Self(arr)
+    }
+}
+
+impl<const N: usize> Sub for C1f64Arr<N> {
+    type Output = Self;
+
+    #[inline]
+    fn sub(self, rhs: Self) -> Self::Output {
+        let mut arr = [Default::default(); N];
+        for i in 0..N {
+            arr[i] = self.0[i] - rhs.0[i];
         }
         Self(arr)
     }
