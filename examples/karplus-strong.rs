@@ -1,7 +1,7 @@
 mod write_to_file;
 
 use corus::{
-    contrib::{amp_pan, chip::Noise},
+    contrib::{amp_pan, fn_processor::FnProcessor, rand::Rand},
     core::{
         add::Add, amp::Amp, first_order_filter::FirstOrderFilter, mul::Mul, param::Param,
         placeholder::Placeholder, ring_buffer_playback::RingBufferPlayback,
@@ -14,7 +14,9 @@ use corus::{
 const SAMPLE_RATE: usize = 44100;
 
 fn main() {
-    let node = Noise::new();
+    let mut rand = Rand::new(1);
+    let noise = FnProcessor::new(move || rand.next_f64() * 2.0 - 1.0);
+
     let mut env = Param::new();
     env.set_value_at_time(0.0, 1.0);
     env.set_value_at_time(0.01, 0.0);
@@ -27,7 +29,7 @@ fn main() {
     env.set_value_at_time(3.0, 0.0);
     env.linear_ramp_to_value_at_time(4.0, 0.1);
     env.linear_ramp_to_value_at_time(7.0, 0.0);
-    let noise = Amp::new(node, env);
+    let noise = Amp::new(noise, env);
     let noise = Share::new(noise);
 
     let mut delay = Param::new();
