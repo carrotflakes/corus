@@ -5,6 +5,7 @@ pub mod amp;
 pub mod biquad_filter;
 pub mod comb_filter;
 pub mod controllable;
+pub mod first_order_filter;
 pub mod impulse;
 pub mod map;
 pub mod mix;
