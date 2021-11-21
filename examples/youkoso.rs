@@ -362,7 +362,7 @@ fn sampler_builder(pitch: Share<Controllable<Param<f64>>>, buffer: Arc<Vec<f64>>
     let (gain, mut gain_ctrl) = controllable_param(1.0);
     let (int, mut int_reset) = resetable_integrator(Amp::new(freq_param, pitch));
     let node = Map::new(int, move |x| {
-        Interpolation::Bilinear.tap(&buffer, x / 440.0) // 440.0 = buffers frequency
+        Interpolation::Linear.tap(&buffer, x / 440.0) // 440.0 = buffers frequency
     });
     let (env, mut env_on, mut env_off) = AdsrEnvelope::new(0.0, 1.0, 0.0, 0.3).build();
     let node = Amp::new(node, Amp::new(env, gain));

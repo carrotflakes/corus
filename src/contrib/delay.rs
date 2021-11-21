@@ -4,7 +4,7 @@ use super::{Node, ProcContext};
 
 pub enum Interpolation {
     NearestNeighbor,
-    Bilinear,
+    Linear,
 }
 
 pub struct Delay<A, B>
@@ -53,7 +53,7 @@ where
         self.buffer.push(v.clone());
         match self.interpolation {
             Interpolation::NearestNeighbor => self.buffer.get(delay.round() as usize),
-            Interpolation::Bilinear => {
+            Interpolation::Linear => {
                 let delay_i = delay.floor() as usize;
                 self.buffer.get(delay_i).lerp(
                     &self.buffer.get(delay_i + 1),

@@ -3,7 +3,7 @@ use crate::signal::Signal;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Interpolation {
     NearestNeighbor,
-    Bilinear,
+    Linear,
 }
 
 impl Interpolation {
@@ -20,7 +20,7 @@ impl Interpolation {
                 let x_floor = x.floor() as usize;
                 get(x_floor)
             }
-            Interpolation::Bilinear => {
+            Interpolation::Linear => {
                 let x_floor = x.floor() as usize;
                 get(x_floor).lerp(&get(x_floor + 1), S::Float::from(x.fract()))
             }

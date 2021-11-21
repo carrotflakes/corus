@@ -16,7 +16,7 @@ fn main() {
         node,
         delay,
         44100,
-        corus::contrib::delay::Interpolation::Bilinear,
+        corus::contrib::delay::Interpolation::Linear,
     );
     write_to_file::write_to_file("delay.wav", 44100, 3.0, node, None, None);
 }

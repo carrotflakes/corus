@@ -15,7 +15,7 @@ where
 
 pub enum ResampleType {
     NearestNeighbor,
-    Bilinear,
+    Linear,
 }
 
 impl<A> Resample<A>
@@ -62,7 +62,7 @@ where
         }
         match self.resample_type {
             ResampleType::NearestNeighbor => self.value.clone(),
-            ResampleType::Bilinear => {
+            ResampleType::Linear => {
                 let r = ctx.current_time * self.sample_rate as f64
                     - self.next_update * self.sample_rate as f64
                     + 1.0;
