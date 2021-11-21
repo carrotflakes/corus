@@ -76,10 +76,16 @@ where
 
     fn lock(&mut self, ctx: &ProcContext) {
         self.frequency.lock(ctx);
+        self.decay.lock(ctx);
+        self.velocity_limit.lock(ctx);
+        self.target.lock(ctx);
     }
 
     fn unlock(&mut self) {
         self.frequency.unlock();
+        self.decay.unlock();
+        self.velocity_limit.unlock();
+        self.target.unlock();
     }
 }
 
