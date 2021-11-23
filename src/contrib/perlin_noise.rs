@@ -10,20 +10,25 @@ pub fn perlin_noise(x: f64, y: f64, z: f64) -> f64 {
     let u = fade(x);
     let v = fade(y);
     let w = fade(z);
-    let a = P[xx] + yy;
-    let aa = P[a] + zz;
-    let ab = P[a + 1] + zz;
-    let b = P[xx + 1] + yy;
-    let ba = P[b] + zz;
-    let bb = P[b + 1] + zz;
+    let a = get_p(xx) + yy;
+    let aa = get_p(a) + zz;
+    let ab = get_p(a + 1) + zz;
+    let b = get_p(xx + 1) + yy;
+    let ba = get_p(b) + zz;
+    let bb = get_p(b + 1) + zz;
 
     lerp(w,
          lerp(v,
-              lerp(u, grad(P[aa], x, y, z), grad(P[ba], x - 1.0, y, z)),
-              lerp(u, grad(P[ab], x, y - 1.0, z), grad(P[bb], x - 1.0, y - 1.0, z))),
+              lerp(u, grad(get_p(aa), x, y, z), grad(get_p(ba), x - 1.0, y, z)),
+              lerp(u, grad(get_p(ab), x, y - 1.0, z), grad(get_p(bb), x - 1.0, y - 1.0, z))),
          lerp(v,
-              lerp(u, grad(P[aa + 1], x, y, z - 1.0), grad(P[ba + 1], x - 1.0, y, z - 1.0)),
-              lerp(u, grad(P[ab + 1], x, y - 1.0, z - 1.0), grad(P[bb + 1], x - 1.0, y - 1.0, z - 1.0))))
+              lerp(u, grad(get_p(aa + 1), x, y, z - 1.0), grad(get_p(ba + 1), x - 1.0, y, z - 1.0)),
+              lerp(u, grad(get_p(ab + 1), x, y - 1.0, z - 1.0), grad(get_p(bb + 1), x - 1.0, y - 1.0, z - 1.0))))
+}
+
+#[inline]
+fn get_p(i: usize) -> usize {
+    P[i & 0xFF] as usize
 }
 
 #[inline]
@@ -45,23 +50,7 @@ fn grad(hash: usize, x: f64, y: f64, z: f64) -> f64 {
     (if (h & 1) == 0 { u } else { -u }) + (if (h & 2) == 0 { v } else { -v })
 }
 
-macro_rules! make_table {
-    (()$($x:tt,)*) => {{
-        [$($x,)*]
-    }};
-    ((+$($y:tt)*)$($x:tt,)*) => {{
-        make_table! {
-            ($($y)*)$($x,)*$($x,)*
-        }
-    }};
-    ($($x:tt,)*) => {{
-        make_table! {
-            (++++++++)$($x,)*
-        }
-    }};
-}
-
-static P: [usize; 256 * 256] = make_table![
+static P: [u8; 256] = [
     151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69,
     142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219,
     203, 117, 35, 11, 32, 57, 177, 33, 88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175,
