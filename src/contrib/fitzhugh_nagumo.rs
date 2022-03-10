@@ -34,7 +34,7 @@ where
     type Output = C1f64;
 
     fn proc(&mut self, ctx: &crate::ProcContext) -> Self::Output {
-        let pitch = self.pitch.proc(ctx);
+        let pitch = self.pitch.proc(ctx) / ctx.sample_rate as f64;
         let input = self.input.proc(ctx);
 
         let v = self.v;
