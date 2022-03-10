@@ -11,6 +11,7 @@ mod effects;
 pub mod envelope;
 pub mod envelope2;
 pub mod envelope3;
+pub mod fitzhugh_nagumo;
 pub mod fm_synth;
 pub mod fn_processor;
 pub mod generic_poly_synth;
