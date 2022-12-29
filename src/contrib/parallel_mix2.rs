@@ -53,9 +53,10 @@ where
             let request = request.clone();
             threads.push(thread::spawn(move || loop {
                 let (lock, cvar) = &*start;
-                let _ = cvar
-                    .wait_while(lock.lock().unwrap(), |started| !*started)
-                    .unwrap();
+                drop(
+                    cvar.wait_while(lock.lock().unwrap(), |started| !*started)
+                        .unwrap(),
+                );
                 let size;
                 let line = {
                     let mut request = request.lock().unwrap();
