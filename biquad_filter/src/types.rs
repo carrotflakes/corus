@@ -190,7 +190,7 @@ impl FilterType for FilterTypeDynamic {
     #[inline]
     fn compute_params(&self, period: f64, gain: f64, q: f64) -> [f64; 6] {
         match self {
-            FilterTypeDynamic::LowPass => LowShelf.compute_params(period, gain, q),
+            FilterTypeDynamic::LowPass => LowPass.compute_params(period, gain, q),
             FilterTypeDynamic::HighPass => HighPass.compute_params(period, gain, q),
             FilterTypeDynamic::BandPass => BandPass.compute_params(period, gain, q),
             FilterTypeDynamic::LowShelf => LowShelf.compute_params(period, gain, q),
