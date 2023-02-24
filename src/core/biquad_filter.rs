@@ -1,4 +1,4 @@
-use biquad_filter::types::BiquadFilterType;
+use biquad_filter::types::FilterType as BiquadFilterType;
 
 use crate::signal::{C1f64, C2f64, Mono, Signal, Stereo};
 

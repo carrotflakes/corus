@@ -1,6 +1,6 @@
 use std::f64::consts::TAU;
 
-pub trait BiquadFilterType {
+pub trait FilterType {
     fn compute_params(&self, period: f64, gain: f64, q: f64) -> [f64; 6];
 
     #[inline]
@@ -18,7 +18,7 @@ pub trait BiquadFilterType {
 #[derive(Debug, Clone, Copy)]
 pub struct LowPass;
 
-impl BiquadFilterType for LowPass {
+impl FilterType for LowPass {
     #[inline]
     fn compute_params(&self, period: f64, _gain: f64, q: f64) -> [f64; 6] {
         let w0 = TAU * period;
@@ -38,7 +38,7 @@ impl BiquadFilterType for LowPass {
 #[derive(Debug, Clone, Copy)]
 pub struct HighPass;
 
-impl BiquadFilterType for HighPass {
+impl FilterType for HighPass {
     #[inline]
     fn compute_params(&self, period: f64, _gain: f64, q: f64) -> [f64; 6] {
         let w0 = TAU * period;
@@ -58,7 +58,7 @@ impl BiquadFilterType for HighPass {
 #[derive(Debug, Clone, Copy)]
 pub struct BandPass;
 
-impl BiquadFilterType for BandPass {
+impl FilterType for BandPass {
     #[inline]
     fn compute_params(&self, period: f64, _gain: f64, q: f64) -> [f64; 6] {
         let w0 = TAU * period;
@@ -78,7 +78,7 @@ impl BiquadFilterType for BandPass {
 #[derive(Debug, Clone, Copy)]
 pub struct LowShelf;
 
-impl BiquadFilterType for LowShelf {
+impl FilterType for LowShelf {
     #[inline]
     fn compute_params(&self, period: f64, gain: f64, q: f64) -> [f64; 6] {
         let w0 = TAU * period;
@@ -100,7 +100,7 @@ impl BiquadFilterType for LowShelf {
 #[derive(Debug, Clone, Copy)]
 pub struct HighShelf;
 
-impl BiquadFilterType for HighShelf {
+impl FilterType for HighShelf {
     #[inline]
     fn compute_params(&self, period: f64, gain: f64, q: f64) -> [f64; 6] {
         let w0 = TAU * period;
@@ -122,7 +122,7 @@ impl BiquadFilterType for HighShelf {
 #[derive(Debug, Clone, Copy)]
 pub struct Peaking;
 
-impl BiquadFilterType for Peaking {
+impl FilterType for Peaking {
     #[inline]
     fn compute_params(&self, period: f64, gain: f64, q: f64) -> [f64; 6] {
         let w0 = TAU * period;
@@ -143,7 +143,7 @@ impl BiquadFilterType for Peaking {
 #[derive(Debug, Clone, Copy)]
 pub struct Notch;
 
-impl BiquadFilterType for Notch {
+impl FilterType for Notch {
     #[inline]
     fn compute_params(&self, period: f64, _gain: f64, q: f64) -> [f64; 6] {
         let w0 = TAU * period;
@@ -156,7 +156,7 @@ impl BiquadFilterType for Notch {
 #[derive(Debug, Clone, Copy)]
 pub struct AllPass;
 
-impl BiquadFilterType for AllPass {
+impl FilterType for AllPass {
     #[inline]
     fn compute_params(&self, period: f64, _gain: f64, q: f64) -> [f64; 6] {
         let w0 = TAU * period;
@@ -175,7 +175,7 @@ impl BiquadFilterType for AllPass {
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy)]
-pub enum BiquadFilterTypeDynamic {
+pub enum FilterTypeDynamic {
     LowPass,
     HighPass,
     BandPass,
@@ -186,18 +186,18 @@ pub enum BiquadFilterTypeDynamic {
     AllPass,
 }
 
-impl BiquadFilterType for BiquadFilterTypeDynamic {
+impl FilterType for FilterTypeDynamic {
     #[inline]
     fn compute_params(&self, period: f64, gain: f64, q: f64) -> [f64; 6] {
         match self {
-            BiquadFilterTypeDynamic::LowPass => LowShelf.compute_params(period, gain, q),
-            BiquadFilterTypeDynamic::HighPass => HighPass.compute_params(period, gain, q),
-            BiquadFilterTypeDynamic::BandPass => BandPass.compute_params(period, gain, q),
-            BiquadFilterTypeDynamic::LowShelf => LowShelf.compute_params(period, gain, q),
-            BiquadFilterTypeDynamic::HighShelf => HighShelf.compute_params(period, gain, q),
-            BiquadFilterTypeDynamic::Peaking => Peaking.compute_params(period, gain, q),
-            BiquadFilterTypeDynamic::Notch => Notch.compute_params(period, gain, q),
-            BiquadFilterTypeDynamic::AllPass => AllPass.compute_params(period, gain, q),
+            FilterTypeDynamic::LowPass => LowShelf.compute_params(period, gain, q),
+            FilterTypeDynamic::HighPass => HighPass.compute_params(period, gain, q),
+            FilterTypeDynamic::BandPass => BandPass.compute_params(period, gain, q),
+            FilterTypeDynamic::LowShelf => LowShelf.compute_params(period, gain, q),
+            FilterTypeDynamic::HighShelf => HighShelf.compute_params(period, gain, q),
+            FilterTypeDynamic::Peaking => Peaking.compute_params(period, gain, q),
+            FilterTypeDynamic::Notch => Notch.compute_params(period, gain, q),
+            FilterTypeDynamic::AllPass => AllPass.compute_params(period, gain, q),
         }
     }
 }
