@@ -16,9 +16,9 @@ fn main() {
     let node = BiquadFilter::new(
         node,
         BiquadFilterParams::new(
-            corus::core::biquad_filter::Peaking,
+            corus::core::biquad_filter::types::Peaking,
             freq,
-            Var::from(10.0),
+            Var::from(10.0f64.powf(10.0 / 40.0)),
             Var::from(10.0),
         ),
     );

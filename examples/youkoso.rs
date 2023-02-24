@@ -19,7 +19,7 @@ use corus::{
         accumulator::Accumulator,
         add::Add,
         amp::Amp,
-        biquad_filter::{BiquadFilter, BiquadFilterParams, LowPass},
+        biquad_filter::{BiquadFilter, BiquadFilterParams, types::LowPass},
         controllable::{Controllable, Controller},
         map::Map,
         mix::Mix,
@@ -113,7 +113,7 @@ fn main() {
         SAMPLE_RATE,
         time,
         node,
-        Some(0x195711b59f17b704),
+        Some(0xbdaf67a9beb4969c),
         Some(0xe6ef7461a20a3ac),
     );
     println!("saved {:?}", &file);

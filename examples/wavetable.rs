@@ -2,9 +2,9 @@ mod write_to_file;
 
 use corus::core::{
     accumulator::Accumulator,
-    biquad_filter::{BiquadFilter, BiquadFilterParams, LowPass},
-    var::Var,
+    biquad_filter::{types::LowPass, BiquadFilter, BiquadFilterParams},
     map::Map,
+    var::Var,
 };
 
 const SAMPLE_RATE: usize = 44100;
@@ -18,12 +18,7 @@ fn main() {
     // let node = Smooth::new(node, 0.9);
     let node = BiquadFilter::new(
         node,
-        BiquadFilterParams::new(
-            LowPass,
-            Var::from(500.0),
-            Var::from(0.0),
-            Var::from(1.0),
-        ),
+        BiquadFilterParams::new(LowPass, Var::from(500.0), Var::from(0.0), Var::from(1.0)),
     );
 
     write_to_file::write_to_file("wavetable.wav", SAMPLE_RATE, 3.0, node, None, None);

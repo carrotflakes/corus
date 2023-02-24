@@ -4,7 +4,7 @@ use corus::{
     contrib::sma::Sma,
     core::{
         accumulator::Accumulator,
-        biquad_filter::{BiquadFilter, BiquadFilterParams, LowPass},
+        biquad_filter::{BiquadFilter, BiquadFilterParams, types::LowPass},
         map::Map,
         mul::Mul,
         param3::ParamEventScheduleNode,
