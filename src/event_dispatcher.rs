@@ -46,22 +46,27 @@ impl EventQueue {
         }
     }
 
-    pub fn get_controller<E, L>(&mut self, ec: &EventControllable<L>) -> EventControl<L>
+    pub fn get_controller<E, L>(&mut self, ec: &EventControllable<L>) -> EventQueueController<L>
     where
         E: Send + Sync,
         L: Node + EventListener<E> + Send + Sync,
     {
-        EventControl::new(self.events.clone(), ec.inner())
+        EventQueueController::new(self.events.clone(), ec.inner())
     }
 
     pub(crate) fn dispatch(&mut self, current_time: f64) {
         let mut events = self.events.lock().unwrap();
-        while let Some(e) = events.front_mut() {
-            if current_time < e.0 {
-                break;
+        if let Some(event) = events.front() {
+            if current_time < event.0 {
+                return;
             }
-            e.1.dispatch(e.0);
-            events.pop_front();
+            let mut event = events.pop_front().unwrap();
+
+            drop(events);
+
+            event.1.dispatch(event.0);
+
+            self.dispatch(current_time);
         }
     }
 
@@ -102,7 +107,7 @@ impl PartialEq for EventQueue {
 }
 
 pub trait EventPusher<E> {
-    fn push_event(&mut self, time: f64, event: E);
+    fn push_event(self, time: f64, event: E);
 }
 
 pub struct EventControllable<A: 'static + Node> {
@@ -151,23 +156,23 @@ where
 }
 
 #[derive(Clone)]
-pub struct EventControl<L> {
+pub struct EventQueueController<L> {
     events: Arc<Mutex<VecDeque<(f64, Box<dyn EventDispatch>)>>>,
     target: Arc<L>,
 }
 
-impl<L> EventControl<L> {
+impl<L> EventQueueController<L> {
     fn new(events: Arc<Mutex<VecDeque<(f64, Box<dyn EventDispatch>)>>>, target: Arc<L>) -> Self {
         Self { events, target }
     }
 }
 
-impl<E, L> EventPusher<E> for EventControl<L>
+impl<E, L> EventPusher<E> for &mut EventQueueController<L>
 where
     E: 'static + Send + Sync,
     L: EventListener<E> + Send + Sync,
 {
-    fn push_event(&mut self, time: f64, event: E) {
+    fn push_event(self, time: f64, event: E) {
         let target = self.target.clone();
         let pair = Box::new(EventTargetPair { event, target });
         let mut events = self.events.lock().unwrap();
@@ -183,44 +188,38 @@ where
 
 #[derive(Default)]
 pub struct EventSchedule<A: 'static> {
-    events: EventQueue,
+    event_queue: Mutex<EventQueue>,
     target: Arc<A>,
 }
 
 impl<E: 'static + Sync + Send, A: 'static + EventListener<E> + Sync + Send> EventPusher<E>
-    for EventSchedule<A>
+    for &EventSchedule<A>
 {
-    fn push_event(&mut self, time: f64, event: E) {
-        self.events.push_event(time, event, self.target.clone());
-    }
-}
-
-impl<A: 'static> Clone for EventSchedule<A> {
-    fn clone(&self) -> Self {
-        EventSchedule {
-            events: self.events.clone(),
-            target: self.target.clone(),
-        }
+    fn push_event(self, time: f64, event: E) {
+        self.event_queue
+            .lock()
+            .unwrap()
+            .push_event(time, event, self.target.clone());
     }
 }
 
 pub struct EventScheduleNode<A: 'static + Node> {
     target: EventControllable<A>,
-    schedule: EventSchedule<A>,
+    schedule: Arc<EventSchedule<A>>,
 }
 
 impl<A: 'static + Node> EventScheduleNode<A> {
     pub fn new(target: EventControllable<A>) -> Self {
         Self {
-            schedule: EventSchedule {
-                events: Default::default(),
+            schedule: Arc::new(EventSchedule {
+                event_queue: Default::default(),
                 target: target.node.clone(),
-            },
+            }),
             target,
         }
     }
 
-    pub fn get_scheduler(&self) -> EventSchedule<A> {
+    pub fn get_scheduler(&self) -> Arc<EventSchedule<A>> {
         self.schedule.clone()
     }
 }
@@ -237,15 +236,23 @@ where
     }
 
     fn lock(&mut self, ctx: &ProcContext) {
-        let mut events = self.schedule.events.events.lock().unwrap();
-        let time = ctx.current_time + ctx.rest_proc_samples as f64 / ctx.sample_rate as f64;
+        let mut eq = self.schedule.event_queue.lock().unwrap();
+        if !Arc::ptr_eq(&ctx.event_queue.events, &eq.events) {
+            {
+                let mut dst = ctx.event_queue.events.lock().unwrap();
+                let mut src = eq.events.lock().unwrap();
 
-        while !events.is_empty() {
-            if time < events[0].0 {
-                break;
+                for (time, event_dispatch) in src.drain(..) {
+                    for (i, e) in dst.iter().enumerate() {
+                        if time < e.0 {
+                            dst.insert(i, (time, event_dispatch));
+                            return;
+                        }
+                    }
+                    dst.push_back((time, event_dispatch));
+                }
             }
-            let first = events.pop_front().unwrap();
-            ctx.event_queue.push_event_dispatch(first.0, first.1);
+            *eq = ctx.event_queue.clone();
         }
         self.target.lock(ctx);
     }
@@ -269,8 +276,8 @@ impl<E, L: EventListener<E>> EventControlInplace<E, L> {
     }
 }
 
-impl<E, L: EventListener<E>> EventPusher<E> for EventControlInplace<E, L> {
-    fn push_event(&mut self, time: f64, event: E) {
+impl<E, L: EventListener<E>> EventPusher<E> for &mut EventControlInplace<E, L> {
+    fn push_event(self, time: f64, event: E) {
         for (i, e) in self.events.iter().enumerate() {
             if time < e.0 {
                 self.events.insert(i, (time, event));

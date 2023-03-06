@@ -178,7 +178,7 @@ pub fn controllable_param(
     (param, ctl)
 }
 
-pub fn controllable<A: Node>(node: A) -> (EventScheduleNode<A>, EventSchedule<A>) {
+pub fn controllable<A: Node>(node: A) -> (EventScheduleNode<A>, Arc<EventSchedule<A>>) {
     let node = EventScheduleNode::new(EventControllable::new(node));
     let ctl = node.get_scheduler();
     (node, ctl)
