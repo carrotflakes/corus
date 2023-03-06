@@ -2,14 +2,8 @@ use std::marker::PhantomData;
 
 use crate::{core::Node, proc_context::ProcContext, signal::C1f64};
 
-use super::triggerable::Triggerable;
-
-pub struct PolySynth<
-    P1,
-    P2,
-    A: Node<Output = C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
-    ID: PartialEq + Default,
-> {
+pub struct PolySynth<P1, P2, A: Node<Output = C1f64> + NoteHandler<P1, P2>, ID: PartialEq + Default>
+{
     voices: Vec<VoiceContainer<P1, P2, A, ID>>,
     current: usize,
 }
@@ -17,7 +11,7 @@ pub struct PolySynth<
 struct VoiceContainer<
     P1,
     P2,
-    A: Node<Output = C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
+    A: Node<Output = C1f64> + NoteHandler<P1, P2>,
     ID: PartialEq + Default,
 > {
     id: ID,
@@ -25,12 +19,8 @@ struct VoiceContainer<
     _t: (PhantomData<P1>, PhantomData<P2>),
 }
 
-impl<
-        P1,
-        P2,
-        A: Node<Output = C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
-        ID: PartialEq + Default,
-    > VoiceContainer<P1, P2, A, ID>
+impl<P1, P2, A: Node<Output = C1f64> + NoteHandler<P1, P2>, ID: PartialEq + Default>
+    VoiceContainer<P1, P2, A, ID>
 {
     pub fn new(node: A) -> Self {
         Self {
@@ -41,12 +31,8 @@ impl<
     }
 }
 
-impl<
-        P1,
-        P2,
-        A: Node<Output = C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
-        ID: PartialEq + Default,
-    > PolySynth<P1, P2, A, ID>
+impl<P1, P2, A: Node<Output = C1f64> + NoteHandler<P1, P2>, ID: PartialEq + Default>
+    PolySynth<P1, P2, A, ID>
 {
     pub fn new(voice_builder: &mut dyn FnMut() -> A, voice_num: usize) -> Self {
         Self {
@@ -61,14 +47,14 @@ impl<
         let current = self.current;
         let voice = &mut self.voices[current];
         voice.id = id;
-        voice.voice.bang(time, NoteOn(payload));
+        voice.voice.note_on(time, payload);
         self.current = (self.current + 1) % self.voices.len();
     }
 
     pub fn note_off(&mut self, time: f64, id: ID, payload: P2) {
         for voice in &mut self.voices {
             if voice.id == id {
-                voice.voice.bang(time, NoteOff(payload));
+                voice.voice.note_off(time, payload);
                 voice.id = Default::default();
                 return;
             }
@@ -76,12 +62,8 @@ impl<
     }
 }
 
-impl<
-        P1,
-        P2,
-        A: Node<Output = C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>>,
-        ID: PartialEq + Default,
-    > Node for PolySynth<P1, P2, A, ID>
+impl<P1, P2, A: Node<Output = C1f64> + NoteHandler<P1, P2>, ID: PartialEq + Default> Node
+    for PolySynth<P1, P2, A, ID>
 {
     type Output = C1f64;
 
@@ -107,28 +89,10 @@ impl<
     }
 }
 
-impl<
-        T: Clone,
-        P1,
-        P2,
-        A: Node<Output = C1f64> + Triggerable<NoteOn<P1>> + Triggerable<NoteOff<P2>> + Triggerable<T>,
-        ID: PartialEq + Default,
-    > Triggerable<T> for PolySynth<P1, P2, A, ID>
-{
-    fn bang(&mut self, time: f64, payload: T) {
-        for voice in &mut self.voices {
-            voice.voice.bang(time, payload.clone());
-        }
-    }
-}
-
-pub struct NoteOn<P>(pub P);
-pub struct NoteOff<P>(pub P);
-
 pub struct Voice<A: Node<Output = C1f64>, P1, P2>(
     pub A,
-    pub Box<dyn FnMut(f64, NoteOn<P1>) + Send + Sync>,
-    pub Box<dyn FnMut(f64, NoteOff<P2>) + Send + Sync>,
+    pub Box<dyn FnMut(f64, P1) + Send + Sync>,
+    pub Box<dyn FnMut(f64, P2) + Send + Sync>,
 );
 
 impl<A: Node<Output = C1f64>, P1, P2> Node for Voice<A, P1, P2> {
@@ -147,14 +111,17 @@ impl<A: Node<Output = C1f64>, P1, P2> Node for Voice<A, P1, P2> {
     }
 }
 
-impl<A: Node<Output = f64>, P1, P2> Triggerable<NoteOn<P1>> for Voice<A, P1, P2> {
-    fn bang(&mut self, time: f64, payload: NoteOn<P1>) {
+impl<A: Node<Output = f64>, P1, P2> NoteHandler<P1, P2> for Voice<A, P1, P2> {
+    fn note_on(&mut self, time: f64, payload: P1) {
         self.1(time, payload);
+    }
+
+    fn note_off(&mut self, time: f64, payload: P2) {
+        self.2(time, payload);
     }
 }
 
-impl<A: Node<Output = f64>, P1, P2> Triggerable<NoteOff<P2>> for Voice<A, P1, P2> {
-    fn bang(&mut self, time: f64, payload: NoteOff<P2>) {
-        self.2(time, payload);
-    }
+pub trait NoteHandler<P1, P2> {
+    fn note_on(&mut self, time: f64, payload: P1);
+    fn note_off(&mut self, time: f64, payload: P2);
 }

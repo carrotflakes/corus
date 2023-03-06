@@ -31,7 +31,6 @@ pub mod sma;
 pub mod smooth;
 pub mod spring;
 pub mod stop_proc;
-pub mod triggerable;
 
 pub use effects::*;
 pub use oscillators::*;

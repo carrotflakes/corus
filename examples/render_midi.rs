@@ -6,17 +6,17 @@ use corus::{
     contrib::{
         amp_pan,
         envelope2::AdsrEnvelope,
-        generic_poly_synth::{NoteOff, NoteOn, PolySynth, Voice},
+        generic_poly_synth::{PolySynth, Voice},
     },
     core::{
         accumulator::{Accumulator, SetValueAtTime},
         add::Add,
         amp::Amp,
-        var::Var,
         mix::Mix,
         mul::Mul,
         param3::{ParamEventSchedule, ParamEventScheduleNode},
         share::Share,
+        var::Var,
         Node,
     },
     db_to_amp, notenum_to_frequency,
@@ -203,7 +203,7 @@ fn saw_builder(pitch: Share<ParamEventScheduleNode<f64>>) -> MyVoice {
     let node = Amp::new(saw, Amp::new(env, gain));
     Voice(
         Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
-        Box::new(move |time, NoteOn((notenum, velocity))| {
+        Box::new(move |time, (notenum, velocity)| {
             freq_ctl
                 .lock()
                 .unwrap()
@@ -215,7 +215,7 @@ fn saw_builder(pitch: Share<ParamEventScheduleNode<f64>>) -> MyVoice {
             acc_reset(time);
             env_on(time);
         }),
-        Box::new(move |time, NoteOff(())| env_off(time)),
+        Box::new(move |time, ()| env_off(time)),
     )
 }
 

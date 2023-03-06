@@ -8,7 +8,7 @@ use corus::{
         chip::{Noise, NoiseEvent},
         controllable_param, delay_fx,
         envelope::{AdsrEnvelope, ArEnvelope},
-        generic_poly_synth::{NoteOff, NoteOn, PolySynth, Voice},
+        generic_poly_synth::{PolySynth, Voice},
         integrator::{Integrator, IntegratorEvent},
         perlin_noise,
         rand_fm_synth::rand_fm_synth,
@@ -19,7 +19,7 @@ use corus::{
         accumulator::Accumulator,
         add::Add,
         amp::Amp,
-        biquad_filter::{BiquadFilter, BiquadFilterParams, types::LowPass},
+        biquad_filter::{types::LowPass, BiquadFilter, BiquadFilterParams},
         controllable::{Controllable, Controller},
         map::Map,
         mix::Mix,
@@ -213,7 +213,7 @@ fn saw_builder(pitch: Share<Controllable<Param<f64>>>) -> MyVoice {
     let node = Amp::new(saw, Amp::new(env, gain));
     Voice(
         Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
-        Box::new(move |time, NoteOn((notenum, velocity))| {
+        Box::new(move |time, (notenum, velocity)| {
             freq_param_ctrl
                 .lock()
                 .set_value_at_time(time, notenum_to_frequency(notenum));
@@ -223,7 +223,7 @@ fn saw_builder(pitch: Share<Controllable<Param<f64>>>) -> MyVoice {
             acc_reset(time, 0.5);
             env_on(time);
         }),
-        Box::new(move |time, NoteOff(())| env_off(time)),
+        Box::new(move |time, ()| env_off(time)),
     )
 }
 
@@ -235,7 +235,7 @@ fn noise_builder() -> MyVoice {
     let node = Amp::new(noise, Amp::new(env, gain));
     Voice(
         Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
-        Box::new(move |time, NoteOn((notenum, velocity))| {
+        Box::new(move |time, (notenum, velocity)| {
             noise_ctrl.lock().push_event(time, NoiseEvent::ResetReg);
             noise_ctrl.lock().push_event(
                 time,
@@ -246,7 +246,7 @@ fn noise_builder() -> MyVoice {
                 .set_value_at_time(time, db_to_amp((velocity * 0.25 - 1.0) * DB_MIN));
             env_on(time)
         }),
-        Box::new(move |time, NoteOff(())| env_off(time)),
+        Box::new(move |time, ()| env_off(time)),
     )
 }
 
@@ -258,11 +258,11 @@ fn fm_synth_builder(seed: u32) -> MyVoice {
     let node = Amp::new(synth, gain);
     Voice(
         Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
-        Box::new(move |time, NoteOn((notenum, velocity))| {
+        Box::new(move |time, (notenum, velocity)| {
             gain_ctrl.lock().set_value_at_time(time, velocity);
             ctrl1.lock().note_on(time, notenum_to_frequency(notenum));
         }),
-        Box::new(move |time, NoteOff(())| {
+        Box::new(move |time, ()| {
             ctrl2.lock().note_off(time);
         }),
     )
@@ -285,7 +285,7 @@ fn benihora_builder() -> MyVoice {
     );
     Voice(
         Box::new(Amp::new(benihora, Var::from(1.5))) as Box<dyn Node<Output = f64> + Send + Sync>,
-        Box::new(move |time, NoteOn((notenum, velocity))| {
+        Box::new(move |time, (notenum, velocity)| {
             let time = time - 0.05;
             ctrl1
                 .lock()
@@ -306,7 +306,7 @@ fn benihora_builder() -> MyVoice {
                 BenihoraEvent::SetFrequency(notenum_to_frequency(notenum)),
             );
         }),
-        Box::new(move |time, NoteOff(())| {
+        Box::new(move |time, ()| {
             let time = time - 0.05;
             ctrl2
                 .lock()
@@ -327,7 +327,7 @@ fn wavetable_builder(pitch: Share<Controllable<Param<f64>>>) -> MyVoice {
     let node = Amp::new(node, Amp::new(env, gain));
     Voice(
         Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
-        Box::new(move |time, NoteOn((notenum, velocity))| {
+        Box::new(move |time, (notenum, velocity)| {
             freq_param_ctrl
                 .lock()
                 .set_value_at_time(time, notenum_to_frequency(notenum));
@@ -337,7 +337,7 @@ fn wavetable_builder(pitch: Share<Controllable<Param<f64>>>) -> MyVoice {
             acc_reset(time, 0.5);
             env_on(time);
         }),
-        Box::new(move |time, NoteOff(())| env_off(time)),
+        Box::new(move |time, ()| env_off(time)),
     )
 }
 
@@ -368,7 +368,7 @@ fn sampler_builder(pitch: Share<Controllable<Param<f64>>>, buffer: Arc<Vec<f64>>
     let node = Amp::new(node, Amp::new(env, gain));
     Voice(
         Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
-        Box::new(move |time, NoteOn((notenum, velocity))| {
+        Box::new(move |time, (notenum, velocity)| {
             freq_param_ctrl
                 .lock()
                 .set_value_at_time(time, notenum_to_frequency(notenum));
@@ -378,7 +378,7 @@ fn sampler_builder(pitch: Share<Controllable<Param<f64>>>, buffer: Arc<Vec<f64>>
             int_reset(time);
             env_on(time);
         }),
-        Box::new(move |time, NoteOff(())| env_off(time)),
+        Box::new(move |time, ()| env_off(time)),
     )
 }
 
@@ -391,7 +391,13 @@ fn make_sample() -> Vec<f64> {
         1000.0,
     );
     freq.set(400.0, 0.0);
-    let mut node = Spring::new(freq, Var::from(0.1), Var::from(10000.0), Var::from(0.0), 1.0);
+    let mut node = Spring::new(
+        freq,
+        Var::from(0.1),
+        Var::from(10000.0),
+        Var::from(0.0),
+        1.0,
+    );
     node.set(0.0, 0.1);
 
     let buf: Vec<_> = ProcContext::new(SAMPLE_RATE as u64)

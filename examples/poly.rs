@@ -3,15 +3,15 @@ mod write_to_file;
 use corus::{
     contrib::{
         envelope2::AdsrEnvelope,
-        generic_poly_synth::{NoteOff, NoteOn, PolySynth, Voice},
+        generic_poly_synth::{PolySynth, Voice},
     },
     core::{
         accumulator::{Accumulator, SetValueAtTime},
         add::Add,
         amp::Amp,
-        var::Var,
         controllable::Controllable,
         param3::ParamEventScheduleNode,
+        var::Var,
     },
     notenum_to_frequency,
     signal::C1f64,
@@ -30,12 +30,11 @@ fn main() {
         )));
         let mut acc_ctl = acc.controller();
         let saw = Add::new(acc, Var::from(-0.5));
-        let (env, mut env_on, mut env_off) =
-            AdsrEnvelope::<f64>::new(0.01, 0.5, 0.2, 0.3).build();
+        let (env, mut env_on, mut env_off) = AdsrEnvelope::<f64>::new(0.01, 0.5, 0.2, 0.3).build();
         let node = Amp::new(saw, env);
         Voice(
             node,
-            Box::new(move |time, NoteOn(notenum)| {
+            Box::new(move |time, notenum| {
                 freq_ctl
                     .lock()
                     .unwrap()
@@ -45,7 +44,7 @@ fn main() {
                     .push_event(time, SetValueAtTime::new(C1f64::from(0.5)));
                 env_on(time);
             }),
-            Box::new(move |time, NoteOff(())| {
+            Box::new(move |time, ()| {
                 env_off(time);
             }),
         )
