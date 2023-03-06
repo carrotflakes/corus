@@ -15,6 +15,7 @@ pub mod fitzhugh_nagumo;
 pub mod fm_synth;
 pub mod fn_processor;
 pub mod generic_poly_synth;
+pub mod generic_poly_synth2;
 pub mod integrator;
 mod oscillators;
 pub mod parallel_mix;
