@@ -21,7 +21,7 @@ use corus::{
 fn main() {
     let sample_rate = 44100;
 
-    let mut builder = || {
+    let builder = || {
         let freq = ParamEventScheduleNode::new();
         let freq_ctl = freq.get_scheduler();
         let acc = Controllable::new(EventControlInplace::new(Accumulator::new(
@@ -49,7 +49,7 @@ fn main() {
             }),
         )
     };
-    let mut synth = PolySynth::new(&mut builder, 10);
+    let mut synth = PolySynth::new(&builder, 10);
 
     synth.note_on(0.2, 60, 60);
     synth.note_off(0.4, 60, ());

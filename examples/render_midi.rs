@@ -148,7 +148,7 @@ impl Track {
         _program: u8,
         pitch: Share<ParamEventScheduleNode<f64>>,
     ) -> PolySynth<(u8, f64), (), MyVoice, Option<u8>> {
-        PolySynth::new(&mut || saw_builder(pitch.clone()), 8)
+        PolySynth::new(&|| saw_builder(pitch.clone()), 8)
     }
 
     pub fn change_program(&mut self, program: u8) {

@@ -156,15 +156,15 @@ impl Track {
         pitch: Share<Controllable<Param<f64>>>,
     ) -> PolySynth<(u8, f64), (), MyVoice, Option<u8>> {
         if track == 0 || track == 2 || track == 3 {
-            PolySynth::new(&mut || benihora_builder(), 1)
+            PolySynth::new(&benihora_builder, 1)
         } else if track == 9 {
-            PolySynth::new(&mut noise_builder, 8)
+            PolySynth::new(&noise_builder, 8)
         } else if 9 < track {
             let buffer = Arc::new(make_sample());
-            PolySynth::new(&mut || sampler_builder(pitch.clone(), buffer.clone()), 8)
+            PolySynth::new(&|| sampler_builder(pitch.clone(), buffer.clone()), 8)
         } else {
             // PolySynth::new(&mut || fm_synth_builder(program as u32), 8)
-            PolySynth::new(&mut || saw_builder(pitch.clone()), 8)
+            PolySynth::new(&|| saw_builder(pitch.clone()), 8)
         }
     }
 
