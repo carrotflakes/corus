@@ -207,6 +207,7 @@ impl<A: 'static> Clone for EventSchedule<A> {
 pub struct EventScheduleNode<A: 'static + Node> {
     target: EventControllable<A>,
     schedule: EventSchedule<A>,
+    past_time: f64,
 }
 
 impl<A: 'static + Node> EventScheduleNode<A> {
@@ -217,6 +218,7 @@ impl<A: 'static + Node> EventScheduleNode<A> {
                 target: target.node.clone(),
             },
             target,
+            past_time: 0.0,
         }
     }
 
@@ -238,10 +240,10 @@ where
 
     fn lock(&mut self, ctx: &ProcContext) {
         let mut events = self.schedule.events.events.lock().unwrap();
-        let time = ctx.current_time + ctx.rest_proc_samples as f64 / ctx.sample_rate as f64;
+        self.past_time = ctx.current_time + ctx.rest_proc_samples as f64 / ctx.sample_rate as f64;
 
         while !events.is_empty() {
-            if time < events[0].0 {
+            if self.past_time < events[0].0 {
                 break;
             }
             let first = events.pop_front().unwrap();
@@ -252,6 +254,11 @@ where
 
     fn unlock(&mut self) {
         self.target.unlock();
+
+        let events = self.schedule.events.events.lock().unwrap();
+        if events.iter().find(|e| e.0 < self.past_time).is_some() {
+            panic!("EventScheduleNode: Event pushed while processing.");
+        }
     }
 }
 
