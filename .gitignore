@@ -1,6 +1,5 @@
 /target
 Cargo.lock
-gui/target
-biquad_filter/target
+**/target
 *.wav
 *.mid
