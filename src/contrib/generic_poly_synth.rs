@@ -5,7 +5,6 @@ use crate::{core::Node, proc_context::ProcContext, signal::C1f64};
 pub struct PolySynth<P1, P2, A: Node<Output = C1f64> + NoteHandler<P1, P2>, ID: PartialEq + Default>
 {
     voices: Vec<VoiceContainer<P1, P2, A, ID>>,
-    current: usize,
 }
 
 struct VoiceContainer<
@@ -16,6 +15,7 @@ struct VoiceContainer<
 > {
     id: ID,
     voice: A,
+    note_off_time: f64,
     _t: (PhantomData<P1>, PhantomData<P2>),
 }
 
@@ -26,6 +26,7 @@ impl<P1, P2, A: Node<Output = C1f64> + NoteHandler<P1, P2>, ID: PartialEq + Defa
         Self {
             id: Default::default(),
             voice: node,
+            note_off_time: 0.0,
             _t: Default::default(),
         }
     }
@@ -39,16 +40,15 @@ impl<P1, P2, A: Node<Output = C1f64> + NoteHandler<P1, P2>, ID: PartialEq + Defa
             voices: (0..voice_num)
                 .map(|_| VoiceContainer::new(voice_builder()))
                 .collect(),
-            current: 0,
         }
     }
 
     pub fn note_on(&mut self, time: f64, id: ID, payload: P1) {
-        let current = self.current;
-        let voice = &mut self.voices[current];
+        let i = self.next_voice_index();
+        let voice = &mut self.voices[i];
         voice.id = id;
         voice.voice.note_on(time, payload);
-        self.current = (self.current + 1) % self.voices.len();
+        voice.note_off_time = f64::INFINITY;
     }
 
     pub fn note_off(&mut self, time: f64, id: ID, payload: P2) {
@@ -56,9 +56,28 @@ impl<P1, P2, A: Node<Output = C1f64> + NoteHandler<P1, P2>, ID: PartialEq + Defa
             if voice.id == id {
                 voice.voice.note_off(time, payload);
                 voice.id = Default::default();
+                voice.note_off_time = time;
                 return;
             }
         }
+    }
+
+    pub fn get_voice_mut(&mut self, id: ID) -> Option<&mut A> {
+        for voice in &mut self.voices {
+            if voice.id == id {
+                return Some(&mut voice.voice);
+            }
+        }
+        None
+    }
+
+    fn next_voice_index(&mut self) -> usize {
+        self.voices
+            .iter()
+            .enumerate()
+            .min_by(|a, b| a.1.note_off_time.total_cmp(&b.1.note_off_time))
+            .unwrap()
+            .0
     }
 }
 
@@ -89,35 +108,49 @@ impl<P1, P2, A: Node<Output = C1f64> + NoteHandler<P1, P2>, ID: PartialEq + Defa
     }
 }
 
-pub struct Voice<A: Node<Output = C1f64>, P1, P2>(
-    pub A,
-    pub Box<dyn FnMut(f64, P1) + Send + Sync>,
-    pub Box<dyn FnMut(f64, P2) + Send + Sync>,
-);
+pub struct Voice<A: Node<Output = C1f64>, P1, P2> {
+    node: A,
+    note_on_fn: Box<dyn FnMut(f64, P1) + Send + Sync>,
+    note_off_fn: Box<dyn FnMut(f64, P2) + Send + Sync>,
+}
+
+impl<A: Node<Output = C1f64>, P1, P2> Voice<A, P1, P2> {
+    pub fn new(
+        node: A,
+        note_on_fn: Box<dyn FnMut(f64, P1) + Send + Sync>,
+        note_off_fn: Box<dyn FnMut(f64, P2) + Send + Sync>,
+    ) -> Self {
+        Self {
+            node,
+            note_on_fn,
+            note_off_fn,
+        }
+    }
+}
 
 impl<A: Node<Output = C1f64>, P1, P2> Node for Voice<A, P1, P2> {
     type Output = C1f64;
 
     fn proc(&mut self, ctx: &crate::ProcContext) -> Self::Output {
-        self.0.proc(ctx)
+        self.node.proc(ctx)
     }
 
     fn lock(&mut self, ctx: &ProcContext) {
-        self.0.lock(ctx);
+        self.node.lock(ctx);
     }
 
     fn unlock(&mut self) {
-        self.0.unlock();
+        self.node.unlock();
     }
 }
 
 impl<A: Node<Output = f64>, P1, P2> NoteHandler<P1, P2> for Voice<A, P1, P2> {
     fn note_on(&mut self, time: f64, payload: P1) {
-        self.1(time, payload);
+        (self.note_on_fn)(time, payload);
     }
 
     fn note_off(&mut self, time: f64, payload: P2) {
-        self.2(time, payload);
+        (self.note_off_fn)(time, payload);
     }
 }
 

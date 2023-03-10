@@ -201,7 +201,7 @@ fn saw_builder(pitch: Share<ParamEventScheduleNode<f64>>) -> MyVoice {
     let saw = Add::new(acc, Var::from(-0.5));
     let (env, mut env_on, mut env_off) = AdsrEnvelope::<f64>::new(0.01, 0.5, 0.2, 0.3).build();
     let node = Amp::new(saw, Amp::new(env, gain));
-    Voice(
+    Voice::new(
         Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
         Box::new(move |time, (notenum, velocity)| {
             freq_ctl

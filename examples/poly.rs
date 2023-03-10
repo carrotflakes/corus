@@ -32,7 +32,7 @@ fn main() {
         let saw = Add::new(acc, Var::from(-0.5));
         let (env, mut env_on, mut env_off) = AdsrEnvelope::<f64>::new(0.01, 0.5, 0.2, 0.3).build();
         let node = Amp::new(saw, env);
-        Voice(
+        Voice::new(
             node,
             Box::new(move |time, notenum| {
                 freq_ctl

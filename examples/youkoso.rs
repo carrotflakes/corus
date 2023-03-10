@@ -113,8 +113,8 @@ fn main() {
         SAMPLE_RATE,
         time,
         node,
-        Some(0xbdaf67a9beb4969c),
-        Some(0xe6ef7461a20a3ac),
+        Some(0x66927d1309bf9ecc),
+        Some(0x6c6ecb9aa4f5d12e),
     );
     println!("saved {:?}", &file);
 }
@@ -211,7 +211,7 @@ fn saw_builder(pitch: Share<Controllable<Param<f64>>>) -> MyVoice {
     let saw = Add::new(acc, Var::from(-0.5));
     let (env, mut env_on, mut env_off) = AdsrEnvelope::new(0.01, 0.5, 0.2, 0.3).build();
     let node = Amp::new(saw, Amp::new(env, gain));
-    Voice(
+    Voice::new(
         Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
         Box::new(move |time, (notenum, velocity)| {
             freq_param_ctrl
@@ -233,7 +233,7 @@ fn noise_builder() -> MyVoice {
     let mut noise_ctrl = noise.controller();
     let (env, mut env_on, mut env_off) = ArEnvelope::new(0.01, 0.3).build();
     let node = Amp::new(noise, Amp::new(env, gain));
-    Voice(
+    Voice::new(
         Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
         Box::new(move |time, (notenum, velocity)| {
             noise_ctrl.lock().push_event(time, NoiseEvent::ResetReg);
@@ -256,7 +256,7 @@ fn fm_synth_builder(seed: u32) -> MyVoice {
     let mut ctrl1 = synth.controller();
     let mut ctrl2 = synth.controller();
     let node = Amp::new(synth, gain);
-    Voice(
+    Voice::new(
         Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
         Box::new(move |time, (notenum, velocity)| {
             gain_ctrl.lock().set_value_at_time(time, velocity);
@@ -283,7 +283,7 @@ fn benihora_builder() -> MyVoice {
         Var::from(0.5),
         Var::from(0.75),
     );
-    Voice(
+    Voice::new(
         Box::new(Amp::new(benihora, Var::from(1.5))) as Box<dyn Node<Output = f64> + Send + Sync>,
         Box::new(move |time, (notenum, velocity)| {
             let time = time - 0.05;
@@ -325,7 +325,7 @@ fn wavetable_builder(pitch: Share<Controllable<Param<f64>>>) -> MyVoice {
     });
     let (env, mut env_on, mut env_off) = AdsrEnvelope::new(0.01, 0.5, 0.2, 0.3).build();
     let node = Amp::new(node, Amp::new(env, gain));
-    Voice(
+    Voice::new(
         Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
         Box::new(move |time, (notenum, velocity)| {
             freq_param_ctrl
@@ -366,7 +366,7 @@ fn sampler_builder(pitch: Share<Controllable<Param<f64>>>, buffer: Arc<Vec<f64>>
     });
     let (env, mut env_on, mut env_off) = AdsrEnvelope::new(0.0, 1.0, 0.0, 0.3).build();
     let node = Amp::new(node, Amp::new(env, gain));
-    Voice(
+    Voice::new(
         Box::new(node) as Box<dyn Node<Output = f64> + Send + Sync>,
         Box::new(move |time, (notenum, velocity)| {
             freq_param_ctrl
