@@ -1,4 +1,5 @@
 pub mod nodes;
+pub mod signal;
 pub mod unsafe_wrapper;
 
 #[path = "./../../src/ring_buffer.rs"]

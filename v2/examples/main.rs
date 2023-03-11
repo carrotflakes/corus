@@ -70,7 +70,7 @@ fn main() {
 
     let name = "main.wav";
     let spec = hound::WavSpec {
-        channels: 1,
+        channels: 2,
         sample_rate: ctx.sample_rate().round() as u32,
         bits_per_sample: 16,
         sample_format: hound::SampleFormat::Int,
@@ -81,8 +81,12 @@ fn main() {
 
         let x = synth.process(&ctx) + poly_synth.process(&ctx);
         let x = delay_fx.process(&ctx, x, 0.5, 0.5);
-        let x = (x * std::i16::MAX as f64) as i16;
-        writer.write_sample(x).unwrap();
+        writer
+            .write_sample((x * std::i16::MAX as f64) as i16)
+            .unwrap();
+        writer
+            .write_sample((x * std::i16::MAX as f64) as i16)
+            .unwrap();
 
         ctx.next();
     }
