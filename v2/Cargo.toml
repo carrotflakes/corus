@@ -1,0 +1,13 @@
+[package]
+name = "corus"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+biquad = "0.4"
+
+[dev-dependencies]
+hound = "3.4"
+ezmid = {git = "https://github.com/carrotflakes/ezmid.git", branch = "main"}
