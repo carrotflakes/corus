@@ -1,6 +1,9 @@
 pub mod nodes;
 pub mod unsafe_wrapper;
 
+#[path = "./../../src/ring_buffer.rs"]
+pub mod ring_buffer;
+
 use std::collections::VecDeque;
 
 #[derive(Debug, Clone)]

@@ -1,4 +1,5 @@
 pub mod biquad_filter;
+pub mod effects;
 pub mod envelope;
 pub mod param;
 pub mod phase;

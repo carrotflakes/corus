@@ -3,6 +3,7 @@ use std::f64::consts::TAU;
 use corus::{
     nodes::{
         biquad_filter::BiquadFilter,
+        effects::DelayFx,
         envelope::Envelope,
         param::Param,
         phase::Phase,
@@ -65,6 +66,8 @@ fn main() {
     event_queue.push(0.2, PolySynth::note_on_event(&poly_synth, 64, 64));
     event_queue.push(0.3, PolySynth::note_off_event(&poly_synth, 64, ()));
 
+    let mut delay_fx = DelayFx::new(44100);
+
     let name = "main.wav";
     let spec = hound::WavSpec {
         channels: 1,
@@ -77,6 +80,7 @@ fn main() {
         event_queue.dispatch(ctx.current_time());
 
         let x = synth.process(&ctx) + poly_synth.process(&ctx);
+        let x = delay_fx.process(&ctx, x, 0.5, 0.5);
         let x = (x * std::i16::MAX as f64) as i16;
         writer.write_sample(x).unwrap();
 
