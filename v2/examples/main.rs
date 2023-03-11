@@ -11,7 +11,7 @@ use corus::{
         sine::Sine,
     },
     unsafe_wrapper::UnsafeWrapper,
-    EventQueue, ProccessContext, Producer,
+    EventQueue, ProccessContext, Producer, signal::IntoStereo,
 };
 
 fn main() {
@@ -81,11 +81,12 @@ fn main() {
 
         let x = synth.process(&ctx) + poly_synth.process(&ctx);
         let x = delay_fx.process(&ctx, x, 0.5, 0.5);
+        let [l, r] = x.into_stereo_with_pan(0.0);
         writer
-            .write_sample((x * std::i16::MAX as f64) as i16)
+            .write_sample((l * std::i16::MAX as f64) as i16)
             .unwrap();
         writer
-            .write_sample((x * std::i16::MAX as f64) as i16)
+            .write_sample((r * std::i16::MAX as f64) as i16)
             .unwrap();
 
         ctx.next();
