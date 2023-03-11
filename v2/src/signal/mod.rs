@@ -25,14 +25,24 @@ impl Signal for StereoF64 {
 }
 
 pub trait SignalExt: Signal {
+    fn neg(self) -> Self;
     fn add(self, rhs: Self) -> Self;
+    fn sub(self, rhs: Self) -> Self;
     fn mul(self, rhs: Self) -> Self;
     fn from_float(f: Self::Float) -> Self;
 }
 
 impl SignalExt for f64 {
+    fn neg(self) -> Self {
+        -self
+    }
+
     fn add(self, rhs: Self) -> Self {
         self + rhs
+    }
+
+    fn sub(self, rhs: Self) -> Self {
+        self - rhs
     }
 
     fn mul(self, rhs: Self) -> Self {
@@ -45,8 +55,16 @@ impl SignalExt for f64 {
 }
 
 impl SignalExt for StereoF64 {
+    fn neg(self) -> Self {
+        [-self[0], -self[1]]
+    }
+
     fn add(self, rhs: Self) -> Self {
         [self[0] + rhs[0], self[1] + rhs[1]]
+    }
+
+    fn sub(self, rhs: Self) -> Self {
+        [self[0] - rhs[0], self[1] - rhs[1]]
     }
 
     fn mul(self, rhs: Self) -> Self {

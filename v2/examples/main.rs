@@ -1,9 +1,9 @@
 use std::f64::consts::TAU;
 
-use corus::{
+use corus_v2::{
     nodes::{
         biquad_filter::BiquadFilter,
-        effects::DelayFx,
+        effects::{DelayFx, SchroederReverb},
         envelope::Envelope,
         param::Param,
         phase::Phase,
@@ -61,14 +61,15 @@ fn main() {
     event_queue.push(1.0, synth.env.make_event(|env, time| env.note_off(time)));
 
     let mut poly_synth = UnsafeWrapper::new(PolySynth::new(Voice::new, 8));
-    event_queue.push(0.0, PolySynth::note_on_event(&poly_synth, 60, 60));
-    event_queue.push(0.1, PolySynth::note_off_event(&poly_synth, 60, ()));
-    event_queue.push(0.1, PolySynth::note_on_event(&poly_synth, 62, 62));
-    event_queue.push(0.2, PolySynth::note_off_event(&poly_synth, 62, ()));
-    event_queue.push(0.2, PolySynth::note_on_event(&poly_synth, 64, 64));
-    event_queue.push(0.3, PolySynth::note_off_event(&poly_synth, 64, ()));
+    event_queue.push(0.5, PolySynth::note_on_event(&poly_synth, 60, 60));
+    event_queue.push(0.6, PolySynth::note_off_event(&poly_synth, 60, ()));
+    event_queue.push(0.6, PolySynth::note_on_event(&poly_synth, 64, 64));
+    event_queue.push(0.7, PolySynth::note_off_event(&poly_synth, 64, ()));
+    event_queue.push(0.7, PolySynth::note_on_event(&poly_synth, 67, 67));
+    event_queue.push(0.9, PolySynth::note_off_event(&poly_synth, 67, ()));
 
     let mut delay_fx = DelayFx::new(44100);
+    let mut reverb = SchroederReverb::new(44100);
 
     let name = "main.wav";
     let spec = hound::WavSpec {
@@ -78,14 +79,15 @@ fn main() {
         sample_format: hound::SampleFormat::Int,
     };
     let mut writer = hound::WavWriter::create(name, spec).unwrap();
-    for _ in 0..44100 * 2 {
+    for _ in 0..44100 * 3 {
         event_queue.dispatch(ctx.current_time());
 
         let x = synth
             .process(&ctx)
             .into_stereo()
             .add(poly_synth.process(&ctx));
-        let x = delay_fx.process(&ctx, x, 0.5, 0.5);
+        let x = delay_fx.process(&ctx, x, 0.5, 0.25);
+        let x = reverb.process(&ctx, x);
         let [l, r] = x.into_stereo_with_pan(0.0);
         writer
             .write_sample((l * std::i16::MAX as f64) as i16)
@@ -143,7 +145,7 @@ impl Synth {
 pub struct Voice {
     frequency: f64,
     unison: Unison,
-    env: Envelope,
+    envs: [Envelope; 2],
     filter: BiquadFilter<2, StereoF64>,
 }
 
@@ -152,7 +154,10 @@ impl Voice {
         Self {
             frequency: 440.0,
             unison: Unison::new(5),
-            env: Envelope::new(&[(0.01, 1.0, -1.0), (1.0, 0.5, 1.0)], 0.3, 1.0),
+            envs: [
+                Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.3, 1.0),
+                Envelope::new(&[(0.01, 1.0, -1.0), (1.0, 0.5, 1.0)], 0.3, 1.0),
+            ],
             filter: BiquadFilter::new(),
         }
     }
@@ -161,8 +166,9 @@ impl Voice {
         let x = self
             .unison
             .process(ctx, self.frequency, 0.04, 0.9, |phase| phase * 2.0 - 1.0);
-        let gain = self.env.process(ctx) * 0.4;
-        let x = self.filter.process(ctx, 5000.0, 1.0, x);
+        let gain = self.envs[0].process(ctx) * 0.4;
+        let filter_freq = self.envs[1].process(ctx) * 4000.0 + 4500.0;
+        let x = self.filter.process(ctx, filter_freq, 1.5, x);
         x.mul(gain.into_stereo())
     }
 }
@@ -178,11 +184,13 @@ impl Producer for Voice {
 impl NoteHandler<u8, ()> for Voice {
     fn note_on(&mut self, time: f64, payload: u8) {
         self.frequency = 440.0 * 2.0f64.powf((payload as f64 - 69.0) / 12.0);
-        self.env.note_on(time);
-        // self.unison.reset();
+        self.envs[0].note_on(time);
+        self.envs[1].note_on(time);
+        self.unison.reset();
     }
 
     fn note_off(&mut self, time: f64, _: ()) {
-        self.env.note_off(time);
+        self.envs[0].note_off(time);
+        self.envs[1].note_off(time);
     }
 }

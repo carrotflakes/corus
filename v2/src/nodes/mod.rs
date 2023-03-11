@@ -1,4 +1,6 @@
+pub mod all_pass_filter;
 pub mod biquad_filter;
+pub mod comb_filter;
 pub mod effects;
 pub mod envelope;
 pub mod param;
