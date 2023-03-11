@@ -5,3 +5,4 @@ pub mod param;
 pub mod phase;
 pub mod poly_synth;
 pub mod sine;
+pub mod unison;

@@ -1,29 +1,21 @@
 use std::marker::PhantomData;
 
-use crate::{unsafe_wrapper::UnsafeWrapper, PackedEvent, ProccessContext, Producer};
+use crate::{
+    signal::SignalExt, unsafe_wrapper::UnsafeWrapper, PackedEvent, ProccessContext, Producer,
+};
 
-pub struct PolySynth<
-    P1,
-    P2,
-    A: Producer<Output = f64> + NoteHandler<P1, P2>,
-    ID: PartialEq + Default,
-> {
+pub struct PolySynth<P1, P2, A: Producer + NoteHandler<P1, P2>, ID: PartialEq + Default> {
     voices: Vec<VoiceContainer<P1, P2, A, ID>>,
 }
 
-struct VoiceContainer<
-    P1,
-    P2,
-    A: Producer<Output = f64> + NoteHandler<P1, P2>,
-    ID: PartialEq + Default,
-> {
+struct VoiceContainer<P1, P2, A: Producer + NoteHandler<P1, P2>, ID: PartialEq + Default> {
     id: ID,
     voice: A,
     note_off_time: f64,
     _t: (PhantomData<P1>, PhantomData<P2>),
 }
 
-impl<P1, P2, A: Producer<Output = f64> + NoteHandler<P1, P2>, ID: PartialEq + Default>
+impl<P1, P2, A: Producer + NoteHandler<P1, P2>, ID: PartialEq + Default>
     VoiceContainer<P1, P2, A, ID>
 {
     pub fn new(node: A) -> Self {
@@ -39,9 +31,11 @@ impl<P1, P2, A: Producer<Output = f64> + NoteHandler<P1, P2>, ID: PartialEq + De
 impl<
         P1: 'static,
         P2: 'static,
-        A: 'static + Producer<Output = f64> + NoteHandler<P1, P2>,
+        A: 'static + Producer + NoteHandler<P1, P2>,
         ID: 'static + PartialEq + Default,
     > PolySynth<P1, P2, A, ID>
+where
+    A::Output: SignalExt,
 {
     pub fn new(mut voice_builder: impl FnMut() -> A, voice_num: usize) -> Self {
         Self {
@@ -88,10 +82,10 @@ impl<
             .0
     }
 
-    pub fn process(&mut self, ctx: &ProccessContext) -> f64 {
-        let mut v = Default::default();
+    pub fn process(&mut self, ctx: &ProccessContext) -> A::Output {
+        let mut v = A::Output::default();
         for voice in &mut self.voices {
-            v = v + voice.voice.process(ctx);
+            v = v.add(voice.voice.process(ctx));
         }
         v
     }

@@ -7,6 +7,8 @@ pub mod ring_buffer;
 
 use std::collections::VecDeque;
 
+use signal::Signal;
+
 #[derive(Debug, Clone)]
 pub struct ProccessContext {
     sample_rate: f64,
@@ -75,7 +77,7 @@ impl EventQueue {
 }
 
 pub trait Producer {
-    type Output;
+    type Output: Signal;
 
     fn process(&mut self, ctx: &ProccessContext) -> Self::Output;
 }

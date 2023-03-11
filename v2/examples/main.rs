@@ -9,9 +9,11 @@ use corus::{
         phase::Phase,
         poly_synth::{NoteHandler, PolySynth},
         sine::Sine,
+        unison::Unison,
     },
+    signal::{IntoStereo, SignalExt, StereoF64},
     unsafe_wrapper::UnsafeWrapper,
-    EventQueue, ProccessContext, Producer, signal::IntoStereo,
+    EventQueue, ProccessContext, Producer,
 };
 
 fn main() {
@@ -79,7 +81,10 @@ fn main() {
     for _ in 0..44100 * 2 {
         event_queue.dispatch(ctx.current_time());
 
-        let x = synth.process(&ctx) + poly_synth.process(&ctx);
+        let x = synth
+            .process(&ctx)
+            .into_stereo()
+            .add(poly_synth.process(&ctx));
         let x = delay_fx.process(&ctx, x, 0.5, 0.5);
         let [l, r] = x.into_stereo_with_pan(0.0);
         writer
@@ -100,7 +105,7 @@ pub struct Synth {
     phase: Phase,
     mod_gain: Param,
     env: UnsafeWrapper<Envelope>,
-    filter: BiquadFilter,
+    filter: BiquadFilter<1, f64>,
     filter_sin: Sine,
 }
 
@@ -137,32 +142,33 @@ impl Synth {
 
 pub struct Voice {
     frequency: f64,
-    phase: Phase,
+    unison: Unison,
     env: Envelope,
-    filter: BiquadFilter,
+    filter: BiquadFilter<2, StereoF64>,
 }
 
 impl Voice {
     pub fn new() -> Self {
         Self {
             frequency: 440.0,
-            phase: Phase::new(),
+            unison: Unison::new(5),
             env: Envelope::new(&[(0.01, 1.0, -1.0), (1.0, 0.5, 1.0)], 0.3, 1.0),
             filter: BiquadFilter::new(),
         }
     }
 
-    fn process(&mut self, ctx: &ProccessContext) -> f64 {
-        let phase = self.phase.process(ctx, self.frequency);
-        let gain = self.env.process(ctx) * 0.2;
-        let x = phase * 2.0 - 1.0;
-        let x = self.filter.process(ctx, 5000.0, 3.0, x);
-        x * gain
+    fn process(&mut self, ctx: &ProccessContext) -> StereoF64 {
+        let x = self
+            .unison
+            .process(ctx, self.frequency, 0.04, 0.9, |phase| phase * 2.0 - 1.0);
+        let gain = self.env.process(ctx) * 0.4;
+        let x = self.filter.process(ctx, 5000.0, 1.0, x);
+        x.mul(gain.into_stereo())
     }
 }
 
 impl Producer for Voice {
-    type Output = f64;
+    type Output = StereoF64;
 
     fn process(&mut self, ctx: &ProccessContext) -> Self::Output {
         self.process(ctx)
@@ -173,7 +179,7 @@ impl NoteHandler<u8, ()> for Voice {
     fn note_on(&mut self, time: f64, payload: u8) {
         self.frequency = 440.0 * 2.0f64.powf((payload as f64 - 69.0) / 12.0);
         self.env.note_on(time);
-        self.phase.set(0.0);
+        // self.unison.reset();
     }
 
     fn note_off(&mut self, time: f64, _: ()) {

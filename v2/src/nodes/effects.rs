@@ -1,19 +1,32 @@
-use crate::{ring_buffer::RingBuffer, ProccessContext};
+use crate::{ring_buffer::RingBuffer, signal::SignalExt, ProccessContext};
 
-pub struct DelayFx {
-    buffer: RingBuffer<f64>,
+use num_traits::*;
+
+pub struct DelayFx<S: SignalExt> {
+    buffer: RingBuffer<S>,
 }
 
-impl DelayFx {
+impl<S: SignalExt> DelayFx<S>
+where
+    S::Float: FromPrimitive + ToPrimitive,
+{
     pub fn new(len: usize) -> Self {
         Self {
             buffer: RingBuffer::new(len),
         }
     }
 
-    pub fn process(&mut self, ctx: &ProccessContext, x: f64, delay: f64, feedback: f64) -> f64 {
-        let i = (delay * ctx.sample_rate()) as usize;
-        let y = x + self.buffer.get(i) * feedback;
+    pub fn process(
+        &mut self,
+        ctx: &ProccessContext,
+        x: S,
+        delay: S::Float,
+        feedback: S::Float,
+    ) -> S {
+        let i = (delay * S::Float::from_f64(ctx.sample_rate()).unwrap())
+            .to_usize()
+            .unwrap();
+        let y = x.add(self.buffer.get(i).mul(S::from_float(feedback)));
         self.buffer.push(y);
         y
     }
