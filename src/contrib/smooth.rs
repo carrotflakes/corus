@@ -1,3 +1,4 @@
+/// Smooth signals, similar to FirstOrderFilter
 use crate::{proc_context::ProcContext, signal::{C1f64, Signal}};
 
 use super::Node;

@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ParamState {
-    Value(f64),
+    Constant(f64),
     Linear(f64),
     Exponential(f64, f64),
     Target { target: f64, time_constant: f64 },
@@ -23,7 +23,7 @@ impl ParamInner {
     fn process(&mut self, sample_rate: f64) -> f64 {
         if sample_rate != self.sample_rate {
             match self.state {
-                ParamState::Value(v) => {
+                ParamState::Constant(v) => {
                     self.pre_add = 0.0.into();
                     self.post_add = v;
                     self.mul = 0.0.into();
@@ -68,7 +68,7 @@ impl Param {
             pre_add: 0.0,
             post_add: 0.0,
             mul: 0.0,
-            state: ParamState::Value(value),
+            state: ParamState::Constant(value),
         });
         let scheduler = Scheduler {
             handles: Vec::new(),
@@ -245,7 +245,7 @@ impl Scheduler {
             }
             match first.1.clone() {
                 Handle::SetValue { value } => {
-                    event_queue.push(first.0, self.set_value_event(ParamState::Value(value)));
+                    event_queue.push(first.0, self.set_value_event(ParamState::Constant(value)));
                     self.last_value = value;
                 }
                 Handle::LinearRamp { value } => {
@@ -255,7 +255,7 @@ impl Scheduler {
                             (value - self.last_value) / (first.0 - self.last_handle.0),
                         )),
                     );
-                    event_queue.push(first.0, self.set_value_event(ParamState::Value(value)));
+                    event_queue.push(first.0, self.set_value_event(ParamState::Constant(value)));
                     self.last_value = value;
                 }
                 Handle::ExponentialRamp { value } => {
@@ -266,7 +266,7 @@ impl Scheduler {
                             first.0 - self.last_handle.0,
                         )),
                     );
-                    event_queue.push(first.0, self.set_value_event(ParamState::Value(value)));
+                    event_queue.push(first.0, self.set_value_event(ParamState::Constant(value)));
                     self.last_value = value;
                 }
                 Handle::SetTarget {
@@ -318,7 +318,7 @@ impl Scheduler {
             let inner =
                 unsafe { std::mem::transmute::<_, &mut ParamInner>(Arc::as_ptr(&inner_arc)) };
             match state {
-                ParamState::Value(value) => inner.value = value,
+                ParamState::Constant(value) => inner.value = value,
                 _ => {}
             }
             inner.state = state;

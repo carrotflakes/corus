@@ -1,12 +1,16 @@
-use std::{collections::VecDeque, ops::{Add, Div, Mul, Neg, Sub}, sync::{Arc, Mutex}};
+use std::{
+    collections::VecDeque,
+    ops::{Add, Div, Mul, Neg, Sub},
+    sync::{Arc, Mutex},
+};
 
-use crate::{EventListener, EventControllable, EventQueue};
+use crate::{EventControllable, EventListener, EventQueue};
 
 use super::{Node, ProcContext};
 
 #[derive(Clone, Copy)]
 pub enum ParamState<F: Float> {
-    Var(F),
+    Constant(F),
     Linear(F),
     Exponential(F, f64),
     Target { target: F, time_constant: f64 },
@@ -33,7 +37,7 @@ impl<F: Float> Param<F> {
             pre_add: 0.0.into(),
             post_add: 0.0.into(),
             mul: 1.0.into(),
-            state: ParamState::Var(value),
+            state: ParamState::Constant(value),
         }
     }
 }
@@ -45,7 +49,7 @@ impl<F: Float> Node for Param<F> {
     fn proc(&mut self, ctx: &ProcContext) -> F {
         if ctx.sample_rate != self.sample_rate {
             match self.state {
-                ParamState::Var(v) => {
+                ParamState::Constant(v) => {
                     self.pre_add = 0.0.into();
                     self.post_add = v;
                     self.mul = 0.0.into();
@@ -66,7 +70,8 @@ impl<F: Float> Node for Param<F> {
                 } => {
                     self.pre_add = -target;
                     self.post_add = target;
-                    self.mul = F::from(1.0 / (1.0 / (time_constant * ctx.sample_rate as f64)).exp());
+                    self.mul =
+                        F::from(1.0 / (1.0 / (time_constant * ctx.sample_rate as f64)).exp());
                 }
             }
             self.sample_rate = ctx.sample_rate;
@@ -130,7 +135,7 @@ impl<F: Float> EventListener<ParamState<F>> for Param<F> {
     #[inline]
     fn apply_event(&mut self, _time: f64, event: &ParamState<F>) {
         match event {
-            ParamState::Var(value) => {
+            ParamState::Constant(value) => {
                 self.value = value.clone();
             }
             _ => {}
@@ -318,7 +323,7 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
                 ParamEvent::SetValueAtTime { value } => {
                     event_queue.push_event(
                         first.0,
-                        ParamState::Var(value.clone()),
+                        ParamState::Constant(value.clone()),
                         param.inner(),
                     );
                     self.last_value = value;
@@ -334,7 +339,7 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
                     );
                     event_queue.push_event(
                         first.0,
-                        ParamState::Var(value.clone()),
+                        ParamState::Constant(value.clone()),
                         param.inner(),
                     );
                     self.last_value = value;
@@ -350,7 +355,7 @@ impl<F: Float + Send + Sync> ParamEventSchedule<F> {
                     );
                     event_queue.push_event(
                         first.0,
-                        ParamState::Var(value.clone()),
+                        ParamState::Constant(value.clone()),
                         param.inner(),
                     );
                     self.last_value = value;

@@ -1,3 +1,4 @@
+/// Simple moving average.
 use crate::{ring_buffer::RingBuffer, signal::Signal};
 
 use super::{Node, ProcContext};
