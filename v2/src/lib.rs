@@ -1,4 +1,5 @@
 pub mod nodes;
+pub mod unsafe_wrapper;
 
 use std::collections::VecDeque;
 
@@ -67,4 +68,10 @@ impl EventQueue {
         x.1(x.0);
         self.dispatch(current_time);
     }
+}
+
+pub trait Producer {
+    type Output;
+
+    fn process(&mut self, ctx: &ProccessContext) -> Self::Output;
 }
