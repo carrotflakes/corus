@@ -35,7 +35,7 @@ where
 }
 
 pub struct SchroederReverb<S: SignalExt> {
-    combs: [(S::Float, CombFilter<S>); 4],
+    combs: [(S::Float, S::Float, CombFilter<S>); 4],
     all_passes: [(S::Float, S::Float, AllPassFilter<S>); 2],
 }
 
@@ -46,10 +46,26 @@ where
     pub fn new(len: usize) -> Self {
         Self {
             combs: [
-                (S::Float::from_f64(0.03).unwrap(), CombFilter::new(len)),
-                (S::Float::from_f64(0.031).unwrap(), CombFilter::new(len)),
-                (S::Float::from_f64(0.034).unwrap(), CombFilter::new(len)),
-                (S::Float::from_f64(0.036).unwrap(), CombFilter::new(len)),
+                (
+                    S::Float::from_f64(0.03).unwrap(),
+                    S::Float::from_f64(0.83).unwrap(),
+                    CombFilter::new(len),
+                ),
+                (
+                    S::Float::from_f64(0.031).unwrap(),
+                    S::Float::from_f64(0.8).unwrap(),
+                    CombFilter::new(len),
+                ),
+                (
+                    S::Float::from_f64(0.034).unwrap(),
+                    S::Float::from_f64(0.76).unwrap(),
+                    CombFilter::new(len),
+                ),
+                (
+                    S::Float::from_f64(0.039).unwrap(),
+                    S::Float::from_f64(0.7).unwrap(),
+                    CombFilter::new(len),
+                ),
             ],
             all_passes: [
                 (
@@ -68,14 +84,14 @@ where
 
     pub fn process(&mut self, ctx: &ProccessContext, x: S) -> S {
         let mut y = S::default();
-        for (delay, comb) in self.combs.iter_mut() {
-            y = y.add(comb.process(ctx, x, *delay, S::Float::from_f64(0.8).unwrap()));
+        for (delay, feedback, comb) in self.combs.iter_mut() {
+            y = y.add(comb.process(ctx, x, *delay, *feedback));
         }
 
         for (delay, feedback, all_pass) in self.all_passes.iter_mut() {
             y = all_pass.process(ctx, y, *delay, *feedback);
         }
 
-        x.add(y.mul(S::from_float(S::Float::from_f64(0.3).unwrap())))
+        y
     }
 }

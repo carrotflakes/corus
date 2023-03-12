@@ -3,6 +3,8 @@ pub mod biquad_filter;
 pub mod comb_filter;
 pub mod effects;
 pub mod envelope;
+pub mod impulse;
+pub mod mix;
 pub mod param;
 pub mod phase;
 pub mod poly_synth;

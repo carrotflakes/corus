@@ -5,6 +5,7 @@ use corus_v2::{
         biquad_filter::BiquadFilter,
         effects::{DelayFx, SchroederReverb},
         envelope::Envelope,
+        mix::mix,
         param::Param,
         phase::Phase,
         poly_synth::{NoteHandler, PolySynth},
@@ -87,7 +88,7 @@ fn main() {
             .into_stereo()
             .add(poly_synth.process(&ctx));
         let x = delay_fx.process(&ctx, x, 0.5, 0.25);
-        let x = reverb.process(&ctx, x);
+        let x = mix(&[(0.9, x), (0.3, reverb.process(&ctx, x))]);
         let [l, r] = x.into_stereo_with_pan(0.0);
         writer
             .write_sample((l * std::i16::MAX as f64) as i16)
