@@ -1,8 +1,9 @@
-use wavetables::tree::Tree;
+use wavetables::tree::{Tree, Value};
 
 #[derive(Debug, Clone)]
 pub struct Config {
     pub least_depth: usize,
+    pub variable_num: usize,
 }
 
 impl Config {
@@ -47,7 +48,7 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
             2 => Tree::ShiftedTriangle,
             3 => Tree::Saw,
             4 => Tree::Square,
-            5 => Tree::Pulse(self.rng.gen_range(0.0..1.0)),
+            5 => Tree::Pulse(self.generate_variable(|s| s.rng.gen_range(0.0..1.0))),
             6 => Tree::Quadratic,
             _ => unreachable!(),
         }
@@ -62,45 +63,51 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
                 Box::new(self.generate_(depth + 1)),
             ),
             3 => Tree::Shift(
-                if self.rng.gen_bool(0.3) {
-                    match self.rng.gen_range(1..=5) {
-                        1 => 0.25,
-                        2 => 0.5,
-                        3 => 0.75,
-                        4 => 1.0 / 3.0,
-                        5 => 2.0 / 3.0,
-                        _ => unreachable!(),
+                self.generate_variable(|s| {
+                    if s.rng.gen_bool(0.3) {
+                        match s.rng.gen_range(1..=5) {
+                            1 => 0.25,
+                            2 => 0.5,
+                            3 => 0.75,
+                            4 => 1.0 / 3.0,
+                            5 => 2.0 / 3.0,
+                            _ => unreachable!(),
+                        }
+                    } else {
+                        s.rng.gen_range(0.0..1.0)
                     }
-                } else {
-                    self.rng.gen_range(0.0..1.0)
-                },
+                }),
                 Box::new(self.generate_(depth + 1)),
             ),
             4 => Tree::Scale(
-                if self.rng.gen_bool(0.7) {
-                    match self.rng.gen_range(1..=9) {
-                        1 => 0.25,
-                        2 => 0.5,
-                        3 => 0.75,
-                        4 => 1.0 / 3.0,
-                        5 => 2.0 / 3.0,
-                        6 => 1.5,
-                        7 => 2.0,
-                        8 => 3.0,
-                        9 => 4.0,
-                        _ => unreachable!(),
+                self.generate_variable(|s| {
+                    if s.rng.gen_bool(0.7) {
+                        match s.rng.gen_range(1..=9) {
+                            1 => 0.25,
+                            2 => 0.5,
+                            3 => 0.75,
+                            4 => 1.0 / 3.0,
+                            5 => 2.0 / 3.0,
+                            6 => 1.5,
+                            7 => 2.0,
+                            8 => 3.0,
+                            9 => 4.0,
+                            _ => unreachable!(),
+                        }
+                    } else {
+                        s.rng.gen_range(0.0..=4.0)
                     }
-                } else {
-                    self.rng.gen_range(0.0..=4.0)
-                },
+                }),
                 Box::new(self.generate_(depth + 1)),
             ),
             5 => Tree::Blend(
-                if self.rng.gen_bool(0.3) {
-                    0.5
-                } else {
-                    self.rng.gen_range(0.0..1.0)
-                },
+                self.generate_variable(|s| {
+                    if s.rng.gen_bool(0.3) {
+                        0.5
+                    } else {
+                        s.rng.gen_range(0.0..1.0)
+                    }
+                }),
                 Box::new(self.generate_(depth + 1)),
                 Box::new(self.generate_(depth + 1)),
             ),
@@ -114,6 +121,14 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
                 Box::new(self.generate_(depth + 1)),
             ),
             _ => unreachable!(),
+        }
+    }
+
+    fn generate_variable(&mut self, value_fn: impl Fn(&mut Self) -> f64) -> Value {
+        if self.config.variable_num > 0 && self.rng.gen_bool(0.5) {
+            Value::Variable(self.rng.gen_range(0..self.config.variable_num))
+        } else {
+            Value::Constant(value_fn(self))
         }
     }
 }

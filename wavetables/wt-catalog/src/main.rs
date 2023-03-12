@@ -87,6 +87,7 @@ impl Application for App {
             }
             row
         });
+
         column = column.push({
             let mut row = widget::Row::new().push(text("bend"));
 
@@ -110,6 +111,26 @@ impl Application for App {
             }));
             row
         });
+
+        column = column.push({
+            let mut rng: rand::rngs::StdRng = rand::SeedableRng::from_seed([0; 32]);
+            let tree = rand_wt::Config {
+                least_depth: 2,
+                variable_num: 1,
+            }
+            .generate(&mut rng);
+
+            let mut row = widget::Row::new().push(text("paramaterized"));
+
+            row = row.push(make_canvas(tree.instant_params(&[0.0]).build()));
+            row = row.push(make_canvas(tree.instant_params(&[0.1]).build()));
+            row = row.push(make_canvas(tree.instant_params(&[0.2]).build()));
+            row = row.push(make_canvas(tree.instant_params(&[0.3]).build()));
+            row = row.push(make_canvas(tree.instant_params(&[0.5]).build()));
+            row = row.push(make_canvas(tree.instant_params(&[1.0]).build()));
+            row
+        });
+
         let mut rng: rand::rngs::StdRng = rand::SeedableRng::from_seed([0; 32]);
         for _ in 0..10 {
             column = column.push({
@@ -117,9 +138,12 @@ impl Application for App {
 
                 for _ in 0..10 {
                     row = row.push(make_canvas(
-                        rand_wt::Config { least_depth: 2 }
-                            .generate(&mut rng)
-                            .build(),
+                        rand_wt::Config {
+                            least_depth: 2,
+                            variable_num: 0,
+                        }
+                        .generate(&mut rng)
+                        .build(),
                     ));
                 }
                 row
