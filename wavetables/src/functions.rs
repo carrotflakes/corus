@@ -34,7 +34,7 @@ pub fn dynamic_blend(
     f2: impl Fn(f64) -> f64,
 ) -> impl Fn(f64) -> f64 {
     move |t| {
-        let r = f(t);
+        let r = f(t) * 0.5 + 0.5;
         f1(t) * (1.0 - r) + f2(t) * r
     }
 }
