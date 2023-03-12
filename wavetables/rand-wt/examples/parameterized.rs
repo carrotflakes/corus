@@ -4,7 +4,7 @@ fn main() {
     let mut rng: rand::rngs::StdRng = rand::SeedableRng::from_seed([0; 32]);
 
     let dir = "./parameterized";
-    std::fs::create_dir(dir);
+    let _ = std::fs::create_dir(dir);
 
     for i in 0..10 {
         let wt = rand_wt::Config {
