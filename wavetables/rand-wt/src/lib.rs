@@ -55,7 +55,7 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
     }
 
     fn generate_branch(&mut self, depth: usize) -> Tree {
-        match self.rng.gen_range(0..=7) {
+        match self.rng.gen_range(0..=8) {
             0 => Tree::Negative(Box::new(self.generate_(depth + 1))),
             1 => Tree::Reversed(Box::new(self.generate_(depth + 1))),
             2 => Tree::Join(
@@ -95,7 +95,7 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
                             _ => unreachable!(),
                         }
                     } else {
-                        s.rng.gen_range(0.0..=4.0)
+                        s.rng.gen_range(0.0..=3.0)
                     }
                 }),
                 Box::new(self.generate_(depth + 1)),
@@ -116,7 +116,11 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
                 Box::new(self.generate_(depth + 1)),
                 Box::new(self.generate_(depth + 1)),
             ),
-            7 => Tree::Dot(
+            7 => Tree::Product(
+                Box::new(self.generate_(depth + 1)),
+                Box::new(self.generate_(depth + 1)),
+            ),
+            8 => Tree::Mul(
                 Box::new(self.generate_(depth + 1)),
                 Box::new(self.generate_(depth + 1)),
             ),

@@ -17,7 +17,8 @@ pub enum Tree {
     Scale(Value, Box<Tree>),
     Blend(Value, Box<Tree>, Box<Tree>),
     DynamicBlend(Box<Tree>, Box<Tree>, Box<Tree>),
-    Dot(Box<Tree>, Box<Tree>),
+    Product(Box<Tree>, Box<Tree>),
+    Mul(Box<Tree>, Box<Tree>),
 }
 
 #[derive(Debug, Clone)]
@@ -76,7 +77,11 @@ impl Tree {
                 Box::new(f2.instant_params(params)),
                 Box::new(f3.instant_params(params)),
             ),
-            Tree::Dot(f1, f2) => Tree::Dot(
+            Tree::Product(f1, f2) => Tree::Product(
+                Box::new(f1.instant_params(params)),
+                Box::new(f2.instant_params(params)),
+            ),
+            Tree::Mul(f1, f2) => Tree::Mul(
                 Box::new(f1.instant_params(params)),
                 Box::new(f2.instant_params(params)),
             ),
@@ -106,7 +111,8 @@ impl Tree {
             Tree::DynamicBlend(f, f1, f2) => {
                 Box::new(functions::dynamic_blend(f.build(), f1.build(), f2.build()))
             }
-            Tree::Dot(f1, f2) => Box::new(functions::dot(f1.build(), f2.build())),
+            Tree::Product(f1, f2) => Box::new(functions::product(f1.build(), f2.build())),
+            Tree::Mul(f1, f2) => Box::new(functions::mul(f1.build(), f2.build())),
         }
     }
 
@@ -163,10 +169,17 @@ impl Tree {
                     )
                 })
             }
-            Tree::Dot(f1, f2) => {
+            Tree::Product(f1, f2) => {
                 let f1 = f1.build_parameterized();
                 let f2 = f2.build_parameterized();
-                Box::new(move |params, t| functions::dot(|t| f1(params, t), |t| f2(params, t))(t))
+                Box::new(move |params, t| {
+                    functions::product(|t| f1(params, t), |t| f2(params, t))(t)
+                })
+            }
+            Tree::Mul(f1, f2) => {
+                let f1 = f1.build_parameterized();
+                let f2 = f2.build_parameterized();
+                Box::new(move |params, t| functions::mul(|t| f1(params, t), |t| f2(params, t))(t))
             }
         }
     }

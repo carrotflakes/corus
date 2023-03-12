@@ -113,7 +113,7 @@ impl Application for App {
         });
 
         column = column.push({
-            let mut rng: rand::rngs::StdRng = rand::SeedableRng::from_seed([0; 32]);
+            let mut rng: rand::rngs::StdRng = rand::SeedableRng::from_seed([1; 32]);
             let tree = rand_wt::Config {
                 least_depth: 2,
                 variable_num: 1,

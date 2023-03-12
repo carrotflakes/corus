@@ -39,6 +39,10 @@ pub fn dynamic_blend(
     }
 }
 
-pub fn dot(f1: impl Fn(f64) -> f64, f2: impl Fn(f64) -> f64) -> impl Fn(f64) -> f64 {
+pub fn product(f1: impl Fn(f64) -> f64, f2: impl Fn(f64) -> f64) -> impl Fn(f64) -> f64 {
     move |t| f2(f1(t) * 0.5 + 0.5)
+}
+
+pub fn mul(f1: impl Fn(f64) -> f64, f2: impl Fn(f64) -> f64) -> impl Fn(f64) -> f64 {
+    move |t| f1(t) * f2(t)
 }
