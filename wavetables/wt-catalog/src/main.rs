@@ -73,8 +73,7 @@ impl Application for App {
         }
         let mut column = widget::Column::new();
         column = column.push({
-            let mut row = widget::Row::new()
-                .push(text("primitive"));
+            let mut row = widget::Row::new().push(text("primitive"));
 
             for f in [
                 wavetables::primitives::sin,
@@ -88,12 +87,34 @@ impl Application for App {
             }
             row
         });
+        column = column.push({
+            let mut row = widget::Row::new().push(text("bend"));
+
+            row = row.push(make_canvas(|t| {
+                wavetables::primitives::saw(wavetables::bend::quadratic_bender(1.0)(t))
+            }));
+            row = row.push(make_canvas(|t| {
+                wavetables::primitives::saw(wavetables::bend::quadratic_bender(-1.0)(t))
+            }));
+            row = row.push(make_canvas(|t| {
+                wavetables::primitives::saw(wavetables::bend::cubic_bender(-0.5)(t))
+            }));
+            row = row.push(make_canvas(|t| {
+                wavetables::primitives::saw(wavetables::bend::cubic_bender(1.0)(t))
+            }));
+            row = row.push(make_canvas(|t| {
+                wavetables::primitives::saw(wavetables::bend::cos_bender(1.0)(t))
+            }));
+            row = row.push(make_canvas(|t| {
+                wavetables::primitives::saw(wavetables::bend::sin_bender(1.0)(t))
+            }));
+            row
+        });
         let mut rng: rand::rngs::StdRng = rand::SeedableRng::from_seed([0; 32]);
         for _ in 0..10 {
             column = column.push({
                 let mut row = widget::Row::new();
 
-                use wavetables::tree::Tree;
                 for _ in 0..10 {
                     row = row.push(make_canvas(
                         rand_wt::Config { least_depth: 2 }
