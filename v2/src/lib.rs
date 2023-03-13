@@ -1,3 +1,4 @@
+pub mod event_queue;
 pub mod nodes;
 pub mod signal;
 pub mod unsafe_wrapper;
@@ -42,7 +43,7 @@ impl ProccessContext {
     }
 }
 
-pub type PackedEvent = Box<dyn FnOnce(f64)>;
+pub type PackedEvent = Box<dyn FnOnce(f64) + Send + Sync>;
 
 pub struct EventQueue {
     queue: VecDeque<(f64, PackedEvent)>,

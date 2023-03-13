@@ -8,13 +8,13 @@ use corus_v2::{
         mix::mix,
         param::Param,
         phase::Phase,
-        poly_synth::{NoteHandler, PolySynth},
         sine::Sine,
         unison::Unison,
+        voice_manager::VoiceManager,
     },
     signal::{IntoStereo, SignalExt, StereoF64},
     unsafe_wrapper::UnsafeWrapper,
-    EventQueue, ProccessContext, Producer,
+    EventQueue, PackedEvent, ProccessContext, Producer,
 };
 
 fn main() {
@@ -61,13 +61,13 @@ fn main() {
     event_queue.push(0.0, synth.env.make_event(|env, time| env.note_on(time)));
     event_queue.push(1.0, synth.env.make_event(|env, time| env.note_off(time)));
 
-    let mut poly_synth = UnsafeWrapper::new(PolySynth::new(Voice::new, 8));
-    event_queue.push(0.5, PolySynth::note_on_event(&poly_synth, 60, 60));
-    event_queue.push(0.6, PolySynth::note_off_event(&poly_synth, 60, ()));
-    event_queue.push(0.6, PolySynth::note_on_event(&poly_synth, 64, 64));
-    event_queue.push(0.7, PolySynth::note_off_event(&poly_synth, 64, ()));
-    event_queue.push(0.7, PolySynth::note_on_event(&poly_synth, 67, 67));
-    event_queue.push(0.9, PolySynth::note_off_event(&poly_synth, 67, ()));
+    let mut poly_synth = UnsafeWrapper::new(PolySynth::new());
+    event_queue.push(0.5, PolySynth::note_on_event(&poly_synth, 60));
+    event_queue.push(0.6, PolySynth::note_off_event(&poly_synth, 60));
+    event_queue.push(0.6, PolySynth::note_on_event(&poly_synth, 64));
+    event_queue.push(0.7, PolySynth::note_off_event(&poly_synth, 64));
+    event_queue.push(0.7, PolySynth::note_on_event(&poly_synth, 67));
+    event_queue.push(0.9, PolySynth::note_off_event(&poly_synth, 67));
 
     let mut delay_fx = DelayFx::new(44100);
     let mut reverb = SchroederReverb::new(44100);
@@ -151,7 +151,31 @@ pub struct Voice {
 }
 
 impl Voice {
-    pub fn new() -> Self {
+    fn process(&mut self, ctx: &ProccessContext) -> StereoF64 {
+        let x = self
+            .unison
+            .process(ctx, self.frequency, 0.04, 0.9, |phase| phase * 2.0 - 1.0);
+        let gain = self.envs[0].process(ctx) * 0.4;
+        let filter_freq = self.envs[1].process(ctx) * 4000.0 + 4500.0;
+        let x = self.filter.process(ctx, filter_freq, 1.5, x);
+        x.mul(gain.into_stereo())
+    }
+
+    fn note_on(&mut self, time: f64, payload: u8) {
+        self.frequency = 440.0 * 2.0f64.powf((payload as f64 - 69.0) / 12.0);
+        self.envs[0].note_on(time);
+        self.envs[1].note_on(time);
+        self.unison.reset();
+    }
+
+    fn note_off(&mut self, time: f64) {
+        self.envs[0].note_off(time);
+        self.envs[1].note_off(time);
+    }
+}
+
+impl Default for Voice {
+    fn default() -> Self {
         Self {
             frequency: 440.0,
             unison: Unison::new(5),
@@ -162,36 +186,40 @@ impl Voice {
             filter: BiquadFilter::new(),
         }
     }
+}
+
+struct PolySynth {
+    voices: VoiceManager<u8, Voice>,
+}
+
+impl PolySynth {
+    fn new() -> Self {
+        Self {
+            voices: VoiceManager::new(8),
+        }
+    }
 
     fn process(&mut self, ctx: &ProccessContext) -> StereoF64 {
-        let x = self
-            .unison
-            .process(ctx, self.frequency, 0.04, 0.9, |phase| phase * 2.0 - 1.0);
-        let gain = self.envs[0].process(ctx) * 0.4;
-        let filter_freq = self.envs[1].process(ctx) * 4000.0 + 4500.0;
-        let x = self.filter.process(ctx, filter_freq, 1.5, x);
-        x.mul(gain.into_stereo())
-    }
-}
-
-impl Producer for Voice {
-    type Output = StereoF64;
-
-    fn process(&mut self, ctx: &ProccessContext) -> Self::Output {
-        self.process(ctx)
-    }
-}
-
-impl NoteHandler<u8, ()> for Voice {
-    fn note_on(&mut self, time: f64, payload: u8) {
-        self.frequency = 440.0 * 2.0f64.powf((payload as f64 - 69.0) / 12.0);
-        self.envs[0].note_on(time);
-        self.envs[1].note_on(time);
-        self.unison.reset();
+        let mut x = StereoF64::default();
+        for voice in self.voices.iter_mut() {
+            x = x.add(voice.process(ctx));
+        }
+        x
     }
 
-    fn note_off(&mut self, time: f64, _: ()) {
-        self.envs[0].note_off(time);
-        self.envs[1].note_off(time);
+    fn note_on_event(this: &UnsafeWrapper<Self>, notenum: u8) -> PackedEvent {
+        let mut this = this.clone();
+        Box::new(move |time| {
+            this.voices.note_on(notenum).note_on(time, notenum);
+        })
+    }
+
+    fn note_off_event(this: &UnsafeWrapper<Self>, notenum: u8) -> PackedEvent {
+        let mut this = this.clone();
+        Box::new(move |time| {
+            if let Some(voice) = this.voices.note_off(notenum) {
+                voice.note_off(time);
+            }
+        })
     }
 }

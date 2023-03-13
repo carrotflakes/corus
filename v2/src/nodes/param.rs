@@ -10,7 +10,7 @@ pub enum ParamState {
     Target { target: f64, time_constant: f64 },
 }
 
-struct ParamInner {
+pub struct ParamInner {
     value: f64,
     sample_rate: f64,
     pre_add: f64,
@@ -20,7 +20,8 @@ struct ParamInner {
 }
 
 impl ParamInner {
-    fn process(&mut self, sample_rate: f64) -> f64 {
+    pub fn process(&mut self, ctx: &ProccessContext) -> f64 {
+        let sample_rate = ctx.sample_rate();
         if sample_rate != self.sample_rate {
             match self.state {
                 ParamState::Constant(v) => {
@@ -53,6 +54,15 @@ impl ParamInner {
         self.value = (self.pre_add + self.value) * self.mul + self.post_add;
         value
     }
+
+    pub fn handle_event(&mut self, event: ParamState) {
+        match event {
+            ParamState::Constant(value) => self.value = value,
+            _ => {}
+        }
+        self.state = event;
+        self.sample_rate = 0.0;
+    }
 }
 
 pub struct Param {
@@ -84,7 +94,7 @@ impl Param {
 
     pub fn process(&mut self, ctx: &ProccessContext) -> f64 {
         let inner = unsafe { std::mem::transmute::<_, &mut ParamInner>(Arc::as_ptr(&self.inner)) };
-        inner.process(ctx.sample_rate())
+        inner.process(ctx)
     }
 
     pub fn scheduler(&self) -> Arc<Mutex<Scheduler>> {
@@ -317,12 +327,7 @@ impl Scheduler {
         Box::new(move |_time: f64| {
             let inner =
                 unsafe { std::mem::transmute::<_, &mut ParamInner>(Arc::as_ptr(&inner_arc)) };
-            match state {
-                ParamState::Constant(value) => inner.value = value,
-                _ => {}
-            }
-            inner.state = state;
-            inner.sample_rate = 0.0;
+            inner.handle_event(state);
         })
     }
 }

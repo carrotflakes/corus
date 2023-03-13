@@ -89,7 +89,17 @@ where
         }
         v
     }
+}
 
+impl<
+        P1: 'static + Send + Sync,
+        P2: 'static + Send + Sync,
+        A: 'static + Send + Sync + Producer + NoteHandler<P1, P2>,
+        ID: 'static + Send + Sync + PartialEq + Default,
+    > PolySynth<P1, P2, A, ID>
+where
+    A::Output: SignalExt,
+{
     pub fn note_on_event(this: &UnsafeWrapper<Self>, id: ID, payload: P1) -> PackedEvent {
         let mut this = this.clone();
         Box::new(move |time: f64| {
