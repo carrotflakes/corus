@@ -1,20 +1,22 @@
 use crate::{unsafe_wrapper::UnsafeWrapper, PackedEvent};
 
-pub struct VoiceManager<ID: PartialEq + Default + 'static, V: Default + 'static> {
+pub struct VoiceManager<ID: PartialEq + Default + 'static, V: 'static> {
     voices: Vec<VoiceContainer<ID, V>>,
+    voice_builder: Box<dyn Fn() -> V + Send + Sync + 'static>,
     count: usize,
 }
 
-impl<ID: PartialEq + Default + 'static, V: Default + 'static> VoiceManager<ID, V> {
-    pub fn new(voice_num: usize) -> Self {
+impl<ID: PartialEq + Default + 'static, V: 'static> VoiceManager<ID, V> {
+    pub fn new(voice_builder: impl Fn() -> V + Send + Sync + 'static, voice_num: usize) -> Self {
         Self {
             voices: (0..voice_num)
                 .map(|_| VoiceContainer {
                     id: ID::default(),
-                    voice: V::default(),
+                    voice: voice_builder(),
                     note_off_count: 0,
                 })
                 .collect(),
+            voice_builder: Box::new(voice_builder),
             count: 0,
         }
     }
@@ -47,6 +49,20 @@ impl<ID: PartialEq + Default + 'static, V: Default + 'static> VoiceManager<ID, V
         None
     }
 
+    pub fn set_voice_num(&mut self, voice_num: usize) {
+        if self.voices.len() < voice_num {
+            for _ in self.voices.len()..voice_num {
+                self.voices.push(VoiceContainer {
+                    id: ID::default(),
+                    voice: (self.voice_builder)(),
+                    note_off_count: 0,
+                });
+            }
+        } else {
+            self.voices.truncate(voice_num);
+        }
+    }
+
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut V> {
         self.voices.iter_mut().map(|v| &mut v.voice)
     }
@@ -61,7 +77,7 @@ impl<ID: PartialEq + Default + 'static, V: Default + 'static> VoiceManager<ID, V
     }
 }
 
-impl<ID: PartialEq + Default + Send + Sync + 'static, V: Default + Send + Sync + 'static>
+impl<ID: PartialEq + Default + Send + Sync + 'static, V: Send + Sync + 'static>
     VoiceManager<ID, V>
 {
     pub fn note_on_event(
@@ -75,7 +91,7 @@ impl<ID: PartialEq + Default + Send + Sync + 'static, V: Default + Send + Sync +
     }
 }
 
-struct VoiceContainer<ID: PartialEq + Default + 'static, V: Default + 'static> {
+struct VoiceContainer<ID: PartialEq + Default + 'static, V: 'static> {
     id: ID,
     voice: V,
     note_off_count: usize,

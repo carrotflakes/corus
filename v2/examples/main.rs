@@ -195,7 +195,7 @@ struct PolySynth {
 impl PolySynth {
     fn new() -> Self {
         Self {
-            voices: VoiceManager::new(8),
+            voices: VoiceManager::new(Voice::default, 8),
         }
     }
 
