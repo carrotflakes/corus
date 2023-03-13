@@ -6,6 +6,7 @@ pub enum Tree {
     Triangle,
     ShiftedTriangle,
     Saw,
+    ShiftedSaw,
     Square,
     Pulse(Value),
     Quadratic,
@@ -19,6 +20,7 @@ pub enum Tree {
     DynamicBlend(Box<Tree>, Box<Tree>, Box<Tree>),
     Product(Box<Tree>, Box<Tree>),
     Mul(Box<Tree>, Box<Tree>),
+    Mirror(Box<Tree>),
 }
 
 #[derive(Debug, Clone)]
@@ -50,6 +52,7 @@ impl Tree {
             Tree::Triangle => Tree::Triangle,
             Tree::ShiftedTriangle => Tree::ShiftedTriangle,
             Tree::Saw => Tree::Saw,
+            Tree::ShiftedSaw => Tree::ShiftedSaw,
             Tree::Square => Tree::Square,
             Tree::Pulse(width) => Tree::Pulse(Value::Constant(width.get(params))),
             Tree::Quadratic => Tree::Quadratic,
@@ -85,6 +88,7 @@ impl Tree {
                 Box::new(f1.instant_params(params)),
                 Box::new(f2.instant_params(params)),
             ),
+            Tree::Mirror(f) => Tree::Mirror(Box::new(f.instant_params(params))),
         }
     }
 
@@ -94,6 +98,7 @@ impl Tree {
             Tree::Triangle => Box::new(primitives::triangle),
             Tree::ShiftedTriangle => Box::new(primitives::shifted_triangle),
             Tree::Saw => Box::new(primitives::saw),
+            Tree::ShiftedSaw => Box::new(primitives::shifted_saw),
             Tree::Square => Box::new(primitives::square),
             Tree::Pulse(width) => {
                 let width = width.get_no_param();
@@ -113,6 +118,7 @@ impl Tree {
             }
             Tree::Product(f1, f2) => Box::new(functions::product(f1.build(), f2.build())),
             Tree::Mul(f1, f2) => Box::new(functions::mul(f1.build(), f2.build())),
+            Tree::Mirror(f) => Box::new(functions::mirror(f.build())),
         }
     }
 
@@ -122,6 +128,7 @@ impl Tree {
             Tree::Triangle => Box::new(|_params, t| primitives::triangle(t)),
             Tree::ShiftedTriangle => Box::new(|_params, t| primitives::shifted_triangle(t)),
             Tree::Saw => Box::new(|_params, t| primitives::saw(t)),
+            Tree::ShiftedSaw => Box::new(|_params, t| primitives::shifted_saw(t)),
             Tree::Square => Box::new(|_params, t| primitives::square(t)),
             Tree::Pulse(width) => {
                 let width = width.clone();
@@ -180,6 +187,10 @@ impl Tree {
                 let f1 = f1.build_parameterized();
                 let f2 = f2.build_parameterized();
                 Box::new(move |params, t| functions::mul(|t| f1(params, t), |t| f2(params, t))(t))
+            }
+            Tree::Mirror(f) => {
+                let f = f.build_parameterized();
+                Box::new(move |params, t| functions::mirror(|t| f(params, t))(t))
             }
         }
     }

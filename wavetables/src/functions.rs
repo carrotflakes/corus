@@ -46,3 +46,7 @@ pub fn product(f1: impl Fn(f64) -> f64, f2: impl Fn(f64) -> f64) -> impl Fn(f64)
 pub fn mul(f1: impl Fn(f64) -> f64, f2: impl Fn(f64) -> f64) -> impl Fn(f64) -> f64 {
     move |t| f1(t) * f2(t)
 }
+
+pub fn mirror(f: impl Fn(f64) -> f64) -> impl Fn(f64) -> f64 {
+    move |t| join(&f, reversed(&f))(t)
+}

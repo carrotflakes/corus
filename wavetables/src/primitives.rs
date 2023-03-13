@@ -26,6 +26,14 @@ pub fn saw(t: f64) -> f64 {
     2.0 * t - 1.0
 }
 
+pub fn shifted_saw(t: f64) -> f64 {
+    if t < 0.5 {
+        2.0 * t
+    } else {
+        2.0 * t - 2.0
+    }
+}
+
 pub fn square(t: f64) -> f64 {
     if t < 0.5 {
         -1.0

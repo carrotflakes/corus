@@ -42,27 +42,38 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
         if self.rng.gen_bool(0.2) {
             return Tree::Sin;
         }
-        match self.rng.gen_range(0..=6) {
+        match self.rng.gen_range(0..=17) {
             0 => Tree::Sin,
-            1 => Tree::Triangle,
-            2 => Tree::ShiftedTriangle,
-            3 => Tree::Saw,
-            4 => Tree::Square,
-            5 => Tree::Pulse(self.generate_variable(|s| s.rng.gen_range(0.0..1.0))),
-            6 => Tree::Quadratic,
+            1 => Tree::Negative(Box::new(Tree::Sin)),
+            2 => Tree::Triangle,
+            3 => Tree::Negative(Box::new(Tree::Triangle)),
+            4 => Tree::ShiftedTriangle,
+            5 => Tree::Negative(Box::new(Tree::ShiftedTriangle)),
+            6 => Tree::Saw,
+            7 => Tree::Negative(Box::new(Tree::Saw)),
+            8 => Tree::ShiftedSaw,
+            9 => Tree::Negative(Box::new(Tree::ShiftedSaw)),
+            10 => Tree::Square,
+            11 => Tree::Negative(Box::new(Tree::Square)),
+            12 => Tree::Pulse(self.generate_variable(|s| s.rng.gen_range(0.0..1.0))),
+            13 => Tree::Negative(Box::new(Tree::Pulse(
+                self.generate_variable(|s| s.rng.gen_range(0.0..1.0)),
+            ))),
+            14 => Tree::Quadratic,
+            15 => Tree::Negative(Box::new(Tree::Quadratic)),
+            16 => Tree::Reversed(Box::new(Tree::Quadratic)),
+            17 => Tree::Reversed(Box::new(Tree::Negative(Box::new(Tree::Quadratic)))),
             _ => unreachable!(),
         }
     }
 
     fn generate_branch(&mut self, depth: usize) -> Tree {
-        match self.rng.gen_range(0..=8) {
-            0 => Tree::Negative(Box::new(self.generate_(depth + 1))),
-            1 => Tree::Reversed(Box::new(self.generate_(depth + 1))),
-            2 => Tree::Join(
+        match self.rng.gen_range(0..=7) {
+            0 => Tree::Join(
                 Box::new(self.generate_(depth + 1)),
                 Box::new(self.generate_(depth + 1)),
             ),
-            3 => Tree::Shift(
+            1 => Tree::Shift(
                 self.generate_variable(|s| {
                     if s.rng.gen_bool(0.3) {
                         match s.rng.gen_range(1..=5) {
@@ -79,7 +90,7 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
                 }),
                 Box::new(self.generate_(depth + 1)),
             ),
-            4 => Tree::Scale(
+            2 => Tree::Scale(
                 self.generate_variable(|s| {
                     if s.rng.gen_bool(0.7) {
                         match s.rng.gen_range(1..=9) {
@@ -100,7 +111,7 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
                 }),
                 Box::new(self.generate_(depth + 1)),
             ),
-            5 => Tree::Blend(
+            3 => Tree::Blend(
                 self.generate_variable(|s| {
                     if s.rng.gen_bool(0.3) {
                         0.5
@@ -111,19 +122,20 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
                 Box::new(self.generate_(depth + 1)),
                 Box::new(self.generate_(depth + 1)),
             ),
-            6 => Tree::DynamicBlend(
+            4 => Tree::DynamicBlend(
                 Box::new(self.generate_(depth + 1)),
                 Box::new(self.generate_(depth + 1)),
                 Box::new(self.generate_(depth + 1)),
             ),
-            7 => Tree::Product(
+            5 => Tree::Product(
                 Box::new(self.generate_(depth + 1)),
                 Box::new(self.generate_(depth + 1)),
             ),
-            8 => Tree::Mul(
+            6 => Tree::Mul(
                 Box::new(self.generate_(depth + 1)),
                 Box::new(self.generate_(depth + 1)),
             ),
+            7 => Tree::Mirror(Box::new(self.generate_(depth + 1))),
             _ => unreachable!(),
         }
     }

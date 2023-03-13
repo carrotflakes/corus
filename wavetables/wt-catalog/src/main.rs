@@ -78,12 +78,24 @@ impl Application for App {
             for f in [
                 wavetables::primitives::sin,
                 wavetables::primitives::saw,
+                wavetables::primitives::shifted_saw,
                 wavetables::primitives::triangle,
                 wavetables::primitives::shifted_triangle,
                 wavetables::primitives::square,
                 wavetables::primitives::quadratic,
             ] {
                 row = row.push(make_canvas(f));
+            }
+            row
+        });
+
+        column = column.push({
+            let mut row = widget::Row::new().push(text("UNRP"));
+
+            for f in
+                wavetables::unique_negative_reverse_primitives::unique_negative_reverse_primitives()
+            {
+                row = row.push(make_canvas(f.instant_params(&[0.25]).build()));
             }
             row
         });
@@ -113,9 +125,9 @@ impl Application for App {
         });
 
         column = column.push({
-            let mut rng: rand::rngs::StdRng = rand::SeedableRng::from_seed([1; 32]);
+            let mut rng: rand::rngs::StdRng = rand::SeedableRng::from_seed([0; 32]);
             let tree = rand_wt::Config {
-                least_depth: 2,
+                least_depth: 1,
                 variable_num: 1,
             }
             .generate(&mut rng);
