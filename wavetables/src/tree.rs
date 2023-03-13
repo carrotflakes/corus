@@ -92,7 +92,7 @@ impl Tree {
         }
     }
 
-    pub fn build(&self) -> Box<dyn Fn(f64) -> f64> {
+    pub fn build(&self) -> Box<dyn Fn(f64) -> f64 + Send + Sync + 'static> {
         match self {
             Tree::Sin => Box::new(primitives::sin),
             Tree::Triangle => Box::new(primitives::triangle),
@@ -122,7 +122,7 @@ impl Tree {
         }
     }
 
-    pub fn build_parameterized(&self) -> Box<dyn Fn(&[f64], f64) -> f64> {
+    pub fn build_parameterized(&self) -> Box<dyn Fn(&[f64], f64) -> f64 + Send + Sync + 'static> {
         match self {
             Tree::Sin => Box::new(|_params, t| primitives::sin(t)),
             Tree::Triangle => Box::new(|_params, t| primitives::triangle(t)),
