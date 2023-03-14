@@ -15,6 +15,7 @@ fn main() {
     let mut reverb = SchroederReverb::new(44100);
     // let mut filter = corus_v2::nodes::comb_filter::CombFilter::new(44100);
     // let mut filter = corus_v2::nodes::all_pass_filter::AllPassFilter::new(44100);
+    // let mut er = corus_v2::nodes::effects::EarlyReflections::new();
 
     let name = "impulse_and_filter.wav";
     let spec = hound::WavSpec {
@@ -30,6 +31,7 @@ fn main() {
         let x = impulse.process(&ctx);
         let x = reverb.process(&ctx, x);
         // let x = filter.process(&ctx, x, 0.25, 0.5);
+        // let x = er.process(&ctx, x.into_stereo_with_pan(0.0));
         let [l, r] = x.into_stereo_with_pan(0.0);
         writer
             .write_sample((l * std::i16::MAX as f64) as i16)

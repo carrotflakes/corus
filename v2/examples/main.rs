@@ -3,7 +3,7 @@ use std::f64::consts::TAU;
 use corus_v2::{
     nodes::{
         biquad_filter::BiquadFilter,
-        effects::{DelayFx, SchroederReverb},
+        effects::{DelayFx, SchroederReverb, EarlyReflections},
         envelope::{self, Envelope},
         mix::mix,
         param::Param,
@@ -76,6 +76,7 @@ fn main() {
 
     let mut delay_fx = DelayFx::new(44100);
     let mut reverb = SchroederReverb::new(44100);
+    let mut er = EarlyReflections::new();
 
     let name = "main.wav";
     let spec = hound::WavSpec {
@@ -93,7 +94,7 @@ fn main() {
             .into_stereo()
             .add(poly_synth.process(&ctx));
         let x = delay_fx.process(&ctx, x, 0.5, 0.25, 0.5);
-        let x = mix(&[(0.9, x), (0.3, reverb.process(&ctx, x))]);
+        let x = mix(&[(0.9, x), (0.4, er.process(&ctx, x)), (0.2, reverb.process(&ctx, x))]);
         let [l, r] = x.into_stereo_with_pan(0.0);
         writer
             .write_sample((l * std::i16::MAX as f64) as i16)

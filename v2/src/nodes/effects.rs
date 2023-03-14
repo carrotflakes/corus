@@ -1,10 +1,14 @@
-use crate::{ring_buffer::RingBuffer, signal::SignalExt, ProccessContext};
+use crate::{
+    ring_buffer::RingBuffer,
+    signal::{IntoStereo, Signal, SignalExt, Stereo},
+    ProccessContext,
+};
 
 use num_traits::*;
 
 use super::{
     all_pass_filter::AllPassFilter, comb_filter::CombFilter,
-    first_order_filter::FirstOrderLowPassFilter,
+    first_order_filter::FirstOrderLowPassFilter, multi_tap_delay::MultiTapDelay,
 };
 
 pub struct DelayFx<S: SignalExt> {
@@ -100,5 +104,47 @@ where
         }
 
         y
+    }
+}
+
+pub struct EarlyReflections<S: SignalExt + Stereo>
+where
+    S::Float: FromPrimitive + ToPrimitive + IntoStereo<Output = S>,
+    <S::Float as Signal>::Float: FromPrimitive,
+{
+    multi_tap_delay: MultiTapDelay<S>,
+    taps: Vec<(S::Float, S)>,
+}
+
+impl<S: SignalExt + Stereo> EarlyReflections<S>
+where
+    S::Float: FromPrimitive + ToPrimitive + IntoStereo<Output = S>,
+    <S::Float as Signal>::Float: FromPrimitive,
+{
+    pub fn new() -> Self {
+        Self {
+            multi_tap_delay: MultiTapDelay::new(44100),
+            taps: (0..10)
+                .map(|i| {
+                    (
+                        S::Float::from_f64((i as f64 * 0.0001).sqrt()).unwrap(),
+                        S::Float::from_f64(1.0 / (10.0).sqrt())
+                            .unwrap()
+                            .into_stereo_with_pan(
+                                <S::Float as Signal>::Float::from_f64(if i % 2 == 0 {
+                                    -0.9
+                                } else {
+                                    0.9
+                                })
+                                .unwrap(),
+                            ),
+                    )
+                })
+                .collect(),
+        }
+    }
+
+    pub fn process(&mut self, ctx: &ProccessContext, x: S) -> S {
+        self.multi_tap_delay.process(ctx, &self.taps, x)
     }
 }

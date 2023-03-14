@@ -6,6 +6,7 @@ pub mod envelope;
 pub mod first_order_filter;
 pub mod impulse;
 pub mod mix;
+pub mod multi_tap_delay;
 pub mod param;
 pub mod phase;
 pub mod poly_synth;
