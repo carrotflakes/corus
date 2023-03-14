@@ -4,7 +4,7 @@ use corus_v2::{
     nodes::{
         biquad_filter::BiquadFilter,
         effects::{DelayFx, SchroederReverb},
-        envelope::Envelope,
+        envelope::{self, Envelope},
         mix::mix,
         param::Param,
         phase::Phase,
@@ -14,7 +14,7 @@ use corus_v2::{
     },
     signal::{IntoStereo, SignalExt, StereoF64},
     unsafe_wrapper::UnsafeWrapper,
-    EventQueue, PackedEvent, ProccessContext, Producer,
+    EventQueue, PackedEvent, ProccessContext,
 };
 
 fn main() {
@@ -58,8 +58,13 @@ fn main() {
         .unwrap()
         .push_events(&mut event_queue, 0.0, 2.0);
 
-    event_queue.push(0.0, synth.env.make_event(|env, time| env.note_on(time)));
-    event_queue.push(1.0, synth.env.make_event(|env, time| env.note_off(time)));
+    event_queue.push(0.0, synth.env.make_event(|env, time| env.1.note_on(time)));
+    event_queue.push(
+        1.0,
+        synth
+            .env
+            .make_event(|env, time| env.1.note_off(&env.0, time)),
+    );
 
     let mut poly_synth = UnsafeWrapper::new(PolySynth::new());
     event_queue.push(0.5, PolySynth::note_on_event(&poly_synth, 60));
@@ -107,7 +112,7 @@ pub struct Synth {
     frequency: Param,
     phase: Phase,
     mod_gain: Param,
-    env: UnsafeWrapper<Envelope>,
+    env: UnsafeWrapper<(Envelope, envelope::State)>,
     filter: BiquadFilter<1, f64>,
     filter_sin: Sine,
 }
@@ -119,10 +124,9 @@ impl Synth {
             frequency: Param::new(440.0),
             phase: Phase::new(),
             mod_gain: Param::new(0.5),
-            env: UnsafeWrapper::new(Envelope::new(
-                &[(0.1, 1.0, -1.0), (1.0, 0.5, 1.0)],
-                0.3,
-                1.0,
+            env: UnsafeWrapper::new((
+                Envelope::new(&[(0.1, 1.0, -1.0), (1.0, 0.5, 1.0)], 0.3, 1.0),
+                envelope::State::new(),
             )),
             filter: BiquadFilter::new(),
             filter_sin: Sine::new(),
@@ -135,7 +139,7 @@ impl Synth {
         let modu = (mod_phase * TAU).sin() * mod_gain * 100.0;
         let f = self.frequency.process(ctx);
         let phase = self.phase.process(ctx, f + modu);
-        let gain = self.env.process(ctx) * 0.2;
+        let gain = self.env.1.process(&self.env.0, ctx) * 0.2;
         let x = (phase * TAU).sin();
         let filter_freq = self.filter_sin.process(ctx, 5.0) * 500.0 + 1000.0;
         let x = self.filter.process(ctx, filter_freq, 3.0, x);
@@ -146,7 +150,7 @@ impl Synth {
 pub struct Voice {
     frequency: f64,
     unison: Unison,
-    envs: [Envelope; 2],
+    envs: [(Envelope, envelope::State); 2],
     filter: BiquadFilter<2, StereoF64>,
 }
 
@@ -155,22 +159,22 @@ impl Voice {
         let x = self
             .unison
             .process(ctx, self.frequency, 0.04, 0.9, |phase| phase * 2.0 - 1.0);
-        let gain = self.envs[0].process(ctx) * 0.4;
-        let filter_freq = self.envs[1].process(ctx) * 4000.0 + 4500.0;
+        let gain = self.envs[0].1.process(&self.envs[0].0, ctx) * 0.4;
+        let filter_freq = self.envs[1].1.process(&self.envs[1].0, ctx) * 4000.0 + 4500.0;
         let x = self.filter.process(ctx, filter_freq, 1.5, x);
         x.mul(gain.into_stereo())
     }
 
     fn note_on(&mut self, time: f64, payload: u8) {
         self.frequency = 440.0 * 2.0f64.powf((payload as f64 - 69.0) / 12.0);
-        self.envs[0].note_on(time);
-        self.envs[1].note_on(time);
+        self.envs[0].1.note_on(time);
+        self.envs[1].1.note_on(time);
         self.unison.reset();
     }
 
     fn note_off(&mut self, time: f64) {
-        self.envs[0].note_off(time);
-        self.envs[1].note_off(time);
+        self.envs[0].1.note_off(&self.envs[0].0, time);
+        self.envs[1].1.note_off(&self.envs[1].0, time);
     }
 }
 
@@ -180,8 +184,14 @@ impl Default for Voice {
             frequency: 440.0,
             unison: Unison::new(5),
             envs: [
-                Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.3, 1.0),
-                Envelope::new(&[(0.01, 1.0, -1.0), (1.0, 0.5, 1.0)], 0.3, 1.0),
+                (
+                    Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.3, 1.0),
+                    envelope::State::new(),
+                ),
+                (
+                    Envelope::new(&[(0.01, 1.0, -1.0), (1.0, 0.5, 1.0)], 0.3, 1.0),
+                    envelope::State::new(),
+                ),
             ],
             filter: BiquadFilter::new(),
         }
