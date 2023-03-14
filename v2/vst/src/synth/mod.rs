@@ -111,7 +111,7 @@ impl MySynth {
             x = self.filter.process(ctx, self.frequency, self.q, x);
         }
         if self.delay_enabled {
-            x = self.delay_fx.process(ctx, x, 0.5, 0.3);
+            x = self.delay_fx.process(ctx, x, 0.5, 0.3, 0.2);
         }
         (x.mul(self.gain.into_stereo())).into_stereo_with_pan(self.pan)
     }

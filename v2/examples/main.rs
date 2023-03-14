@@ -92,7 +92,7 @@ fn main() {
             .process(&ctx)
             .into_stereo()
             .add(poly_synth.process(&ctx));
-        let x = delay_fx.process(&ctx, x, 0.5, 0.25);
+        let x = delay_fx.process(&ctx, x, 0.5, 0.25, 0.5);
         let x = mix(&[(0.9, x), (0.3, reverb.process(&ctx, x))]);
         let [l, r] = x.into_stereo_with_pan(0.0);
         writer

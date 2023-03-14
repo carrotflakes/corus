@@ -2,10 +2,14 @@ use crate::{ring_buffer::RingBuffer, signal::SignalExt, ProccessContext};
 
 use num_traits::*;
 
-use super::{all_pass_filter::AllPassFilter, comb_filter::CombFilter};
+use super::{
+    all_pass_filter::AllPassFilter, comb_filter::CombFilter,
+    first_order_filter::FirstOrderLowPassFilter,
+};
 
 pub struct DelayFx<S: SignalExt> {
     buffer: RingBuffer<S>,
+    filter: FirstOrderLowPassFilter<S>,
 }
 
 impl<S: SignalExt> DelayFx<S>
@@ -15,6 +19,7 @@ where
     pub fn new(len: usize) -> Self {
         Self {
             buffer: RingBuffer::new(len),
+            filter: FirstOrderLowPassFilter::new(),
         }
     }
 
@@ -24,11 +29,13 @@ where
         x: S,
         delay: S::Float,
         feedback: S::Float,
+        low_pass: S::Float,
     ) -> S {
         let i = (delay * S::Float::from_f64(ctx.sample_rate()).unwrap())
             .to_usize()
             .unwrap();
-        let y = x.add(self.buffer.get(i).mul(S::from_float(feedback)));
+        let d = self.buffer.get(i).mul(S::from_float(feedback));
+        let y = x.add(self.filter.process(ctx, low_pass, d));
         self.buffer.push(y);
         y
     }
