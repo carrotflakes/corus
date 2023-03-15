@@ -195,35 +195,41 @@ impl Plugin for MyPlugin {
                         &mut synth.chorus_enabled,
                         "Chorus",
                     ));
-                    ui.add(
-                        egui::widgets::DragValue::new(&mut synth.unison_num).clamp_range(1..=10),
-                    );
-                    ui.add(egui::widgets::Slider::new(
-                        &mut synth.voice_params.detune,
-                        0.0..=1.0,
-                    ));
-                    ui.add(egui::widgets::Slider::new(
-                        &mut synth.voice_params.stereo_width,
-                        0.0..=1.0,
-                    ));
+                    ui.collapsing("Unison", |ui| {
+                        ui.horizontal(|ui| {
+                            ui.add(
+                                egui::widgets::DragValue::new(&mut synth.unison_num).clamp_range(1..=10),
+                            );
+                            ui.label("voices");
+                        });
+                        ui.add(egui::widgets::Slider::new(
+                            &mut synth.voice_params.detune,
+                            0.0..=1.0,
+                        ));
+                        ui.add(egui::widgets::Slider::new(
+                            &mut synth.voice_params.stereo_width,
+                            0.0..=1.0,
+                        ));
+                    });
 
-                    ui.label("ADSR envelope");
-                    ui.add(egui::widgets::Slider::new(
-                        &mut synth.voice_params.env.points[0].0,
-                        0.0..=1.0,
-                    ));
-                    ui.add(egui::widgets::Slider::new(
-                        &mut synth.voice_params.env.points[1].0,
-                        0.0..=8.0,
-                    ));
-                    ui.add(egui::widgets::Slider::new(
-                        &mut synth.voice_params.env.points[1].1,
-                        0.0..=1.0,
-                    ));
-                    ui.add(egui::widgets::Slider::new(
-                        &mut synth.voice_params.env.release_length,
-                        0.0..=1.0,
-                    ));
+                    ui.collapsing("ADSR envelope", |ui| {
+                        ui.add(egui::widgets::Slider::new(
+                            &mut synth.voice_params.env.points[0].0,
+                            0.0..=1.0,
+                        ));
+                        ui.add(egui::widgets::Slider::new(
+                            &mut synth.voice_params.env.points[1].0,
+                            0.0..=8.0,
+                        ));
+                        ui.add(egui::widgets::Slider::new(
+                            &mut synth.voice_params.env.points[1].1,
+                            0.0..=1.0,
+                        ));
+                        ui.add(egui::widgets::Slider::new(
+                            &mut synth.voice_params.env.release_length,
+                            0.0..=1.0,
+                        ));
+                    });
 
                     ui.label("Gain");
                     ui.add(widgets::ParamSlider::for_param(&params.gain, setter));
