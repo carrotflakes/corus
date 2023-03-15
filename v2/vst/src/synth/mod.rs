@@ -5,9 +5,8 @@ use std::sync::Arc;
 use corus_v2::{
     nodes::{
         biquad_filter::BiquadFilter,
-        effects::DelayFx,
+        effects::{chorus::Chorus, phaser::Phaser, DelayFx},
         envelope::{self, Envelope},
-        phaser::Phaser,
         sine::Sine,
         unison::Unison,
         voice_manager::VoiceManager,
@@ -25,6 +24,7 @@ pub struct MySynth {
     pub q: f64,
     pub global_filter_enabled: bool,
     pub phaser_enabled: bool,
+    pub chorus_enabled: bool,
     pub voice_params: VoiceParams,
     pub delay_enabled: bool,
     pub unison_num: usize,
@@ -33,6 +33,7 @@ pub struct MySynth {
     filter: BiquadFilter<2, StereoF64>,
     pharser: Phaser<StereoF64>,
     delay_fx: DelayFx<StereoF64>,
+    chorus: Chorus<StereoF64>,
 }
 
 type WT = Arc<dyn Fn(f64) -> f64 + Send + Sync + 'static>;
@@ -59,6 +60,7 @@ impl MySynth {
             q: 1.0,
             global_filter_enabled: false,
             phaser_enabled: false,
+            chorus_enabled: false,
             voice_params: VoiceParams {
                 seed: 0,
                 wt_cache: cache::Cache::new(|seed: u64| {
@@ -92,7 +94,7 @@ impl MySynth {
                 stereo_width: 0.95,
                 env: Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
                 filter_env: Envelope::new(&[(0.01, 1.0, -1.0), (0.4, 0.3, 1.0)], 0.3, 1.0),
-                filter_enabled: true,
+                filter_enabled: false,
             },
             delay_enabled: false,
             unison_num: 3,
@@ -101,6 +103,7 @@ impl MySynth {
             filter: BiquadFilter::new(),
             pharser: Phaser::new(),
             delay_fx: DelayFx::new(48000),
+            chorus: Chorus::new(),
         }
     }
 
@@ -120,6 +123,9 @@ impl MySynth {
         }
         if self.phaser_enabled {
             x = self.pharser.process(ctx, x);
+        }
+        if self.chorus_enabled {
+            x = self.chorus.process(ctx, 0.001, 0.001, x);
         }
         (x * self.gain.into_stereo()).into_stereo_with_pan(self.pan)
     }

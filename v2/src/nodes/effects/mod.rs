@@ -1,3 +1,6 @@
+pub mod chorus;
+pub mod phaser;
+
 use crate::{
     interpolate_get,
     ring_buffer::RingBuffer,

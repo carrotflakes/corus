@@ -30,6 +30,7 @@ pub trait Signal:
 
     fn map(self, f: impl Fn(Self::Float) -> Self::Float) -> Self;
     fn zip_map(self, other: Self, f: impl Fn(Self::Float, Self::Float) -> Self::Float) -> Self;
+    fn float_from_f64(x: f64) -> Self::Float;
 
     fn floor(self) -> Self {
         self.map(|x| x.floor())
@@ -184,5 +185,10 @@ impl Signal for f64 {
     #[inline]
     fn zip_map(self, other: Self, f: impl Fn(Self::Float, Self::Float) -> Self::Float) -> Self {
         f(self, other)
+    }
+
+    #[inline]
+    fn float_from_f64(x: f64) -> Self::Float {
+        x
     }
 }

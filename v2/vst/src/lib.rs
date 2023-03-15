@@ -43,7 +43,7 @@ impl Default for MyPlugin {
 impl Default for MyPluginParams {
     fn default() -> Self {
         Self {
-            editor_state: EguiState::from_size(300, 400),
+            editor_state: EguiState::from_size(300, 450),
             synth: Arc::new(Mutex::new(MySynth::new())),
             gain: FloatParam::new(
                 "Gain",
@@ -190,6 +190,10 @@ impl Plugin for MyPlugin {
                     ui.add(egui::widgets::Checkbox::new(
                         &mut synth.phaser_enabled,
                         "Phaser",
+                    ));
+                    ui.add(egui::widgets::Checkbox::new(
+                        &mut synth.chorus_enabled,
+                        "Chorus",
                     ));
                     ui.add(
                         egui::widgets::DragValue::new(&mut synth.unison_num).clamp_range(1..=10),

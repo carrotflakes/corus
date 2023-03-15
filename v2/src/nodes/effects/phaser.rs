@@ -1,7 +1,7 @@
 use crate::{signal::Signal, ProccessContext};
 use num_traits::FromPrimitive;
 
-use super::{all_pass_filter::AllPassFilter, sine::Sine};
+use super::super::{all_pass_filter::AllPassFilter, sine::Sine};
 
 pub struct Phaser<S: Signal>
 where
