@@ -8,6 +8,7 @@ pub mod ring_buffer;
 
 use std::collections::VecDeque;
 
+use num_traits::{Float, FromPrimitive, ToPrimitive};
 use signal::Signal;
 
 #[derive(Debug, Clone)]
@@ -81,4 +82,30 @@ pub trait Producer {
     type Output: Signal;
 
     fn process(&mut self, ctx: &ProccessContext) -> Self::Output;
+}
+
+#[inline]
+pub fn interpolate_get<T: Signal>(x: T::Float, getter: impl Fn(usize) -> T) -> T
+where
+    T::Float: FromPrimitive + ToPrimitive,
+{
+    let x = x.to_f64().unwrap();
+    let x0 = x.floor() as usize;
+    let x1 = x0 + 1;
+    let y0 = getter(x0);
+    let y1 = getter(x1);
+    let t = x - x0 as f64;
+    y0 + (y1 - y0) * T::Float::from_f64(t).unwrap()
+}
+
+#[test]
+fn test_interpolate_get() {
+    let getter = |x| x as f64;
+    assert_eq!(interpolate_get(0.0, getter), 0.0);
+    assert_eq!(interpolate_get(0.5, getter), 0.5);
+    assert_eq!(interpolate_get(0.9, getter), 0.9);
+    assert_eq!(interpolate_get(1.0, getter), 1.0);
+    assert_eq!(interpolate_get(1.5, getter), 1.5);
+    assert_eq!(interpolate_get(1.9, getter), 1.9);
+    assert_eq!(interpolate_get(2.0, getter), 2.0);
 }

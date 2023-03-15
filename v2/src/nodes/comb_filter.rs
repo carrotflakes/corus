@@ -1,4 +1,4 @@
-use crate::{ring_buffer::RingBuffer, signal::Signal, ProccessContext};
+use crate::{interpolate_get, ring_buffer::RingBuffer, signal::Signal, ProccessContext};
 
 use num_traits::*;
 
@@ -23,10 +23,8 @@ where
         delay: S::Float,
         feedback: S::Float,
     ) -> S {
-        let i = (delay * S::Float::from_f64(ctx.sample_rate()).unwrap())
-            .to_usize()
-            .unwrap();
-        let y = self.buffer.get(i);
+        let i = delay * S::Float::from_f64(ctx.sample_rate()).unwrap();
+        let y = interpolate_get(i, |i| self.buffer.get(i));
         self.buffer.push(x + y * S::from(feedback));
         y
     }

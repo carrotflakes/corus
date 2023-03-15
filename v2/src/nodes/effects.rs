@@ -1,4 +1,5 @@
 use crate::{
+    interpolate_get,
     ring_buffer::RingBuffer,
     signal::{IntoStereo, Signal, Stereo},
     ProccessContext,
@@ -35,10 +36,8 @@ where
         feedback: S::Float,
         low_pass: S::Float,
     ) -> S {
-        let i = (delay * S::Float::from_f64(ctx.sample_rate()).unwrap())
-            .to_usize()
-            .unwrap();
-        let d = self.buffer.get(i).mul(S::from(feedback));
+        let i = delay * S::Float::from_f64(ctx.sample_rate()).unwrap();
+        let d = interpolate_get(i, |i| self.buffer.get(i)) * feedback;
         let y = x + self.filter.process(ctx, low_pass, d);
         self.buffer.push(y);
         y
