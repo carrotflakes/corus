@@ -1,16 +1,16 @@
-use crate::{signal::SignalExt, ProccessContext};
+use crate::{signal::Signal, ProccessContext};
 
-pub struct FirstOrderLowPassFilter<S: SignalExt> {
+pub struct FirstOrderLowPassFilter<S: Signal> {
     prev: S,
 }
 
-impl<S: SignalExt> FirstOrderLowPassFilter<S> {
+impl<S: Signal> FirstOrderLowPassFilter<S> {
     pub fn new() -> Self {
         Self { prev: S::default() }
     }
 
     pub fn process(&mut self, _ctx: &ProccessContext, k: S::Float, x: S) -> S {
-        self.prev = self.prev.add(S::from_float(k).mul(x.sub(self.prev)));
+        self.prev = self.prev.add(S::from(k).mul(x.sub(self.prev)));
         self.prev
     }
 }

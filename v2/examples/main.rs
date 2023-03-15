@@ -3,7 +3,7 @@ use std::f64::consts::TAU;
 use corus_v2::{
     nodes::{
         biquad_filter::BiquadFilter,
-        effects::{DelayFx, SchroederReverb, EarlyReflections},
+        effects::{DelayFx, EarlyReflections, SchroederReverb},
         envelope::{self, Envelope},
         mix::mix,
         param::Param,
@@ -12,7 +12,7 @@ use corus_v2::{
         unison::Unison,
         voice_manager::VoiceManager,
     },
-    signal::{IntoStereo, SignalExt, StereoF64},
+    signal::{IntoStereo, StereoF64},
     unsafe_wrapper::UnsafeWrapper,
     EventQueue, PackedEvent, ProccessContext,
 };
@@ -89,18 +89,18 @@ fn main() {
     for _ in 0..44100 * 3 {
         event_queue.dispatch(ctx.current_time());
 
-        let x = synth
-            .process(&ctx)
-            .into_stereo()
-            .add(poly_synth.process(&ctx));
+        let x = synth.process(&ctx).into_stereo() + poly_synth.process(&ctx);
         let x = delay_fx.process(&ctx, x, 0.5, 0.25, 0.5);
-        let x = mix(&[(0.9, x), (0.4, er.process(&ctx, x)), (0.2, reverb.process(&ctx, x))]);
-        let [l, r] = x.into_stereo_with_pan(0.0);
+        let x = mix(&[
+            (0.9, x),
+            (0.4, er.process(&ctx, x)),
+            (0.2, reverb.process(&ctx, x)),
+        ]);
         writer
-            .write_sample((l * std::i16::MAX as f64) as i16)
+            .write_sample((x[0] * std::i16::MAX as f64) as i16)
             .unwrap();
         writer
-            .write_sample((r * std::i16::MAX as f64) as i16)
+            .write_sample((x[1] * std::i16::MAX as f64) as i16)
             .unwrap();
 
         ctx.next();
@@ -163,7 +163,7 @@ impl Voice {
         let gain = self.envs[0].1.process(&self.envs[0].0, ctx) * 0.4;
         let filter_freq = self.envs[1].1.process(&self.envs[1].0, ctx) * 4000.0 + 4500.0;
         let x = self.filter.process(ctx, filter_freq, 1.5, x);
-        x.mul(gain.into_stereo())
+        x * gain.into_stereo()
     }
 
     fn note_on(&mut self, time: f64, payload: u8) {
@@ -213,7 +213,7 @@ impl PolySynth {
     fn process(&mut self, ctx: &ProccessContext) -> StereoF64 {
         let mut x = StereoF64::default();
         for voice in self.voices.iter_mut() {
-            x = x.add(voice.process(ctx));
+            x = x + voice.process(ctx);
         }
         x
     }

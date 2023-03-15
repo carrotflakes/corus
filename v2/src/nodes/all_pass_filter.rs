@@ -1,12 +1,12 @@
-use crate::{ring_buffer::RingBuffer, signal::SignalExt, ProccessContext};
+use crate::{ring_buffer::RingBuffer, signal::Signal, ProccessContext};
 
 use num_traits::*;
 
-pub struct AllPassFilter<S: SignalExt> {
+pub struct AllPassFilter<S: Signal> {
     buffer: RingBuffer<S>,
 }
 
-impl<S: SignalExt> AllPassFilter<S>
+impl<S: Signal> AllPassFilter<S>
 where
     S::Float: FromPrimitive + ToPrimitive,
 {
@@ -23,13 +23,13 @@ where
         delay: S::Float,
         feedback: S::Float,
     ) -> S {
-        let feedback = S::from_float(feedback);
+        let feedback = S::from(feedback);
         let i = (delay * S::Float::from_f64(ctx.sample_rate()).unwrap())
             .to_usize()
             .unwrap();
         let d = self.buffer.get(i);
-        let a = x.add(d.mul(feedback));
+        let a = x + d * feedback;
         self.buffer.push(a);
-        d.sub(a.mul(feedback))
+        d - a * feedback
     }
 }

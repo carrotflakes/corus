@@ -1,15 +1,15 @@
 use biquad::{Biquad, Coefficients, DirectForm1, ToHertz, Type, Q_BUTTERWORTH_F64};
 
 use crate::{
-    signal::{Mono, SignalExt, Stereo},
+    signal::{Mono, Signal, Stereo},
     ProccessContext,
 };
 
-pub struct BiquadFilter<const N: usize, S: SignalExt> {
+pub struct BiquadFilter<const N: usize, S: Signal> {
     biquad: [DirectForm1<S::Float>; N],
 }
 
-impl<const N: usize, S: SignalExt<Float = f64>> BiquadFilter<N, S> {
+impl<const N: usize, S: Signal<Float = f64>> BiquadFilter<N, S> {
     pub fn new() -> Self {
         assert_eq!(N, S::CHANNEL);
 
@@ -26,17 +26,17 @@ impl<const N: usize, S: SignalExt<Float = f64>> BiquadFilter<N, S> {
     }
 }
 
-impl<S: SignalExt<Float = f64> + Mono> BiquadFilter<1, S> {
+impl<S: Signal<Float = f64> + Mono> BiquadFilter<1, S> {
     pub fn process(&mut self, ctx: &ProccessContext, freq: f64, q: f64, x: S) -> S {
         let coeff =
             Coefficients::<f64>::from_params(Type::LowPass, ctx.sample_rate().hz(), freq.hz(), q)
                 .unwrap();
         self.biquad[0].update_coefficients(coeff);
-        S::from_float(self.biquad[0].run(x.get_m()))
+        S::from(self.biquad[0].run(x.get_m()))
     }
 }
 
-impl<S: SignalExt<Float = f64> + Stereo> BiquadFilter<2, S> {
+impl<S: Signal<Float = f64> + Stereo> BiquadFilter<2, S> {
     pub fn process(&mut self, ctx: &ProccessContext, freq: f64, q: f64, x: S) -> S {
         let coeff =
             Coefficients::<f64>::from_params(Type::LowPass, ctx.sample_rate().hz(), freq.hz(), q)

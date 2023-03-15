@@ -1,5 +1,5 @@
 use crate::{
-    signal::{IntoStereo, SignalExt, StereoF64},
+    signal::{IntoStereo, StereoF64},
     ProccessContext,
 };
 
@@ -51,7 +51,7 @@ impl Unison {
             } else {
                 (i as f64 / (n - 1) as f64 - 0.5) * 2.0 * stereo_width
             };
-            x = x.add(y.into_stereo_with_pan(pan));
+            x = x + y.into_stereo_with_pan(pan);
         }
         x
     }

@@ -1,12 +1,12 @@
-use crate::{ring_buffer::RingBuffer, signal::SignalExt, ProccessContext};
+use crate::{ring_buffer::RingBuffer, signal::Signal, ProccessContext};
 
 use num_traits::*;
 
-pub struct CombFilter<S: SignalExt> {
+pub struct CombFilter<S: Signal> {
     buffer: RingBuffer<S>,
 }
 
-impl<S: SignalExt> CombFilter<S>
+impl<S: Signal> CombFilter<S>
 where
     S::Float: FromPrimitive + ToPrimitive,
 {
@@ -27,7 +27,7 @@ where
             .to_usize()
             .unwrap();
         let y = self.buffer.get(i);
-        self.buffer.push(x.add(y.mul(S::from_float(feedback))));
+        self.buffer.push(x + y * S::from(feedback));
         y
     }
 }

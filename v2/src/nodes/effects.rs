@@ -1,6 +1,6 @@
 use crate::{
     ring_buffer::RingBuffer,
-    signal::{IntoStereo, Signal, SignalExt, Stereo},
+    signal::{IntoStereo, Signal, Stereo},
     ProccessContext,
 };
 
@@ -11,12 +11,12 @@ use super::{
     first_order_filter::FirstOrderLowPassFilter, multi_tap_delay::MultiTapDelay,
 };
 
-pub struct DelayFx<S: SignalExt> {
+pub struct DelayFx<S: Signal> {
     buffer: RingBuffer<S>,
     filter: FirstOrderLowPassFilter<S>,
 }
 
-impl<S: SignalExt> DelayFx<S>
+impl<S: Signal> DelayFx<S>
 where
     S::Float: FromPrimitive + ToPrimitive,
 {
@@ -38,19 +38,19 @@ where
         let i = (delay * S::Float::from_f64(ctx.sample_rate()).unwrap())
             .to_usize()
             .unwrap();
-        let d = self.buffer.get(i).mul(S::from_float(feedback));
-        let y = x.add(self.filter.process(ctx, low_pass, d));
+        let d = self.buffer.get(i).mul(S::from(feedback));
+        let y = x + self.filter.process(ctx, low_pass, d);
         self.buffer.push(y);
         y
     }
 }
 
-pub struct SchroederReverb<S: SignalExt> {
+pub struct SchroederReverb<S: Signal> {
     combs: [(S::Float, S::Float, CombFilter<S>); 4],
     all_passes: [(S::Float, S::Float, AllPassFilter<S>); 2],
 }
 
-impl<S: SignalExt> SchroederReverb<S>
+impl<S: Signal> SchroederReverb<S>
 where
     S::Float: FromPrimitive + ToPrimitive,
 {
@@ -96,7 +96,7 @@ where
     pub fn process(&mut self, ctx: &ProccessContext, x: S) -> S {
         let mut y = S::default();
         for (delay, feedback, comb) in self.combs.iter_mut() {
-            y = y.add(comb.process(ctx, x, *delay, *feedback));
+            y = y + comb.process(ctx, x, *delay, *feedback);
         }
 
         for (delay, feedback, all_pass) in self.all_passes.iter_mut() {
@@ -107,7 +107,7 @@ where
     }
 }
 
-pub struct EarlyReflections<S: SignalExt + Stereo>
+pub struct EarlyReflections<S: Signal + Stereo>
 where
     S::Float: FromPrimitive + ToPrimitive + IntoStereo<Output = S>,
     <S::Float as Signal>::Float: FromPrimitive,
@@ -116,7 +116,7 @@ where
     taps: Vec<(S::Float, S)>,
 }
 
-impl<S: SignalExt + Stereo> EarlyReflections<S>
+impl<S: Signal + Stereo> EarlyReflections<S>
 where
     S::Float: FromPrimitive + ToPrimitive + IntoStereo<Output = S>,
     <S::Float as Signal>::Float: FromPrimitive,
@@ -128,7 +128,7 @@ where
                 .map(|i| {
                     (
                         S::Float::from_f64((i as f64 * 0.0001).sqrt()).unwrap(),
-                        S::Float::from_f64(1.0 / (10.0).sqrt())
+                        S::Float::from_f64(1.0 / (10.0f64).sqrt())
                             .unwrap()
                             .into_stereo_with_pan(
                                 <S::Float as Signal>::Float::from_f64(if i % 2 == 0 {
@@ -146,5 +146,20 @@ where
 
     pub fn process(&mut self, ctx: &ProccessContext, x: S) -> S {
         self.multi_tap_delay.process(ctx, &self.taps, x)
+    }
+}
+
+pub struct Compressor<S: Signal> {
+    gain: S::Float,
+}
+
+impl Compressor<f64> {
+    pub fn new() -> Self {
+        Self { gain: 1.0 }
+    }
+
+    pub fn process(&mut self, _ctx: &ProccessContext, x: f64) -> f64 {
+        self.gain = (self.gain * 1.01).min(1.0).min(1.0 / x);
+        x * self.gain
     }
 }

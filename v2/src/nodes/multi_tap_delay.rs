@@ -1,15 +1,15 @@
-use crate::{ring_buffer::RingBuffer, signal::SignalExt, ProccessContext};
+use crate::{ring_buffer::RingBuffer, signal::Signal, ProccessContext};
 
 use num_traits::*;
 
-pub struct MultiTapDelay<S: SignalExt>
+pub struct MultiTapDelay<S: Signal>
 where
     S::Float: FromPrimitive + ToPrimitive,
 {
     buffer: RingBuffer<S>,
 }
 
-impl<S: SignalExt> MultiTapDelay<S>
+impl<S: Signal> MultiTapDelay<S>
 where
     S::Float: FromPrimitive + ToPrimitive,
 {

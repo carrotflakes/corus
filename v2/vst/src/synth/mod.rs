@@ -11,7 +11,7 @@ use corus_v2::{
         unison::Unison,
         voice_manager::VoiceManager,
     },
-    signal::{IntoStereo, SignalExt, StereoF64},
+    signal::{IntoStereo, StereoF64},
     ProccessContext,
 };
 
@@ -105,7 +105,7 @@ impl MySynth {
         let mut x = StereoF64::default();
         for voice in self.voices.iter_mut() {
             voice.unison.set_voice_num(self.unison_num);
-            x = x.add(voice.process(ctx, &mut self.voice_params, pitch));
+            x = x + voice.process(ctx, &mut self.voice_params, pitch);
         }
         if self.global_filter_enabled {
             x = self.filter.process(ctx, self.frequency, self.q, x);
@@ -113,7 +113,7 @@ impl MySynth {
         if self.delay_enabled {
             x = self.delay_fx.process(ctx, x, 0.5, 0.3, 0.2);
         }
-        (x.mul(self.gain.into_stereo())).into_stereo_with_pan(self.pan)
+        (x * self.gain.into_stereo()).into_stereo_with_pan(self.pan)
     }
 
     pub fn handle_event(&mut self, event: MyEvent, time: f64) {
@@ -188,6 +188,6 @@ impl MyVoice {
                 .filter
                 .process(ctx, filter_env * 10000.0 + 20.0, 1.5, x);
         }
-        x.mul(gain.into_stereo())
+        x * gain
     }
 }

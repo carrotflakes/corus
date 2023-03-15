@@ -3,8 +3,8 @@ where
     T: Clone + PartialEq,
     F: Fn(T) -> S,
 {
-    pub(crate) cache: Option<(T, S)>,
-    pub(crate) f: F,
+    cache: Option<(T, S)>,
+    f: F,
 }
 
 impl<T, S, F> Cache<T, S, F>

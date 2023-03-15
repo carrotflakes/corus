@@ -57,5 +57,5 @@ fn test() {
     dbg!(f64::from(1.0).into_stereo_with_pan(0.0));
     dbg!(f64::from(1.0).into_stereo_with_pan(-1.0));
     dbg!(f64::from(1.0).into_stereo_with_pan(1.0));
-    dbg!([1.0, 1.0].into_stereo_with_pan(0.0));
+    dbg!(StereoF64::from([1.0, 1.0]).into_stereo_with_pan(0.0));
 }

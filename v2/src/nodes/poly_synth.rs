@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    signal::SignalExt, unsafe_wrapper::UnsafeWrapper, PackedEvent, ProccessContext, Producer,
+    signal::Signal, unsafe_wrapper::UnsafeWrapper, PackedEvent, ProccessContext, Producer,
 };
 
 pub struct PolySynth<P1, P2, A: Producer + NoteHandler<P1, P2>, ID: PartialEq + Default> {
@@ -35,7 +35,7 @@ impl<
         ID: 'static + PartialEq + Default,
     > PolySynth<P1, P2, A, ID>
 where
-    A::Output: SignalExt,
+    A::Output: Signal,
 {
     pub fn new(mut voice_builder: impl FnMut() -> A, voice_num: usize) -> Self {
         Self {
@@ -85,7 +85,7 @@ where
     pub fn process(&mut self, ctx: &ProccessContext) -> A::Output {
         let mut v = A::Output::default();
         for voice in &mut self.voices {
-            v = v.add(voice.voice.process(ctx));
+            v = v + voice.voice.process(ctx);
         }
         v
     }
@@ -98,7 +98,7 @@ impl<
         ID: 'static + Send + Sync + PartialEq + Default,
     > PolySynth<P1, P2, A, ID>
 where
-    A::Output: SignalExt,
+    A::Output: Signal,
 {
     pub fn note_on_event(this: &UnsafeWrapper<Self>, id: ID, payload: P1) -> PackedEvent {
         let mut this = this.clone();

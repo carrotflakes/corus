@@ -34,7 +34,7 @@ impl Stereo for StereoF64 {
 
     #[inline]
     fn from_lr(l: f64, r: f64) -> Self {
-        [l, r]
+        [l, r].into()
     }
 
     #[inline]

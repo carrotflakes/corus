@@ -32,12 +32,12 @@ fn main() {
         let x = reverb.process(&ctx, x);
         // let x = filter.process(&ctx, x, 0.25, 0.5);
         // let x = er.process(&ctx, x.into_stereo_with_pan(0.0));
-        let [l, r] = x.into_stereo_with_pan(0.0);
+        let x = x.into_stereo_with_pan(0.0);
         writer
-            .write_sample((l * std::i16::MAX as f64) as i16)
+            .write_sample((x[0] * std::i16::MAX as f64) as i16)
             .unwrap();
         writer
-            .write_sample((r * std::i16::MAX as f64) as i16)
+            .write_sample((x[1] * std::i16::MAX as f64) as i16)
             .unwrap();
 
         ctx.next();
