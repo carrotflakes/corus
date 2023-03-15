@@ -187,6 +187,10 @@ impl Plugin for MyPlugin {
                         &mut synth.voice_params.filter_enabled,
                         "Filter",
                     ));
+                    ui.add(egui::widgets::Checkbox::new(
+                        &mut synth.phaser_enabled,
+                        "Phaser",
+                    ));
                     ui.add(
                         egui::widgets::DragValue::new(&mut synth.unison_num).clamp_range(1..=10),
                     );

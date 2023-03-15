@@ -16,6 +16,7 @@ fn main() {
     // let mut filter = corus_v2::nodes::comb_filter::CombFilter::new(44100);
     // let mut filter = corus_v2::nodes::all_pass_filter::AllPassFilter::new(44100);
     // let mut er = corus_v2::nodes::effects::EarlyReflections::new();
+    // let mut ph = corus_v2::nodes::phaser::Phaser::new();
 
     let name = "impulse_and_filter.wav";
     let spec = hound::WavSpec {
@@ -30,6 +31,7 @@ fn main() {
 
         let x = impulse.process(&ctx);
         let x = reverb.process(&ctx, x);
+        // let x = ph.process(&ctx, x);
         // let x = filter.process(&ctx, x, 0.25, 0.5);
         // let x = er.process(&ctx, x.into_stereo_with_pan(0.0));
         let x = x.into_stereo_with_pan(0.0);

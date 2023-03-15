@@ -8,9 +8,8 @@ use corus_v2::{
         mix::mix,
         param::Param,
         phase::Phase,
-        sine::Sine,
         unison::Unison,
-        voice_manager::VoiceManager,
+        voice_manager::VoiceManager, sine::Sine,
     },
     signal::{IntoStereo, StereoF64},
     unsafe_wrapper::UnsafeWrapper,
@@ -109,13 +108,13 @@ fn main() {
 }
 
 pub struct Synth {
-    mod_phase: Phase,
+    mod_phase: Phase<f64>,
     frequency: Param,
-    phase: Phase,
+    phase: Phase<f64>,
     mod_gain: Param,
     env: UnsafeWrapper<(Envelope, envelope::State)>,
     filter: BiquadFilter<1, f64>,
-    filter_sin: Sine,
+    filter_sin: Sine<f64>,
 }
 
 impl Synth {

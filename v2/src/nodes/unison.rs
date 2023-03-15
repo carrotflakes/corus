@@ -6,7 +6,7 @@ use crate::{
 use super::phase::Phase;
 
 pub struct Unison {
-    pub phases: Vec<Phase>,
+    pub phases: Vec<Phase<f64>>,
 }
 
 impl Unison {
@@ -51,6 +51,7 @@ impl Unison {
             } else {
                 (i as f64 / (n - 1) as f64 - 0.5) * 2.0 * stereo_width
             };
+            // TODO: dry/wet
             x = x + y.into_stereo_with_pan(pan);
         }
         x

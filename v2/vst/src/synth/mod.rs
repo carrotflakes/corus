@@ -7,6 +7,7 @@ use corus_v2::{
         biquad_filter::BiquadFilter,
         effects::DelayFx,
         envelope::{self, Envelope},
+        phaser::Phaser,
         sine::Sine,
         unison::Unison,
         voice_manager::VoiceManager,
@@ -23,12 +24,14 @@ pub struct MySynth {
     pub frequency: f64,
     pub q: f64,
     pub global_filter_enabled: bool,
+    pub phaser_enabled: bool,
     pub voice_params: VoiceParams,
     pub delay_enabled: bool,
     pub unison_num: usize,
     mod_level: f64,
-    mod_sine: Sine,
+    mod_sine: Sine<f64>,
     filter: BiquadFilter<2, StereoF64>,
+    pharser: Phaser<StereoF64>,
     delay_fx: DelayFx<StereoF64>,
 }
 
@@ -55,6 +58,7 @@ impl MySynth {
             frequency: 1000.0,
             q: 1.0,
             global_filter_enabled: false,
+            phaser_enabled: false,
             voice_params: VoiceParams {
                 seed: 0,
                 wt_cache: cache::Cache::new(|seed: u64| {
@@ -95,6 +99,7 @@ impl MySynth {
             mod_level: 0.0,
             mod_sine: Sine::new(),
             filter: BiquadFilter::new(),
+            pharser: Phaser::new(),
             delay_fx: DelayFx::new(48000),
         }
     }
@@ -112,6 +117,9 @@ impl MySynth {
         }
         if self.delay_enabled {
             x = self.delay_fx.process(ctx, x, 0.5, 0.3, 0.2);
+        }
+        if self.phaser_enabled {
+            x = self.pharser.process(ctx, x);
         }
         (x * self.gain.into_stereo()).into_stereo_with_pan(self.pan)
     }

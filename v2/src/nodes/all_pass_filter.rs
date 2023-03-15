@@ -8,7 +8,7 @@ pub struct AllPassFilter<S: Signal> {
 
 impl<S: Signal> AllPassFilter<S>
 where
-    S::Float: FromPrimitive + ToPrimitive,
+    S::Float: FromPrimitive,
 {
     pub fn new(len: usize) -> Self {
         Self {

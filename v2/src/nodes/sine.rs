@@ -1,18 +1,20 @@
+use num_traits::{Float, FromPrimitive};
+
 use crate::ProccessContext;
 
-pub struct Sine {
-    phase: f64,
+pub struct Sine<F: Float + FromPrimitive> {
+    phase: F,
 }
 
-impl Sine {
+impl<F: Float + FromPrimitive> Sine<F> {
     pub fn new() -> Self {
-        Self { phase: 0.0 }
+        Self { phase: F::zero() }
     }
 
-    pub fn process(&mut self, ctx: &ProccessContext, frequency: f64) -> f64 {
-        let dphase = frequency * ctx.dtime() * std::f64::consts::TAU;
+    pub fn process(&mut self, ctx: &ProccessContext, frequency: F) -> F {
+        let dphase = frequency * F::from_f64(ctx.dtime() * std::f64::consts::TAU).unwrap();
         let x = self.phase.sin();
-        self.phase += dphase;
+        self.phase = self.phase + dphase;
         x
     }
 }

@@ -9,6 +9,7 @@ pub mod mix;
 pub mod multi_tap_delay;
 pub mod param;
 pub mod phase;
+pub mod phaser;
 pub mod poly_synth;
 pub mod sine;
 pub mod unison;
