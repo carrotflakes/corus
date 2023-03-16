@@ -1,4 +1,4 @@
-use crate::{interpolate_get, ring_buffer::RingBuffer, signal::Signal, ProccessContext};
+use crate::{interpolate_get, ring_buffer::RingBuffer, signal::Signal, ProcessContext};
 
 use num_traits::*;
 
@@ -18,7 +18,7 @@ where
 
     pub fn process(
         &mut self,
-        ctx: &ProccessContext,
+        ctx: &ProcessContext,
         x: S,
         delay: S::Float,
         feedback: S::Float,

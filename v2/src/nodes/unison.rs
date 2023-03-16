@@ -1,6 +1,6 @@
 use crate::{
     signal::{IntoStereo, StereoF64},
-    ProccessContext,
+    ProcessContext,
 };
 
 use super::phase::Phase;
@@ -28,7 +28,7 @@ impl Unison {
 
     pub fn process(
         &mut self,
-        ctx: &ProccessContext,
+        ctx: &ProcessContext,
         frequency: f64,
         detune: f64,
         stereo_width: f64,

@@ -12,45 +12,21 @@ pub fn editor_updator(
     egui::CentralPanel::default().show(egui_ctx, |ui| {
         let mut synth = state.synth.lock().unwrap();
 
-        let wt = {
-            let seed = synth.voice_params.seed;
-            synth.voice_params.wt_cache.update(seed);
-            synth
-                .voice_params
-                .wt_cache
-                .get_ref(synth.voice_params.seed)
-                .unwrap()
-                .clone()
-        };
-        egui::Frame::canvas(ui.style()).show(ui, |ui| {
-            let (_id, rect) = ui.allocate_space(egui::vec2(100.0, 100.0));
-            let to_screen = emath::RectTransform::from_to(
-                egui::Rect::from_x_y_ranges(0.0..=1.0, -1.0..=1.0),
-                rect,
-            );
-            let mut shapes = vec![];
-
-            let w = rect.width() as usize;
-            let mut points = vec![];
-            for i in 0..=w {
-                let p = i as f64 / w as f64;
-                let v = wt(p % 1.0) as f32;
-                points.push(to_screen * egui::pos2(p as f32, -v));
-            }
-            shapes.push(egui::Shape::line(
-                points,
-                egui::Stroke::new(1.0, egui::Color32::RED),
-            ));
-            ui.painter().extend(shapes);
-        });
-
-        ui.add(egui::widgets::DragValue::new(&mut synth.voice_params.seed));
-
         ui.horizontal(|ui| {
+            let wt = {
+                let seed = synth.voice_params.seed;
+                synth.voice_params.wt_cache.update(seed);
+                synth
+                    .voice_params
+                    .wt_cache
+                    .get_ref(synth.voice_params.seed)
+                    .unwrap()
+                    .clone()
+            };
             egui::Frame::canvas(ui.style()).show(ui, |ui| {
-                let (_id, rect) = ui.allocate_space(egui::vec2(20.0, 20.0));
+                let (_id, rect) = ui.allocate_space(egui::vec2(100.0, 100.0));
                 let to_screen = emath::RectTransform::from_to(
-                    egui::Rect::from_x_y_ranges(0.0..=1.0, -1.0..=0.0),
+                    egui::Rect::from_x_y_ranges(0.0..=1.0, -1.0..=1.0),
                     rect,
                 );
                 let mut shapes = vec![];
@@ -59,11 +35,7 @@ pub fn editor_updator(
                 let mut points = vec![];
                 for i in 0..=w {
                     let p = i as f64 / w as f64;
-                    let v = synth
-                        .voice_params
-                        .bender
-                        .process(synth.voice_params.bend_level, p)
-                        as f32;
+                    let v = wt(p % 1.0) as f32;
                     points.push(to_screen * egui::pos2(p as f32, -v));
                 }
                 shapes.push(egui::Shape::line(
@@ -73,51 +45,66 @@ pub fn editor_updator(
                 ui.painter().extend(shapes);
             });
 
-            let r = synth.voice_params.bender.level_range();
-            if ui
-                .add(crate::widgets::knob::knob(
-                    r.start..r.end,
-                    &mut synth.voice_params.bend_level,
-                ))
-                .secondary_clicked()
-            {
-                synth.voice_params.bend_level = 0.0;
-            };
+            ui.vertical(|ui| {
+                ui.add(egui::widgets::DragValue::new(&mut synth.voice_params.seed));
 
-            egui::ComboBox::from_label("bend")
-                .selected_text(format!("{:?}", &synth.voice_params.bender))
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut synth.voice_params.bender, Bender::None, "none");
-                    ui.selectable_value(
-                        &mut synth.voice_params.bender,
-                        Bender::Quadratic,
-                        "quadratic",
-                    );
-                    ui.selectable_value(&mut synth.voice_params.bender, Bender::Cubic, "cubic");
-                    ui.selectable_value(&mut synth.voice_params.bender, Bender::Sin, "sin");
-                    ui.selectable_value(&mut synth.voice_params.bender, Bender::Cos, "cos");
+                ui.horizontal(|ui| {
+                    egui::Frame::canvas(ui.style()).show(ui, |ui| {
+                        let (_id, rect) = ui.allocate_space(egui::vec2(20.0, 20.0));
+                        let to_screen = emath::RectTransform::from_to(
+                            egui::Rect::from_x_y_ranges(0.0..=1.0, -1.0..=0.0),
+                            rect,
+                        );
+                        let mut shapes = vec![];
+
+                        let w = rect.width() as usize;
+                        let mut points = vec![];
+                        for i in 0..=w {
+                            let p = i as f64 / w as f64;
+                            let v = synth
+                                .voice_params
+                                .bender
+                                .process(synth.voice_params.bend_level, p)
+                                as f32;
+                            points.push(to_screen * egui::pos2(p as f32, -v));
+                        }
+                        shapes.push(egui::Shape::line(
+                            points,
+                            egui::Stroke::new(1.0, egui::Color32::RED),
+                        ));
+                        ui.painter().extend(shapes);
+                    });
+
+                    let r = synth.voice_params.bender.level_range();
+                    if ui
+                        .add(crate::widgets::knob::knob(
+                            r.start..r.end,
+                            &mut synth.voice_params.bend_level,
+                        ))
+                        .secondary_clicked()
+                    {
+                        synth.voice_params.bend_level = 0.0;
+                    };
                 });
-        });
 
-        ui.add(egui::widgets::Checkbox::new(
-            &mut synth.delay_enabled,
-            "Delay",
-        ));
-        ui.add(egui::widgets::Checkbox::new(
-            &mut synth.global_filter_enabled,
-            "Global filter",
-        ));
+                egui::ComboBox::from_label("bend")
+                    .selected_text(format!("{:?}", &synth.voice_params.bender))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut synth.voice_params.bender, Bender::None, "none");
+                        ui.selectable_value(
+                            &mut synth.voice_params.bender,
+                            Bender::Quadratic,
+                            "quadratic",
+                        );
+                        ui.selectable_value(&mut synth.voice_params.bender, Bender::Cubic, "cubic");
+                        ui.selectable_value(&mut synth.voice_params.bender, Bender::Sin, "sin");
+                        ui.selectable_value(&mut synth.voice_params.bender, Bender::Cos, "cos");
+                    });
+            });
+        });
         ui.add(egui::widgets::Checkbox::new(
             &mut synth.voice_params.filter_enabled,
             "Filter",
-        ));
-        ui.add(egui::widgets::Checkbox::new(
-            &mut synth.phaser_enabled,
-            "Phaser",
-        ));
-        ui.add(egui::widgets::Checkbox::new(
-            &mut synth.chorus_enabled,
-            "Chorus",
         ));
         ui.collapsing("Unison", |ui| {
             ui.horizontal(|ui| {
@@ -151,6 +138,35 @@ pub fn editor_updator(
                 &mut synth.voice_params.env.release_length,
                 0.0..=1.0,
             ));
+        });
+
+        ui.collapsing("Master", |ui| {
+            for (enabled, effector) in &mut synth.effectors {
+                ui.horizontal(|ui| {
+                    ui.add(egui::widgets::Checkbox::new(enabled, effector.name()));
+                    use crate::synth::effectors::Effector;
+                    #[allow(unused_variables)]
+                    match effector {
+                        Effector::Filter {
+                            frequency,
+                            q,
+                            filter,
+                        } => {
+                            ui.add(crate::widgets::knob::knob(20.0..10000.0, frequency));
+                            ui.add(crate::widgets::knob::knob(0.7..10.0, q));
+                        }
+                        Effector::Phaser { phaser } => {}
+                        Effector::Chorus { chorus } => {}
+                        Effector::Delay { delay } => {}
+                        Effector::Reverb { reverb, er } => {}
+                        Effector::Gain { gain } => {
+                            // ui.add(egui::widgets::Slider::new(gain, 0.0..=1.5));
+                            ui.add(crate::widgets::knob::knob(0.0..1.5, gain));
+                        }
+                        Effector::Tanh {} => {}
+                    }
+                });
+            }
         });
 
         ui.label("Gain");

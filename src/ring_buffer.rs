@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct RingBuffer<T: Clone + Default> {
     buffer: Vec<T>,
     pos: usize,

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    signal::Signal, unsafe_wrapper::UnsafeWrapper, PackedEvent, ProccessContext, Producer,
+    signal::Signal, unsafe_wrapper::UnsafeWrapper, PackedEvent, ProcessContext, Producer,
 };
 
 pub struct PolySynth<P1, P2, A: Producer + NoteHandler<P1, P2>, ID: PartialEq + Default> {
@@ -82,7 +82,7 @@ where
             .0
     }
 
-    pub fn process(&mut self, ctx: &ProccessContext) -> A::Output {
+    pub fn process(&mut self, ctx: &ProcessContext) -> A::Output {
         let mut v = A::Output::default();
         for voice in &mut self.voices {
             v = v + voice.voice.process(ctx);
@@ -138,7 +138,7 @@ impl<A: Producer<Output = f64>, P1, P2> Voice<A, P1, P2> {
 impl<A: Producer<Output = f64>, P1, P2> Producer for Voice<A, P1, P2> {
     type Output = f64;
 
-    fn process(&mut self, ctx: &ProccessContext) -> Self::Output {
+    fn process(&mut self, ctx: &ProcessContext) -> Self::Output {
         self.node.process(ctx)
     }
 }

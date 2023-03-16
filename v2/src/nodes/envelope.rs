@@ -1,4 +1,4 @@
-use crate::ProccessContext;
+use crate::ProcessContext;
 
 #[derive(Clone)]
 pub struct Envelope {
@@ -68,7 +68,7 @@ impl State {
             envelope.compute_level(self.note_off_time - self.note_on_time);
     }
 
-    pub fn process(&self, envelope: &Envelope, ctx: &ProccessContext) -> f64 {
+    pub fn process(&self, envelope: &Envelope, ctx: &ProcessContext) -> f64 {
         let current_time = ctx.current_time();
         if current_time < self.note_on_time
             || self.note_off_time + envelope.release_length <= current_time

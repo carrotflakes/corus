@@ -10,7 +10,7 @@ use synth::{MyEvent, MySynth};
 
 struct MyPlugin {
     params: Arc<MyPluginParams>,
-    context: corus_v2::ProccessContext,
+    context: corus_v2::ProcessContext,
     event_queue: EventQueue<MyEvent>,
 }
 
@@ -32,7 +32,7 @@ impl Default for MyPlugin {
     fn default() -> Self {
         Self {
             params: Arc::new(MyPluginParams::default()),
-            context: corus_v2::ProccessContext::new(44100.0),
+            context: corus_v2::ProcessContext::new(44100.0),
             event_queue: EventQueue::new(),
         }
     }
@@ -41,7 +41,7 @@ impl Default for MyPlugin {
 impl Default for MyPluginParams {
     fn default() -> Self {
         Self {
-            editor_state: EguiState::from_size(300, 450),
+            editor_state: EguiState::from_size(400, 400),
             synth: Arc::new(Mutex::new(MySynth::new())),
             gain: FloatParam::new(
                 "Gain",
@@ -147,7 +147,7 @@ impl Plugin for MyPlugin {
     ) -> ProcessStatus {
         let sample_rate = context.transport().sample_rate as f64;
         if self.context.sample_rate() != sample_rate {
-            self.context = corus_v2::ProccessContext::new(sample_rate);
+            self.context = corus_v2::ProcessContext::new(sample_rate);
         }
         while let Some(event) = context.next_event() {
             #[allow(unused_variables)]

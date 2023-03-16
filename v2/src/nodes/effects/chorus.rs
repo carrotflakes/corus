@@ -1,4 +1,4 @@
-use crate::{nodes::multi_tap_delay::MultiTapDelay, signal::Signal, ProccessContext};
+use crate::{nodes::multi_tap_delay::MultiTapDelay, signal::Signal, ProcessContext};
 use num_traits::{FromPrimitive, ToPrimitive};
 
 use super::super::sine::Sine;
@@ -22,7 +22,7 @@ where
         }
     }
 
-    pub fn process(&mut self, ctx: &ProccessContext, delay: S::Float, depth: S::Float, x: S) -> S {
+    pub fn process(&mut self, ctx: &ProcessContext, delay: S::Float, depth: S::Float, x: S) -> S {
         self.multi_tap_delay.process(
             ctx,
             &[

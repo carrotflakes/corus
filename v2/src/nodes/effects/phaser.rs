@@ -1,4 +1,4 @@
-use crate::{signal::Signal, ProccessContext};
+use crate::{signal::Signal, ProcessContext};
 use num_traits::FromPrimitive;
 
 use super::super::{all_pass_filter::AllPassFilter, sine::Sine};
@@ -24,7 +24,7 @@ where
         }
     }
 
-    pub fn process(&mut self, ctx: &ProccessContext, x: S) -> S {
+    pub fn process(&mut self, ctx: &ProcessContext, x: S) -> S {
         let feedback = S::from(S::Float::from_f64(0.5).unwrap());
         let depth = S::Float::from_f64(2.0).unwrap();
         let mut y = x + self.prev * feedback;

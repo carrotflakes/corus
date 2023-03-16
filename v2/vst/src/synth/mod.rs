@@ -1,20 +1,23 @@
 pub mod bender;
 mod cache;
+pub mod effectors;
 
 use std::sync::Arc;
 
 use corus_v2::{
     nodes::{
         biquad_filter::BiquadFilter,
-        effects::{chorus::Chorus, phaser::Phaser, DelayFx},
+        effects::{chorus::Chorus, phaser::Phaser, DelayFx, EarlyReflections, SchroederReverb},
         envelope::{self, Envelope},
         sine::Sine,
         unison::Unison,
         voice_manager::VoiceManager,
     },
     signal::{IntoStereo, StereoF64},
-    ProccessContext,
+    ProcessContext,
 };
+
+use self::effectors::Effector;
 
 pub struct MySynth {
     voices: VoiceManager<u8, MyVoice>,
@@ -23,18 +26,11 @@ pub struct MySynth {
     pub pitch: f64,
     pub frequency: f64,
     pub q: f64,
-    pub global_filter_enabled: bool,
-    pub phaser_enabled: bool,
-    pub chorus_enabled: bool,
     pub voice_params: VoiceParams,
-    pub delay_enabled: bool,
     pub unison_num: usize,
     mod_level: f64,
     mod_sine: Sine<f64>,
-    filter: BiquadFilter<2, StereoF64>,
-    pharser: Phaser<StereoF64>,
-    delay_fx: DelayFx<StereoF64>,
-    chorus: Chorus<StereoF64>,
+    pub effectors: Vec<(bool, Effector)>,
 }
 
 type WT = Arc<dyn Fn(f64) -> f64 + Send + Sync + 'static>;
@@ -61,9 +57,6 @@ impl MySynth {
             pitch: 1.0,
             frequency: 1000.0,
             q: 1.0,
-            global_filter_enabled: false,
-            phaser_enabled: false,
-            chorus_enabled: false,
             voice_params: VoiceParams {
                 seed: 0,
                 wt_cache: cache::Cache::new(|seed: u64| {
@@ -101,18 +94,50 @@ impl MySynth {
                 filter_env: Envelope::new(&[(0.01, 1.0, -1.0), (0.4, 0.3, 1.0)], 0.3, 1.0),
                 filter_enabled: false,
             },
-            delay_enabled: false,
             unison_num: 1,
             mod_level: 0.0,
             mod_sine: Sine::new(),
-            filter: BiquadFilter::new(),
-            pharser: Phaser::new(),
-            delay_fx: DelayFx::new(48000),
-            chorus: Chorus::new(),
+            effectors: vec![
+                (
+                    false,
+                    Effector::Filter {
+                        filter: BiquadFilter::new(),
+                        frequency: 10000.0,
+                        q: 1.0,
+                    },
+                ),
+                (false, Effector::Tanh),
+                (
+                    false,
+                    Effector::Phaser {
+                        phaser: Phaser::new(),
+                    },
+                ),
+                (
+                    false,
+                    Effector::Chorus {
+                        chorus: Chorus::new(),
+                    },
+                ),
+                (
+                    false,
+                    Effector::Delay {
+                        delay: DelayFx::new(48000),
+                    },
+                ),
+                (
+                    false,
+                    Effector::Reverb {
+                        reverb: SchroederReverb::new(44800),
+                        er: EarlyReflections::new(),
+                    },
+                ),
+                (true, Effector::Gain { gain: 1.0 }),
+            ],
         }
     }
 
-    pub fn process(&mut self, ctx: &ProccessContext) -> StereoF64 {
+    pub fn process(&mut self, ctx: &ProcessContext) -> StereoF64 {
         let modu = self.mod_sine.process(ctx, 3.0) * self.mod_level;
         let pitch = self.pitch * modu.exp2();
         let mut x = StereoF64::default();
@@ -120,19 +145,13 @@ impl MySynth {
             voice.unison.set_voice_num(self.unison_num);
             x = x + voice.process(ctx, &mut self.voice_params, pitch);
         }
-        if self.global_filter_enabled {
-            x = self.filter.process(ctx, self.frequency, self.q, x);
+        for (enabled, effector) in self.effectors.iter_mut() {
+            if *enabled {
+                x = effector.process(ctx, x);
+            }
         }
-        if self.phaser_enabled {
-            x = self.pharser.process(ctx, x);
-        }
-        if self.chorus_enabled {
-            x = self.chorus.process(ctx, 0.001, 0.001, x);
-        }
-        if self.delay_enabled {
-            x = self.delay_fx.process(ctx, x, 0.5, 0.3, 0.2);
-        }
-        (x * self.gain.into_stereo()).into_stereo_with_pan(self.pan)
+        x = (x * self.gain.into_stereo()).into_stereo_with_pan(self.pan);
+        x.map(|x| x.clamp(-1.0, 1.0))
     }
 
     pub fn handle_event(&mut self, event: MyEvent, time: f64) {
@@ -187,7 +206,7 @@ impl MyVoice {
 
     pub fn process(
         &mut self,
-        ctx: &ProccessContext,
+        ctx: &ProcessContext,
         param: &mut VoiceParams,
         pitch: f64,
     ) -> StereoF64 {

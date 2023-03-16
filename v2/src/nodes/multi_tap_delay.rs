@@ -1,4 +1,4 @@
-use crate::{interpolate_get, ring_buffer::RingBuffer, signal::Signal, ProccessContext};
+use crate::{interpolate_get, ring_buffer::RingBuffer, signal::Signal, ProcessContext};
 
 use num_traits::*;
 
@@ -19,7 +19,7 @@ where
         }
     }
 
-    pub fn process(&mut self, ctx: &ProccessContext, taps: &[(S::Float, S)], x: S) -> S {
+    pub fn process(&mut self, ctx: &ProcessContext, taps: &[(S::Float, S)], x: S) -> S {
         let mut y = S::default();
         for (delay, gain) in taps {
             let i = *delay * S::Float::from_f64(ctx.sample_rate()).unwrap();

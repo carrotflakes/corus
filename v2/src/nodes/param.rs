@@ -1,4 +1,4 @@
-use crate::{EventQueue, PackedEvent, ProccessContext};
+use crate::{EventQueue, PackedEvent, ProcessContext};
 
 use std::sync::{Arc, Mutex};
 
@@ -20,7 +20,7 @@ pub struct ParamInner {
 }
 
 impl ParamInner {
-    pub fn process(&mut self, ctx: &ProccessContext) -> f64 {
+    pub fn process(&mut self, ctx: &ProcessContext) -> f64 {
         let sample_rate = ctx.sample_rate();
         if sample_rate != self.sample_rate {
             match self.state {
@@ -92,7 +92,7 @@ impl Param {
         }
     }
 
-    pub fn process(&mut self, ctx: &ProccessContext) -> f64 {
+    pub fn process(&mut self, ctx: &ProcessContext) -> f64 {
         let inner = unsafe { std::mem::transmute::<_, &mut ParamInner>(Arc::as_ptr(&self.inner)) };
         inner.process(ctx)
     }

@@ -2,11 +2,11 @@ use corus_v2::{
     nodes::{effects::SchroederReverb, impulse::Impulse},
     signal::IntoStereo,
     unsafe_wrapper::UnsafeWrapper,
-    EventQueue, ProccessContext,
+    EventQueue, ProcessContext,
 };
 
 fn main() {
-    let mut ctx = ProccessContext::new(44100.0);
+    let mut ctx = ProcessContext::new(44100.0);
     let mut event_queue = EventQueue::new();
     let mut impulse = UnsafeWrapper::new(Impulse::new());
 

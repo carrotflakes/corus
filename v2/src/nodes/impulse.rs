@@ -1,4 +1,4 @@
-use crate::{signal::Signal, ProccessContext};
+use crate::{signal::Signal, ProcessContext};
 
 pub struct Impulse<S: Signal> {
     value: S,
@@ -15,7 +15,7 @@ impl<S: Signal> Impulse<S> {
         self.value = value;
     }
 
-    pub fn process(&mut self, _ctx: &ProccessContext) -> S {
+    pub fn process(&mut self, _ctx: &ProcessContext) -> S {
         let x = self.value;
         self.value = S::default();
         x

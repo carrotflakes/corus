@@ -12,13 +12,13 @@ use num_traits::{Float, FromPrimitive, ToPrimitive};
 use signal::Signal;
 
 #[derive(Debug, Clone)]
-pub struct ProccessContext {
+pub struct ProcessContext {
     sample_rate: f64,
     dtime: f64,
     current_time: f64,
 }
 
-impl ProccessContext {
+impl ProcessContext {
     pub fn new(sample_rate: f64) -> Self {
         Self {
             sample_rate,
@@ -81,7 +81,7 @@ impl EventQueue {
 pub trait Producer {
     type Output: Signal;
 
-    fn process(&mut self, ctx: &ProccessContext) -> Self::Output;
+    fn process(&mut self, ctx: &ProcessContext) -> Self::Output;
 }
 
 #[inline]

@@ -2,7 +2,7 @@ use biquad::{Biquad, Coefficients, DirectForm1, ToHertz, Type, Q_BUTTERWORTH_F64
 
 use crate::{
     signal::{Mono, Signal, Stereo},
-    ProccessContext,
+    ProcessContext,
 };
 
 pub struct BiquadFilter<const N: usize, S: Signal> {
@@ -27,7 +27,7 @@ impl<const N: usize, S: Signal<Float = f64>> BiquadFilter<N, S> {
 }
 
 impl<S: Signal<Float = f64> + Mono> BiquadFilter<1, S> {
-    pub fn process(&mut self, ctx: &ProccessContext, freq: f64, q: f64, x: S) -> S {
+    pub fn process(&mut self, ctx: &ProcessContext, freq: f64, q: f64, x: S) -> S {
         let coeff =
             Coefficients::<f64>::from_params(Type::LowPass, ctx.sample_rate().hz(), freq.hz(), q)
                 .unwrap();
@@ -37,7 +37,7 @@ impl<S: Signal<Float = f64> + Mono> BiquadFilter<1, S> {
 }
 
 impl<S: Signal<Float = f64> + Stereo> BiquadFilter<2, S> {
-    pub fn process(&mut self, ctx: &ProccessContext, freq: f64, q: f64, x: S) -> S {
+    pub fn process(&mut self, ctx: &ProcessContext, freq: f64, q: f64, x: S) -> S {
         let coeff =
             Coefficients::<f64>::from_params(Type::LowPass, ctx.sample_rate().hz(), freq.hz(), q)
                 .unwrap();

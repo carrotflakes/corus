@@ -13,11 +13,11 @@ use corus_v2::{
     },
     signal::{IntoStereo, StereoF64},
     unsafe_wrapper::UnsafeWrapper,
-    EventQueue, PackedEvent, ProccessContext,
+    EventQueue, PackedEvent, ProcessContext,
 };
 
 fn main() {
-    let mut ctx = ProccessContext::new(44100.0);
+    let mut ctx = ProcessContext::new(44100.0);
     let mut event_queue = EventQueue::new();
     let mut synth = Synth::new();
 
@@ -133,7 +133,7 @@ impl Synth {
         }
     }
 
-    fn process(&mut self, ctx: &ProccessContext) -> f64 {
+    fn process(&mut self, ctx: &ProcessContext) -> f64 {
         let mod_phase = self.mod_phase.process(ctx, 40.0);
         let mod_gain = self.mod_gain.process(ctx);
         let modu = (mod_phase * TAU).sin() * mod_gain * 100.0;
@@ -155,7 +155,7 @@ pub struct Voice {
 }
 
 impl Voice {
-    fn process(&mut self, ctx: &ProccessContext) -> StereoF64 {
+    fn process(&mut self, ctx: &ProcessContext) -> StereoF64 {
         let x = self
             .unison
             .process(ctx, self.frequency, 0.04, 0.9, |phase| phase * 2.0 - 1.0);
@@ -209,7 +209,7 @@ impl PolySynth {
         }
     }
 
-    fn process(&mut self, ctx: &ProccessContext) -> StereoF64 {
+    fn process(&mut self, ctx: &ProcessContext) -> StereoF64 {
         let mut x = StereoF64::default();
         for voice in self.voices.iter_mut() {
             x = x + voice.process(ctx);

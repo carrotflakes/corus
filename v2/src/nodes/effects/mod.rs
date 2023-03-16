@@ -5,7 +5,7 @@ use crate::{
     interpolate_get,
     ring_buffer::RingBuffer,
     signal::{IntoStereo, Signal, Stereo},
-    ProccessContext,
+    ProcessContext,
 };
 
 use num_traits::*;
@@ -33,7 +33,7 @@ where
 
     pub fn process(
         &mut self,
-        ctx: &ProccessContext,
+        ctx: &ProcessContext,
         x: S,
         delay: S::Float,
         feedback: S::Float,
@@ -95,7 +95,7 @@ where
         }
     }
 
-    pub fn process(&mut self, ctx: &ProccessContext, x: S) -> S {
+    pub fn process(&mut self, ctx: &ProcessContext, x: S) -> S {
         let mut y = S::default();
         for (delay, feedback, comb) in self.combs.iter_mut() {
             y = y + comb.process(ctx, x, *delay, *feedback);
@@ -146,7 +146,7 @@ where
         }
     }
 
-    pub fn process(&mut self, ctx: &ProccessContext, x: S) -> S {
+    pub fn process(&mut self, ctx: &ProcessContext, x: S) -> S {
         self.multi_tap_delay.process(ctx, &self.taps, x)
     }
 }
@@ -160,7 +160,7 @@ impl Compressor<f64> {
         Self { gain: 1.0 }
     }
 
-    pub fn process(&mut self, _ctx: &ProccessContext, x: f64) -> f64 {
+    pub fn process(&mut self, _ctx: &ProcessContext, x: f64) -> f64 {
         self.gain = (self.gain * 1.01).min(1.0).min(1.0 / x);
         x * self.gain
     }

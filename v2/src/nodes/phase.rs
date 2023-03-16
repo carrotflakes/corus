@@ -1,6 +1,6 @@
 use num_traits::{Float, FromPrimitive};
 
-use crate::ProccessContext;
+use crate::ProcessContext;
 
 pub struct Phase<F: Float + FromPrimitive> {
     phase: F,
@@ -15,7 +15,7 @@ impl<F: Float + FromPrimitive> Phase<F> {
         self.phase = phase.fract();
     }
 
-    pub fn process(&mut self, ctx: &ProccessContext, frequency: F) -> F {
+    pub fn process(&mut self, ctx: &ProcessContext, frequency: F) -> F {
         let dphase = frequency * F::from_f64(ctx.dtime()).unwrap();
         let phase = self.phase;
         self.phase = (self.phase + dphase).fract();
