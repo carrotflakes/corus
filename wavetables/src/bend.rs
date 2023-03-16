@@ -5,7 +5,7 @@ pub fn quadratic_bender(level: f64) -> impl Fn(f64) -> f64 {
     move |t| t.powi(2) * level + t * (1.0 - level)
 }
 
-/// level: -0.5 ~ 3.0
+/// level: -0.5 ~ 4.0
 pub fn cubic_bender(level: f64) -> impl Fn(f64) -> f64 {
     move |t| {
         let t = 2.0 * t - 1.0;

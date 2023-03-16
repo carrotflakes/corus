@@ -1,3 +1,4 @@
+pub mod bender;
 mod cache;
 
 use std::sync::Arc;
@@ -41,6 +42,8 @@ type WT = Arc<dyn Fn(f64) -> f64 + Send + Sync + 'static>;
 pub struct VoiceParams {
     pub seed: u64,
     pub wt_cache: cache::Cache<u64, WT, fn(u64) -> WT>,
+    pub bender: bender::Bender,
+    pub bend_level: f64,
     pub detune: f64,
     pub stereo_width: f64,
     pub env: Envelope,
@@ -90,6 +93,8 @@ impl MySynth {
                     }
                     .into()
                 }),
+                bender: bender::Bender::None,
+                bend_level: 0.0,
                 detune: 0.02,
                 stereo_width: 0.95,
                 env: Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
@@ -97,7 +102,7 @@ impl MySynth {
                 filter_enabled: false,
             },
             delay_enabled: false,
-            unison_num: 3,
+            unison_num: 1,
             mod_level: 0.0,
             mod_sine: Sine::new(),
             filter: BiquadFilter::new(),
@@ -118,14 +123,14 @@ impl MySynth {
         if self.global_filter_enabled {
             x = self.filter.process(ctx, self.frequency, self.q, x);
         }
-        if self.delay_enabled {
-            x = self.delay_fx.process(ctx, x, 0.5, 0.3, 0.2);
-        }
         if self.phaser_enabled {
             x = self.pharser.process(ctx, x);
         }
         if self.chorus_enabled {
             x = self.chorus.process(ctx, 0.001, 0.001, x);
+        }
+        if self.delay_enabled {
+            x = self.delay_fx.process(ctx, x, 0.5, 0.3, 0.2);
         }
         (x * self.gain.into_stereo()).into_stereo_with_pan(self.pan)
     }
@@ -194,7 +199,7 @@ impl MyVoice {
             self.frequency * pitch,
             param.detune,
             param.stereo_width,
-            |phase| (wt)(phase),
+            |phase| (wt)(param.bender.process(param.bend_level, phase)),
         );
         if param.filter_enabled {
             let filter_env = self.filter_env.process(&param.filter_env, ctx);
