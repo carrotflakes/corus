@@ -164,7 +164,7 @@ impl Plugin for MyPlugin {
                         let mut points = vec![];
                         for i in 0..=w {
                             let p = i as f64 / w as f64;
-                            let v = wt(p) as f32;
+                            let v = wt(p % 1.0) as f32;
                             points.push(to_screen * egui::pos2(p as f32, -v));
                         }
                         shapes.push(egui::Shape::line(

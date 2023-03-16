@@ -42,7 +42,7 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
         if self.rng.gen_bool(0.2) {
             return Tree::Sin;
         }
-        match self.rng.gen_range(0..=17) {
+        match self.rng.gen_range(0..=19) {
             0 => Tree::Sin,
             1 => Tree::Negative(Box::new(Tree::Sin)),
             2 => Tree::Triangle,
@@ -59,10 +59,12 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
             13 => Tree::Negative(Box::new(Tree::Pulse(
                 self.generate_variable(|s| s.rng.gen_range(0.0..1.0)),
             ))),
-            14 => Tree::Quadratic,
-            15 => Tree::Negative(Box::new(Tree::Quadratic)),
-            16 => Tree::Reversed(Box::new(Tree::Quadratic)),
-            17 => Tree::Reversed(Box::new(Tree::Negative(Box::new(Tree::Quadratic)))),
+            14 => Tree::Steps(self.rng.gen_range(3..16) as f64),
+            15 => Tree::Negative(Box::new(Tree::Steps(self.rng.gen_range(3..16) as f64))),
+            16 => Tree::Quadratic,
+            17 => Tree::Negative(Box::new(Tree::Quadratic)),
+            18 => Tree::Reversed(Box::new(Tree::Quadratic)),
+            19 => Tree::Reversed(Box::new(Tree::Negative(Box::new(Tree::Quadratic)))),
             _ => unreachable!(),
         }
     }

@@ -9,6 +9,7 @@ pub enum Tree {
     ShiftedSaw,
     Square,
     Pulse(Value),
+    Steps(f64),
     Quadratic,
 
     Negative(Box<Tree>),
@@ -55,6 +56,7 @@ impl Tree {
             Tree::ShiftedSaw => Tree::ShiftedSaw,
             Tree::Square => Tree::Square,
             Tree::Pulse(width) => Tree::Pulse(Value::Constant(width.get(params))),
+            Tree::Steps(n) => Tree::Steps(*n),
             Tree::Quadratic => Tree::Quadratic,
             Tree::Negative(f) => Tree::Negative(Box::new(f.instant_params(params))),
             Tree::Reversed(f) => Tree::Reversed(Box::new(f.instant_params(params))),
@@ -104,6 +106,10 @@ impl Tree {
                 let width = width.get_no_param();
                 Box::new(move |t| primitives::pulse(width, t))
             }
+            Tree::Steps(n) => {
+                let n = *n;
+                Box::new(move |t| primitives::steps(n, t))
+            }
             Tree::Quadratic => Box::new(primitives::quadratic),
             Tree::Negative(f) => Box::new(functions::negative(f.build())),
             Tree::Reversed(f) => Box::new(functions::reversed(f.build())),
@@ -133,6 +139,10 @@ impl Tree {
             Tree::Pulse(width) => {
                 let width = width.clone();
                 Box::new(move |params, t| primitives::pulse(width.get(params), t))
+            }
+            Tree::Steps(n) => {
+                let n = *n;
+                Box::new(move |_params, t| primitives::steps(n, t))
             }
             Tree::Quadratic => Box::new(|_params, t| primitives::quadratic(t)),
             Tree::Negative(f) => {

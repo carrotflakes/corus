@@ -110,24 +110,25 @@ impl Application for App {
 
                 column = column.push({
                     let mut row = widget::Row::new().push(text("primitive"));
-        
+
                     for f in [
-                        wavetables::primitives::sin,
-                        wavetables::primitives::saw,
-                        wavetables::primitives::shifted_saw,
-                        wavetables::primitives::triangle,
-                        wavetables::primitives::shifted_triangle,
-                        wavetables::primitives::square,
-                        wavetables::primitives::quadratic,
+                        Box::new(wavetables::primitives::sin) as Box<dyn Fn(f64) -> f64>,
+                        Box::new(wavetables::primitives::saw),
+                        Box::new(wavetables::primitives::shifted_saw),
+                        Box::new(wavetables::primitives::triangle),
+                        Box::new(wavetables::primitives::shifted_triangle),
+                        Box::new(wavetables::primitives::square),
+                        Box::new(wavetables::primitives::quadratic),
+                        Box::new(|t|wavetables::primitives::steps(3.0, t)),
                     ] {
                         row = row.push(make_canvas(f));
                     }
                     row
                 });
-        
+
                 column = column.push({
                     let mut row = widget::Row::new().push(text("UNRP"));
-        
+
                     for f in
                         wavetables::unique_negative_reverse_primitives::unique_negative_reverse_primitives()
                     {
@@ -135,10 +136,10 @@ impl Application for App {
                     }
                     row
                 });
-        
+
                 column = column.push({
                     let mut row = widget::Row::new().push(text("bend"));
-        
+
                     row = row.push(make_canvas(|t| {
                         wavetables::primitives::saw(wavetables::bend::quadratic_bender(1.0)(t))
                     }));
@@ -159,7 +160,7 @@ impl Application for App {
                     }));
                     row
                 });
-        
+
                 column = column.push({
                     let mut rng: rand::rngs::StdRng = rand::SeedableRng::from_seed([0; 32]);
                     let tree = rand_wt::Config {
@@ -167,9 +168,9 @@ impl Application for App {
                         variable_num: 1,
                     }
                     .generate(&mut rng);
-        
+
                     let mut row = widget::Row::new().push(text("paramaterized"));
-        
+
                     row = row.push(make_canvas(tree.instant_params(&[0.0]).build()));
                     row = row.push(make_canvas(tree.instant_params(&[0.1]).build()));
                     row = row.push(make_canvas(tree.instant_params(&[0.2]).build()));
@@ -178,12 +179,12 @@ impl Application for App {
                     row = row.push(make_canvas(tree.instant_params(&[1.0]).build()));
                     row
                 });
-        
+
                 let mut rng: rand::rngs::StdRng = rand::SeedableRng::from_seed([0; 32]);
                 for _ in 0..10 {
                     column = column.push({
                         let mut row = widget::Row::new();
-        
+
                         for _ in 0..10 {
                             row = row.push(make_canvas(
                                 rand_wt::Config {
@@ -201,7 +202,7 @@ impl Application for App {
             Mode::Composite => {
                 column = column.push({
                     let mut row = widget::Row::new().push(text("my WT"));
-        
+
                     for f in
                         self.wts.iter()
                     {
@@ -211,7 +212,7 @@ impl Application for App {
                 });
                 column = column.push({
                     let mut row = widget::Row::new().push(text("slots"));
-        
+
                     for (i, f) in
                         self.slots.iter().enumerate()
                     {
@@ -221,7 +222,7 @@ impl Application for App {
                 });
                 column = column.push({
                     let mut row = widget::Row::new().push(text("composite"));
-        
+
                     for f in &[
                         wavetables::tree::Tree::Negative(Box::new(self.slots[0].clone())),
                         wavetables::tree::Tree::Reversed(Box::new(self.slots[0].clone())),

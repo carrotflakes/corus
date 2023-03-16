@@ -16,6 +16,8 @@ pub fn unique_negative_reverse_primitives() -> Vec<Tree> {
         Tree::Negative(Box::new(Tree::Square)),
         Tree::Pulse(Value::Variable(0)),
         Tree::Negative(Box::new(Tree::Pulse(Value::Variable(0)))),
+        Tree::Steps(3.0),
+        Tree::Negative(Box::new(Tree::Steps(3.0))),
         Tree::Quadratic,
         Tree::Negative(Box::new(Tree::Quadratic)),
         Tree::Reversed(Box::new(Tree::Quadratic)),

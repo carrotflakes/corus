@@ -50,3 +50,7 @@ pub fn mul(f1: impl Fn(f64) -> f64, f2: impl Fn(f64) -> f64) -> impl Fn(f64) -> 
 pub fn mirror(f: impl Fn(f64) -> f64) -> impl Fn(f64) -> f64 {
     move |t| join(&f, reversed(&f))(t)
 }
+
+pub fn fractal(f: impl Fn(f64) -> f64) -> impl Fn(f64) -> f64 {
+    move |t| (f(t) + scale(2.0, &f)(t)) * 0.5
+}
