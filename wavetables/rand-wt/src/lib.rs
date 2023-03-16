@@ -77,7 +77,7 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
             ),
             1 => Tree::Shift(
                 self.generate_variable(|s| {
-                    if s.rng.gen_bool(0.3) {
+                    if s.rng.gen_bool(0.8) {
                         match s.rng.gen_range(1..=5) {
                             1 => 0.25,
                             2 => 0.5,
@@ -94,7 +94,7 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
             ),
             2 => Tree::Scale(
                 self.generate_variable(|s| {
-                    if s.rng.gen_bool(0.7) {
+                    if s.rng.gen_bool(0.8) {
                         match s.rng.gen_range(1..=9) {
                             1 => 0.25,
                             2 => 0.5,
@@ -108,14 +108,14 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
                             _ => unreachable!(),
                         }
                     } else {
-                        s.rng.gen_range(0.0..=3.0)
+                        s.rng.gen_range(0.1..=3.0)
                     }
                 }),
                 Box::new(self.generate_(depth + 1)),
             ),
             3 => Tree::Blend(
                 self.generate_variable(|s| {
-                    if s.rng.gen_bool(0.3) {
+                    if s.rng.gen_bool(0.5) {
                         0.5
                     } else {
                         s.rng.gen_range(0.0..1.0)
@@ -137,7 +137,14 @@ impl<'a, R: rand::Rng> Generator<'a, R> {
                 Box::new(self.generate_(depth + 1)),
                 Box::new(self.generate_(depth + 1)),
             ),
-            7 => Tree::Mirror(Box::new(self.generate_(depth + 1))),
+            7 => {
+                let child = Box::new(self.generate_(depth + 1));
+                Tree::Blend(
+                    Value::Constant(0.5),
+                    child.clone(),
+                    Box::new(Tree::Scale(Value::Constant(2.0), child)),
+                )
+            }
             _ => unreachable!(),
         }
     }
