@@ -7,7 +7,6 @@ use std::sync::Arc;
 use corus_v2::{
     nodes::{
         biquad_filter::BiquadFilter,
-        effects::{chorus::Chorus, phaser::Phaser, DelayFx, EarlyReflections, SchroederReverb},
         envelope::{self, Envelope},
         sine::Sine,
         unison::Unison,
@@ -31,6 +30,8 @@ pub struct MySynth {
     mod_level: f64,
     mod_sine: Sine<f64>,
     pub effectors: Vec<(bool, Effector)>,
+    pub effector_states: Vec<effectors::State>,
+    // lfo: Vec<Oscillator>,
 }
 
 type WT = Arc<dyn Fn(f64) -> f64 + Send + Sync + 'static>;
@@ -101,39 +102,18 @@ impl MySynth {
                 (
                     false,
                     Effector::Filter {
-                        filter: BiquadFilter::new(),
                         frequency: 10000.0,
                         q: 1.0,
                     },
                 ),
                 (false, Effector::Tanh),
-                (
-                    false,
-                    Effector::Phaser {
-                        phaser: Phaser::new(),
-                    },
-                ),
-                (
-                    false,
-                    Effector::Chorus {
-                        chorus: Chorus::new(),
-                    },
-                ),
-                (
-                    false,
-                    Effector::Delay {
-                        delay: DelayFx::new(48000),
-                    },
-                ),
-                (
-                    false,
-                    Effector::Reverb {
-                        reverb: SchroederReverb::new(44800),
-                        er: EarlyReflections::new(),
-                    },
-                ),
+                (false, Effector::Phaser),
+                (false, Effector::Chorus),
+                (false, Effector::Delay),
+                (false, Effector::Reverb),
                 (true, Effector::Gain { gain: 1.0 }),
             ],
+            effector_states: vec![],
         }
     }
 
@@ -145,13 +125,23 @@ impl MySynth {
             voice.unison.set_voice_num(self.unison_num);
             x = x + voice.process(ctx, &mut self.voice_params, pitch);
         }
-        for (enabled, effector) in self.effectors.iter_mut() {
+        for ((enabled, effector), state) in
+            self.effectors.iter().zip(self.effector_states.iter_mut())
+        {
             if *enabled {
-                x = effector.process(ctx, x);
+                x = effector.process(state, ctx, x);
             }
         }
         x = (x * self.gain.into_stereo()).into_stereo_with_pan(self.pan);
         x.map(|x| x.clamp(-1.0, 1.0))
+    }
+
+    pub fn ensure_state(&mut self) {
+        self.effector_states
+            .resize_with(self.effectors.len(), || effectors::State::None);
+        for ((_, effector), state) in self.effectors.iter().zip(self.effector_states.iter_mut()) {
+            effector.ensure_state(state);
+        }
     }
 
     pub fn handle_event(&mut self, event: MyEvent, time: f64) {
@@ -160,7 +150,7 @@ impl MySynth {
                 let v = self.voices.note_on(notenum);
                 v.frequency = 440.0 * 2.0f64.powf((notenum as f64 - 69.0) / 12.0);
                 // v.unison.reset();
-                v.gain = velocity;
+                v.velocity = velocity;
                 v.env.note_on(time);
                 v.filter_env.note_on(time);
             }
@@ -184,9 +174,9 @@ pub enum MyEvent {
 }
 
 pub struct MyVoice {
-    unison: Unison,
     frequency: f64,
-    gain: f64,
+    velocity: f64,
+    unison: Unison,
     env: envelope::State,
     filter_env: envelope::State,
     filter: BiquadFilter<2, StereoF64>,
@@ -195,9 +185,9 @@ pub struct MyVoice {
 impl MyVoice {
     pub fn new() -> Self {
         Self {
-            unison: Unison::new(3),
             frequency: 440.0,
-            gain: 0.0,
+            velocity: 0.0,
+            unison: Unison::new(3),
             env: envelope::State::new(),
             filter_env: envelope::State::new(),
             filter: BiquadFilter::new(),
@@ -211,7 +201,7 @@ impl MyVoice {
         pitch: f64,
     ) -> StereoF64 {
         let env = self.env.process(&param.env, ctx);
-        let gain = self.gain * env;
+        let gain = self.velocity * env;
         let wt = param.wt_cache.get(param.seed).clone();
         let mut x = self.unison.process(
             ctx,

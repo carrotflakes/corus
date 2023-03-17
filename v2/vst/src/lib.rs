@@ -262,6 +262,7 @@ impl Plugin for MyPlugin {
         }
 
         let mut synth = self.params.synth.lock().unwrap();
+        synth.ensure_state();
 
         // apply params
         synth.frequency = self.params.frequency.value() as f64;

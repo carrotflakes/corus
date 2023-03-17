@@ -147,18 +147,14 @@ pub fn editor_updator(
                     use crate::synth::effectors::Effector;
                     #[allow(unused_variables)]
                     match effector {
-                        Effector::Filter {
-                            frequency,
-                            q,
-                            filter,
-                        } => {
+                        Effector::Filter { frequency, q } => {
                             ui.add(crate::widgets::knob::knob(20.0..10000.0, frequency));
                             ui.add(crate::widgets::knob::knob(0.7..10.0, q));
                         }
-                        Effector::Phaser { phaser } => {}
-                        Effector::Chorus { chorus } => {}
-                        Effector::Delay { delay } => {}
-                        Effector::Reverb { reverb, er } => {}
+                        Effector::Phaser => {}
+                        Effector::Chorus => {}
+                        Effector::Delay => {}
+                        Effector::Reverb => {}
                         Effector::Gain { gain } => {
                             // ui.add(egui::widgets::Slider::new(gain, 0.0..=1.5));
                             ui.add(crate::widgets::knob::knob(0.0..1.5, gain));
