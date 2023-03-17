@@ -1,5 +1,5 @@
 use crate::{
-    signal::{IntoStereo, StereoF64},
+    signal::{IntoStereo, Signal, StereoF64},
     ProcessContext,
 };
 
@@ -26,13 +26,15 @@ impl Unison {
         }
     }
 
-    pub fn process(
+    pub fn process<
+        T: Signal<Float = f64> + IntoStereo<Output = StereoF64> + std::ops::Mul<f64, Output = T>,
+    >(
         &mut self,
         ctx: &ProcessContext,
         frequency: f64,
         detune: f64,
         stereo_width: f64,
-        f: impl Fn(f64) -> f64,
+        f: impl Fn(f64) -> T,
     ) -> StereoF64 {
         let n = self.phases.len();
         let scale = 1.0 / (n as f64).sqrt();
