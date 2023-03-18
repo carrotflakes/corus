@@ -2,7 +2,13 @@ use corus_v2::nodes::envelope::Envelope;
 
 pub struct ParamF64 {
     pub value: f64,
-    pub envelope: Option<(f64, Envelope)>,
+    pub envelope: Option<(bool, f64, Envelope)>,
+    pub lfo: Option<(bool, Lfo)>,
+}
+
+pub struct Lfo {
+    pub frequency: f64,
+    pub amp: f64,
 }
 
 #[derive(Clone, Copy)]
@@ -18,11 +24,17 @@ impl ParamF64 {
             note_off_time,
         } = *env_state;
 
-        if let Some((amount, envelope)) = &self.envelope {
-            let envelope_level = envelope.compute(elapsed, note_off_time);
-            self.value + amount * envelope_level
-        } else {
-            self.value
-        }
+        self.value
+            + if let Some((true, amount, envelope)) = &self.envelope {
+                let envelope_level = envelope.compute(elapsed, note_off_time);
+                amount * envelope_level
+            } else {
+                0.0
+            }
+            + if let Some((true, lfo)) = &self.lfo {
+                (elapsed * lfo.frequency * std::f64::consts::TAU).sin() * lfo.amp
+            } else {
+                0.0
+            }
     }
 }

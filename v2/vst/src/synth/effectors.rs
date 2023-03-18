@@ -136,7 +136,7 @@ impl Effector {
     ) -> StereoF64 {
         match (self, state) {
             (Effector::Filter { frequency, q }, State::Filter { filter }) => {
-                filter.process(ctx, frequency.compute(env_state), q.compute(env_state), x)
+                filter.process(ctx, frequency.compute(env_state).max(20.0), q.compute(env_state), x)
             }
             (Effector::Phaser, State::Phaser { phaser }) => phaser.process(ctx, x),
             (Effector::Chorus, State::Chorus { chorus }) => chorus.process(ctx, 0.001, 0.001, x),

@@ -7,7 +7,8 @@ use nih_plug_egui::egui::{self, emath};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum EnvelopeLocation {
     VoiceGain,
-    VoiceFilterFrequency(usize),
+    VoiceEffector(usize, usize),
+    MasterEffector(usize, usize),
 }
 
 pub fn editor_updator(
@@ -53,7 +54,9 @@ pub fn editor_updator(
             });
 
             ui.vertical(|ui| {
-                ui.add(egui::widgets::DragValue::new(&mut synth.voice_params.wavetable_settings.seed));
+                ui.add(egui::widgets::DragValue::new(
+                    &mut synth.voice_params.wavetable_settings.seed,
+                ));
 
                 ui.horizontal(|ui| {
                     egui::Frame::canvas(ui.style()).show(ui, |ui| {
@@ -108,22 +111,23 @@ pub fn editor_updator(
                         ui.selectable_value(&mut synth.voice_params.bender, Bender::Cos, "cos");
                     });
 
-                ui.checkbox(&mut synth.voice_params.wavetable_settings.use_buffer, "prerender");
+                ui.checkbox(
+                    &mut synth.voice_params.wavetable_settings.use_buffer,
+                    "prerender",
+                );
             });
-        });
-        ui.horizontal(|ui| {
-            if ui.button("gain").clicked() {
-                *state.envelope_location.lock().unwrap() = EnvelopeLocation::VoiceGain;
-            }
-            if ui.button("filter freq").clicked() {
-                *state.envelope_location.lock().unwrap() = EnvelopeLocation::VoiceFilterFrequency(0);
-            }
         });
         ui.collapsing("Unison", |ui| {
             ui.horizontal(|ui| {
-                ui.add(egui::widgets::DragValue::new(&mut synth.voice_params.unison_settings.num).clamp_range(1..=10));
+                ui.add(
+                    egui::widgets::DragValue::new(&mut synth.voice_params.unison_settings.num)
+                        .clamp_range(1..=10),
+                );
                 ui.label("voices");
-                ui.checkbox(&mut synth.voice_params.unison_settings.phase_reset, "phase reset");
+                ui.checkbox(
+                    &mut synth.voice_params.unison_settings.phase_reset,
+                    "phase reset",
+                );
             });
             ui.add(egui::widgets::Slider::new(
                 &mut synth.voice_params.unison_settings.detune,
@@ -136,42 +140,40 @@ pub fn editor_updator(
         });
 
         ui.collapsing("Envelope", |ui| {
-            let Some(envelope) = (match state.envelope_location.lock().unwrap().clone() {
-                EnvelopeLocation::VoiceGain => Some(&mut synth.voice_params.env),
-                EnvelopeLocation::VoiceFilterFrequency(i) => match &mut synth.voice_params.effectors[i].1 {
-                    crate::synth::effectors::Effector::Filter { frequency, .. } => {
-                        frequency.envelope.as_mut().map(|e| &mut e.1)
-                    },
-                    crate::synth::effectors::Effector::Phaser => None,
-                    crate::synth::effectors::Effector::Chorus => None,
-                    crate::synth::effectors::Effector::Delay => None,
-                    crate::synth::effectors::Effector::Reverb => None,
-                    crate::synth::effectors::Effector::Gain { .. } => None,
-                    crate::synth::effectors::Effector::Compressor { .. } => None,
-                    crate::synth::effectors::Effector::Tanh => None,
-                },
-            }) else {
-                return
-            };
-            ui.label(format!("{:?}", state.envelope_location.lock().unwrap()));
             ui.horizontal(|ui| {
-                ui.add(crate::widgets::knob::knob(
-                    0.0..1.0,
-                    &mut envelope.points[0].0,
-                ));
-                ui.add(crate::widgets::knob::knob(
-                    0.0..8.0,
-                    &mut envelope.points[1].0,
-                ));
-                ui.add(crate::widgets::knob::knob(
-                    0.0..1.0,
-                    &mut envelope.points[1].1,
-                ));
-                ui.add(crate::widgets::knob::knob(
-                    0.0..1.0,
-                    &mut envelope.release_length,
-                ));
+                if ui.button("gain").clicked() {
+                    *state.envelope_location.lock().unwrap() = EnvelopeLocation::VoiceGain;
+                }
+                if ui.button("filter freq").clicked() {
+                    *state.envelope_location.lock().unwrap() =
+                        EnvelopeLocation::VoiceEffector(0, 0);
+                }
             });
+
+            match state.envelope_location.lock().unwrap().clone() {
+                EnvelopeLocation::VoiceGain => {
+                    ui.label("Voice gain");
+                    envelope(ui, &mut synth.voice_params.env);
+                }
+                EnvelopeLocation::VoiceEffector(i, j) => {
+                    if let Some((_, fx)) = synth.voice_params.effectors.get_mut(i) {
+                        ui.label(format!("V {} {}", fx.name(), fx.param_names()[j]));
+                        if let Some(p) = fx.param_muts().get_mut(j) {
+                            p.envelope.as_mut().map(|e| envelope(ui, &mut e.2));
+                            p.lfo.as_mut().map(|l| lfo(ui, &mut l.1));
+                        }
+                    }
+                }
+                EnvelopeLocation::MasterEffector(i, j) => {
+                    if let Some((_, fx)) = synth.effectors.get_mut(i) {
+                        ui.label(format!("M {} {}", fx.name(), fx.param_names()[0]));
+                        if let Some(p) = fx.param_muts().get_mut(j) {
+                            p.envelope.as_mut().map(|e| envelope(ui, &mut e.2));
+                            p.lfo.as_mut().map(|l| lfo(ui, &mut l.1));
+                        }
+                    }
+                }
+            }
         });
 
         ui.collapsing("Voice effectors", |ui| {
@@ -220,6 +222,34 @@ pub fn editor_updator(
         //     egui::widgets::ProgressBar::new(peak_meter_normalized)
         //         .text(peak_meter_text),
         // );
+    });
+}
+
+fn envelope(ui: &mut egui::Ui, envelope: &mut corus_v2::nodes::envelope::Envelope) {
+    ui.horizontal(|ui| {
+        ui.add(crate::widgets::knob::knob(
+            0.0..1.0,
+            &mut envelope.points[0].0,
+        ));
+        ui.add(crate::widgets::knob::knob(
+            0.0..8.0,
+            &mut envelope.points[1].0,
+        ));
+        ui.add(crate::widgets::knob::knob(
+            0.0..1.0,
+            &mut envelope.points[1].1,
+        ));
+        ui.add(crate::widgets::knob::knob(
+            0.0..1.0,
+            &mut envelope.release_length,
+        ));
+    });
+}
+
+fn lfo(ui: &mut egui::Ui, lfo: &mut crate::synth::param_f64::Lfo) {
+    ui.horizontal(|ui| {
+        ui.add(crate::widgets::knob::knob(0.001..100.0, &mut lfo.frequency));
+        ui.add(crate::widgets::knob::knob(-10.0..10.0, &mut lfo.amp));
     });
 }
 

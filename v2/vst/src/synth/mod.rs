@@ -17,6 +17,8 @@ use effectors::Effector;
 use param_f64::{EnvelopeState, ParamF64};
 use wavetable::WavetableSettings;
 
+use self::param_f64::Lfo;
+
 pub struct MySynth {
     voices: VoiceManager<u8, MyVoice>,
     gain: f64,
@@ -38,10 +40,9 @@ pub struct VoiceParams {
     pub bender: bender::Bender,
     pub bend_level: f64,
     pub unison_settings: UnisonSettings,
-    pub env: Envelope,
-    pub filter_env: Envelope,
-    pub filter_enabled: bool,
+    pub level: ParamF64,
     pub effectors: Vec<(bool, Effector)>,
+    pub env: Envelope,
 }
 
 pub struct UnisonSettings {
@@ -71,25 +72,41 @@ impl MySynth {
                     stereo_width: 0.95,
                     phase_reset: false,
                 },
-                env: Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
-                filter_env: Envelope::new(&[(0.01, 1.0, -1.0), (0.4, 0.3, 1.0)], 0.3, 1.0),
-                filter_enabled: false,
+                level: ParamF64 {
+                    value: 0.7,
+                    envelope: Some((
+                        true,
+                        0.0,
+                        Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
+                    )),
+                    lfo: Some((
+                        false,
+                        Lfo {
+                            frequency: 1.0,
+                            amp: 0.5,
+                        },
+                    )),
+                },
                 effectors: vec![(
                     false,
                     Effector::Filter {
                         frequency: ParamF64 {
                             value: 50.0,
                             envelope: Some((
+                                true,
                                 5000.0,
                                 Envelope::new(&[(0.01, 1.0, -1.0), (0.4, 0.3, 1.0)], 0.3, 1.0),
                             )),
+                            lfo: Some((true, Lfo { frequency: 1.0, amp: 1000.0 })),
                         },
                         q: ParamF64 {
                             value: 1.0,
                             envelope: None,
+                            lfo: None,
                         },
                     },
                 )],
+                env: Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
             },
             mod_level: 0.0,
             mod_sine: Sine::new(),
@@ -100,10 +117,12 @@ impl MySynth {
                         frequency: ParamF64 {
                             value: 10000.0,
                             envelope: None,
+                            lfo: None,
                         },
                         q: ParamF64 {
                             value: 1.0,
                             envelope: None,
+                            lfo: None,
                         },
                     },
                 ),
@@ -118,6 +137,7 @@ impl MySynth {
                         gain: ParamF64 {
                             value: 1.0,
                             envelope: None,
+                            lfo: None,
                         },
                     },
                 ),
@@ -127,22 +147,27 @@ impl MySynth {
                         threshold: ParamF64 {
                             value: 0.8,
                             envelope: None,
+                            lfo: None,
                         },
                         ratio: ParamF64 {
                             value: 0.5,
                             envelope: None,
+                            lfo: None,
                         },
                         attack: ParamF64 {
                             value: 0.01,
                             envelope: None,
+                            lfo: None,
                         },
                         release: ParamF64 {
                             value: 0.03,
                             envelope: None,
+                            lfo: None,
                         },
                         gain: ParamF64 {
                             value: 1.0,
                             envelope: None,
+                            lfo: None,
                         },
                     },
                 ),
@@ -289,11 +314,13 @@ impl MyVoice {
             }
         }
 
+        let level = param.level.compute(&env_state).clamp(0.0, 1.0);
+        let gain = self.velocity * level;
+
         let env = param
             .env
             .compute(env_state.elapsed, env_state.note_off_time);
-        let gain = self.velocity * env;
 
-        x * gain
+        x * gain * env
     }
 }
