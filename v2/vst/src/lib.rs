@@ -3,6 +3,7 @@ mod synth;
 mod widgets;
 
 use corus_v2::{event_queue::EventQueue, signal::Stereo};
+use editor_ui::EnvelopeLocation;
 use nih_plug::prelude::*;
 use nih_plug_egui::{create_egui_editor, EguiState};
 use std::sync::{Arc, Mutex};
@@ -19,6 +20,7 @@ pub struct MyPluginParams {
     #[persist = "editor-state"]
     editor_state: Arc<EguiState>,
     synth: Arc<Mutex<MySynth>>,
+    envelope_location: Mutex<EnvelopeLocation>,
 
     #[id = "gain"]
     pub gain: FloatParam,
@@ -43,9 +45,10 @@ impl Default for MyPluginParams {
         Self {
             editor_state: EguiState::from_size(400, 400),
             synth: Arc::new(Mutex::new(MySynth::new())),
+            envelope_location: Mutex::new(EnvelopeLocation::VoiceGain),
             gain: FloatParam::new(
                 "Gain",
-                util::db_to_gain(3.0),
+                util::db_to_gain(0.0),
                 FloatRange::Skewed {
                     min: util::db_to_gain(-30.0),
                     max: util::db_to_gain(30.0),

@@ -4,6 +4,12 @@ use crate::{synth::bender::Bender, MyPluginParams};
 use nih_plug::prelude::*;
 use nih_plug_egui::egui::{self, emath};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum EnvelopeLocation {
+    VoiceGain,
+    VoiceFilterFrequency(usize),
+}
+
 pub fn editor_updator(
     egui_ctx: &egui::Context,
     setter: &ParamSetter,
@@ -102,67 +108,73 @@ pub fn editor_updator(
                     });
             });
         });
-        ui.add(egui::widgets::Checkbox::new(
-            &mut synth.voice_params.filter_enabled,
-            "Filter",
-        ));
+        ui.horizontal(|ui| {
+            if ui.button("gain").clicked() {
+                *state.envelope_location.lock().unwrap() = EnvelopeLocation::VoiceGain;
+            }
+            if ui.button("filter freq").clicked() {
+                *state.envelope_location.lock().unwrap() = EnvelopeLocation::VoiceFilterFrequency(0);
+            }
+        });
         ui.collapsing("Unison", |ui| {
             ui.horizontal(|ui| {
-                ui.add(egui::widgets::DragValue::new(&mut synth.unison_num).clamp_range(1..=10));
+                ui.add(egui::widgets::DragValue::new(&mut synth.voice_params.unison_settings.num).clamp_range(1..=10));
                 ui.label("voices");
+                ui.checkbox(&mut synth.voice_params.unison_settings.phase_reset, "phase reset");
             });
             ui.add(egui::widgets::Slider::new(
-                &mut synth.voice_params.detune,
+                &mut synth.voice_params.unison_settings.detune,
                 0.0..=1.0,
             ));
             ui.add(egui::widgets::Slider::new(
-                &mut synth.voice_params.stereo_width,
-                0.0..=1.0,
-            ));
-        });
-
-        ui.collapsing("ADSR envelope", |ui| {
-            ui.add(egui::widgets::Slider::new(
-                &mut synth.voice_params.env.points[0].0,
-                0.0..=1.0,
-            ));
-            ui.add(egui::widgets::Slider::new(
-                &mut synth.voice_params.env.points[1].0,
-                0.0..=8.0,
-            ));
-            ui.add(egui::widgets::Slider::new(
-                &mut synth.voice_params.env.points[1].1,
-                0.0..=1.0,
-            ));
-            ui.add(egui::widgets::Slider::new(
-                &mut synth.voice_params.env.release_length,
+                &mut synth.voice_params.unison_settings.stereo_width,
                 0.0..=1.0,
             ));
         });
 
+        ui.collapsing("Envelope", |ui| {
+            let Some(envelope) = (match state.envelope_location.lock().unwrap().clone() {
+                EnvelopeLocation::VoiceGain => Some(&mut synth.voice_params.env),
+                EnvelopeLocation::VoiceFilterFrequency(i) => match &mut synth.voice_params.effectors[i].1 {
+                    crate::synth::effectors::Effector::Filter { frequency, .. } => {
+                        frequency.envelope.as_mut().map(|e| &mut e.1)
+                    },
+                    crate::synth::effectors::Effector::Phaser => None,
+                    crate::synth::effectors::Effector::Chorus => None,
+                    crate::synth::effectors::Effector::Delay => None,
+                    crate::synth::effectors::Effector::Reverb => None,
+                    crate::synth::effectors::Effector::Gain { .. } => None,
+                    crate::synth::effectors::Effector::Tanh => None,
+                },
+            }) else {
+                return
+            };
+            ui.label(format!("{:?}", state.envelope_location.lock().unwrap()));
+            ui.horizontal(|ui| {
+                ui.add(crate::widgets::knob::knob(
+                    0.0..1.0,
+                    &mut envelope.points[0].0,
+                ));
+                ui.add(crate::widgets::knob::knob(
+                    0.0..8.0,
+                    &mut envelope.points[1].0,
+                ));
+                ui.add(crate::widgets::knob::knob(
+                    0.0..1.0,
+                    &mut envelope.points[1].1,
+                ));
+                ui.add(crate::widgets::knob::knob(
+                    0.0..1.0,
+                    &mut envelope.release_length,
+                ));
+            });
+        });
+
+        ui.collapsing("Voice effectors", |ui| {
+            effectors(&mut synth.voice_params.effectors, ui);
+        });
         ui.collapsing("Master", |ui| {
-            for (enabled, effector) in &mut synth.effectors {
-                ui.horizontal(|ui| {
-                    ui.add(egui::widgets::Checkbox::new(enabled, effector.name()));
-                    use crate::synth::effectors::Effector;
-                    #[allow(unused_variables)]
-                    match effector {
-                        Effector::Filter { frequency, q } => {
-                            ui.add(crate::widgets::knob::knob(20.0..10000.0, frequency));
-                            ui.add(crate::widgets::knob::knob(0.7..10.0, q));
-                        }
-                        Effector::Phaser => {}
-                        Effector::Chorus => {}
-                        Effector::Delay => {}
-                        Effector::Reverb => {}
-                        Effector::Gain { gain } => {
-                            // ui.add(egui::widgets::Slider::new(gain, 0.0..=1.5));
-                            ui.add(crate::widgets::knob::knob(0.0..1.5, gain));
-                        }
-                        Effector::Tanh {} => {}
-                    }
-                });
-            }
+            effectors(&mut synth.effectors, ui);
         });
 
         ui.label("Gain");
@@ -205,4 +217,32 @@ pub fn editor_updator(
         //         .text(peak_meter_text),
         // );
     });
+}
+
+fn effectors(effectors: &mut Vec<(bool, crate::synth::effectors::Effector)>, ui: &mut egui::Ui) {
+    for (enabled, effector) in effectors {
+        ui.horizontal(|ui| {
+            ui.add(egui::widgets::Checkbox::new(enabled, effector.name()));
+            use crate::synth::effectors::Effector;
+
+            match effector {
+                Effector::Filter { frequency, q } => {
+                    ui.add(crate::widgets::knob::knob(
+                        20.0..10000.0,
+                        &mut frequency.value,
+                    ));
+                    ui.add(crate::widgets::knob::knob(0.7..10.0, &mut q.value));
+                }
+                Effector::Phaser => {}
+                Effector::Chorus => {}
+                Effector::Delay => {}
+                Effector::Reverb => {}
+                Effector::Gain { gain } => {
+                    // ui.add(egui::widgets::Slider::new(gain, 0.0..=1.5));
+                    ui.add(crate::widgets::knob::knob(0.0..1.5, &mut gain.value));
+                }
+                Effector::Tanh {} => {}
+            }
+        });
+    }
 }

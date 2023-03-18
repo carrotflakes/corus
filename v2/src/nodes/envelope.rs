@@ -11,7 +11,7 @@ pub struct Envelope {
 pub struct State {
     pub note_on_time: f64,
     pub note_off_time: f64,
-    pub level_at_note_off_time: f64,
+    pub level_at_note_off: f64,
 }
 
 #[derive(Clone, Copy)]
@@ -37,7 +37,7 @@ impl Envelope {
 
     pub fn compute_level(&self, mut elapsed: f64) -> f64 {
         let mut last_level = 0.0;
-        for (length, level, curve) in self.points.clone() {
+        for (length, level, curve) in self.points.iter().cloned() {
             if elapsed < length {
                 return curve.compute(last_level, level, elapsed / length);
             }
@@ -46,6 +46,23 @@ impl Envelope {
         }
         last_level
     }
+
+    pub fn compute_release(&self, level_at_note_off: f64, elapsed: f64) -> f64 {
+        if elapsed < self.release_length {
+            self.release_curve
+                .compute(level_at_note_off, 0.0, elapsed / self.release_length)
+        } else {
+            0.0
+        }
+    }
+
+    pub fn compute(&self, elapsed: f64, note_off_time: f64) -> f64 {
+        if elapsed <= note_off_time {
+            self.compute_level(elapsed)
+        } else {
+            self.compute_release(self.compute_level(note_off_time), elapsed - note_off_time)
+        }
+    }
 }
 
 impl State {
@@ -53,7 +70,7 @@ impl State {
         Self {
             note_on_time: 0.0,
             note_off_time: 0.0,
-            level_at_note_off_time: 0.0,
+            level_at_note_off: 0.0,
         }
     }
 
@@ -64,8 +81,7 @@ impl State {
 
     pub fn note_off(&mut self, envelope: &Envelope, time: f64) {
         self.note_off_time = time;
-        self.level_at_note_off_time =
-            envelope.compute_level(self.note_off_time - self.note_on_time);
+        self.level_at_note_off = envelope.compute_level(self.note_off_time - self.note_on_time);
     }
 
     pub fn process(&self, envelope: &Envelope, ctx: &ProcessContext) -> f64 {
@@ -78,7 +94,7 @@ impl State {
             envelope.compute_level(current_time - self.note_on_time)
         } else {
             envelope.release_curve.compute(
-                self.level_at_note_off_time,
+                self.level_at_note_off,
                 0.0,
                 (current_time - self.note_off_time) / envelope.release_length,
             )

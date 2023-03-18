@@ -8,13 +8,39 @@ use corus_v2::{
     ProcessContext,
 };
 
+use super::param_f64::{self, EnvelopeState};
+
+// pub enum MonoEffector {
+//     Filter { frequency: f64, q: f64 },
+//     Delay,
+//     Gain { gain: f64 },
+//     Tanh,
+// }
+
+// pub enum MonoState {
+//     Filter {
+//         filter: BiquadFilter<2, StereoF64>,
+//     },
+//     Delay {
+//         delay: DelayFx<StereoF64>,
+//     },
+//     Gain,
+//     Tanh,
+//     None,
+// }
+
 pub enum Effector {
-    Filter { frequency: f64, q: f64 },
+    Filter {
+        frequency: param_f64::ParamF64,
+        q: param_f64::ParamF64,
+    },
     Phaser,
     Chorus,
     Delay,
     Reverb,
-    Gain { gain: f64 },
+    Gain {
+        gain: param_f64::ParamF64,
+    },
     Tanh,
 }
 
@@ -53,10 +79,40 @@ impl Effector {
         }
     }
 
-    pub fn process(&self, state: &mut State, ctx: &ProcessContext, x: StereoF64) -> StereoF64 {
+    pub fn param_names(&self) -> &[&'static str] {
+        match self {
+            Effector::Filter { .. } => &["frequency", "q"],
+            Effector::Phaser { .. } => &[],
+            Effector::Chorus { .. } => &[],
+            Effector::Delay { .. } => &[],
+            Effector::Reverb { .. } => &[],
+            Effector::Gain { .. } => &["gain"],
+            Effector::Tanh => &[],
+        }
+    }
+
+    pub fn param_muts<'a>(&'a mut self) -> Vec<&'a mut param_f64::ParamF64> {
+        match self {
+            Effector::Filter { frequency, q } => vec![frequency, q],
+            Effector::Phaser { .. } => vec![],
+            Effector::Chorus { .. } => vec![],
+            Effector::Delay { .. } => vec![],
+            Effector::Reverb { .. } => vec![],
+            Effector::Gain { gain } => vec![gain],
+            Effector::Tanh => vec![],
+        }
+    }
+
+    pub fn process(
+        &self,
+        state: &mut State,
+        ctx: &ProcessContext,
+        env_state: &EnvelopeState,
+        x: StereoF64,
+    ) -> StereoF64 {
         match (self, state) {
             (Effector::Filter { frequency, q }, State::Filter { filter }) => {
-                filter.process(ctx, *frequency, *q, x)
+                filter.process(ctx, frequency.compute(env_state), q.compute(env_state), x)
             }
             (Effector::Phaser, State::Phaser { phaser }) => phaser.process(ctx, x),
             (Effector::Chorus, State::Chorus { chorus }) => chorus.process(ctx, 0.001, 0.001, x),
@@ -66,7 +122,7 @@ impl Effector {
                 (0.3, er.process(ctx, x)),
                 (0.2, reverb.process(ctx, x)),
             ]),
-            (Effector::Gain { gain }, State::Gain) => x * *gain,
+            (Effector::Gain { gain }, State::Gain) => x * gain.compute(env_state),
             (Effector::Tanh, State::Tanh) => x.map(|x| x.tanh()),
             _ => unreachable!("invalid state"),
         }
