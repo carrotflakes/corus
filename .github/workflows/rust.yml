@@ -11,17 +11,22 @@ env:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        dir: ['.', './v2']
 
     runs-on: ubuntu-latest
 
     steps:
     - name: Setup
       run: rustup update
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Run tests
       run: cargo test --verbose
+      working-directory: ${{ matrix.dir }}
     - name: Build examples
       run: |
         for f in $(ls examples/*.rs); do
         cargo build --release --example $(basename $f | sed 's/\.[^\.]*$//')
         done
+      working-directory: ${{ matrix.dir }}
