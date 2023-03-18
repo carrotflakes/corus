@@ -150,6 +150,31 @@ impl MySynth {
                         },
                     },
                 ),
+                (
+                    true,
+                    Effector::Compressor {
+                        threshold: ParamF64 {
+                            value: 0.8,
+                            envelope: None,
+                        },
+                        ratio: ParamF64 {
+                            value: 0.5,
+                            envelope: None,
+                        },
+                        attack: ParamF64 {
+                            value: 0.001,
+                            envelope: None,
+                        },
+                        release: ParamF64 {
+                            value: 0.02,
+                            envelope: None,
+                        },
+                        gain: ParamF64 {
+                            value: 1.0,
+                            envelope: None,
+                        },
+                    },
+                ),
             ],
             effector_states: vec![],
             global_params: vec![20.0, 1.5],
@@ -175,7 +200,7 @@ impl MySynth {
             }
         }
         x = (x * self.gain.into_stereo()).into_stereo_with_pan(self.pan);
-        x.map(|x| x.clamp(-1.0, 1.0))
+        x
     }
 
     pub fn ensure_state(&mut self) {

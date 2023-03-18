@@ -1,4 +1,5 @@
 pub mod chorus;
+pub mod compressor;
 pub mod phaser;
 
 use crate::{
@@ -148,20 +149,5 @@ where
 
     pub fn process(&mut self, ctx: &ProcessContext, x: S) -> S {
         self.multi_tap_delay.process(ctx, &self.taps, x)
-    }
-}
-
-pub struct Compressor<S: Signal> {
-    gain: S::Float,
-}
-
-impl Compressor<f64> {
-    pub fn new() -> Self {
-        Self { gain: 1.0 }
-    }
-
-    pub fn process(&mut self, _ctx: &ProcessContext, x: f64) -> f64 {
-        self.gain = (self.gain * 1.01).min(1.0).min(1.0 / x);
-        x * self.gain
     }
 }

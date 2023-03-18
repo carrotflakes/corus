@@ -44,6 +44,10 @@ impl<const N: usize, F: Float> FloatArray<N, F> {
         }
         self
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = &F> {
+        self.0.iter()
+    }
 }
 
 impl<const N: usize, F: Float> std::ops::Neg for FloatArray<N, F> {

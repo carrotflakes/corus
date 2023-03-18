@@ -144,6 +144,7 @@ pub fn editor_updator(
                     crate::synth::effectors::Effector::Delay => None,
                     crate::synth::effectors::Effector::Reverb => None,
                     crate::synth::effectors::Effector::Gain { .. } => None,
+                    crate::synth::effectors::Effector::Compressor { .. } => None,
                     crate::synth::effectors::Effector::Tanh => None,
                 },
             }) else {
@@ -239,6 +240,13 @@ fn effectors(effectors: &mut Vec<(bool, crate::synth::effectors::Effector)>, ui:
                 Effector::Reverb => {}
                 Effector::Gain { gain } => {
                     // ui.add(egui::widgets::Slider::new(gain, 0.0..=1.5));
+                    ui.add(crate::widgets::knob::knob(0.0..1.5, &mut gain.value));
+                }
+                Effector::Compressor { threshold, ratio, attack, release, gain } => {
+                    ui.add(crate::widgets::knob::knob(0.0..1.0, &mut threshold.value));
+                    ui.add(crate::widgets::knob::knob(0.0..1.0, &mut ratio.value));
+                    ui.add(crate::widgets::knob::knob(0.001..1.0, &mut attack.value));
+                    ui.add(crate::widgets::knob::knob(0.001..1.0, &mut release.value));
                     ui.add(crate::widgets::knob::knob(0.0..1.5, &mut gain.value));
                 }
                 Effector::Tanh {} => {}

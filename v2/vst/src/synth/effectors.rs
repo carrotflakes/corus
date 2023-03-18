@@ -1,7 +1,12 @@
 use corus_v2::{
     nodes::{
         biquad_filter::BiquadFilter,
-        effects::{chorus::Chorus, phaser::Phaser, DelayFx, EarlyReflections, SchroederReverb},
+        effects::{
+            chorus::Chorus,
+            compressor::{Compressor, Param as CompressorParam},
+            phaser::Phaser,
+            DelayFx, EarlyReflections, SchroederReverb,
+        },
         mix::mix,
     },
     signal::StereoF64,
@@ -41,6 +46,13 @@ pub enum Effector {
     Gain {
         gain: param_f64::ParamF64,
     },
+    Compressor {
+        threshold: param_f64::ParamF64,
+        ratio: param_f64::ParamF64,
+        attack: param_f64::ParamF64,
+        release: param_f64::ParamF64,
+        gain: param_f64::ParamF64,
+    },
     Tanh,
 }
 
@@ -62,6 +74,9 @@ pub enum State {
         er: EarlyReflections<StereoF64>,
     },
     Gain,
+    Compressor {
+        compressor: Compressor<f64>,
+    },
     Tanh,
     None,
 }
@@ -75,6 +90,7 @@ impl Effector {
             Effector::Delay { .. } => "Delay",
             Effector::Reverb { .. } => "Reverb",
             Effector::Gain { .. } => "Gain",
+            Effector::Compressor { .. } => "Compressor",
             Effector::Tanh => "Tanh",
         }
     }
@@ -87,6 +103,7 @@ impl Effector {
             Effector::Delay { .. } => &[],
             Effector::Reverb { .. } => &[],
             Effector::Gain { .. } => &["gain"],
+            Effector::Compressor { .. } => &["threshold", "ratio", "attack", "release", "gain"],
             Effector::Tanh => &[],
         }
     }
@@ -99,6 +116,13 @@ impl Effector {
             Effector::Delay { .. } => vec![],
             Effector::Reverb { .. } => vec![],
             Effector::Gain { gain } => vec![gain],
+            Effector::Compressor {
+                threshold,
+                ratio,
+                attack,
+                release,
+                gain,
+            } => vec![threshold, ratio, attack, release, gain],
             Effector::Tanh => vec![],
         }
     }
@@ -123,6 +147,33 @@ impl Effector {
                 (0.2, reverb.process(ctx, x)),
             ]),
             (Effector::Gain { gain }, State::Gain) => x * gain.compute(env_state),
+            (
+                Effector::Compressor {
+                    threshold,
+                    ratio,
+                    attack,
+                    release,
+                    gain,
+                },
+                State::Compressor { compressor },
+            ) => {
+                let threshold = threshold.compute(env_state);
+                let ratio = ratio.compute(env_state);
+                let attack = attack.compute(env_state);
+                let release = release.compute(env_state);
+                let gain = gain.compute(env_state);
+                compressor.process(
+                    &CompressorParam {
+                        threshold,
+                        ratio,
+                        attack,
+                        release,
+                        gain,
+                    },
+                    ctx,
+                    x,
+                )
+            }
             (Effector::Tanh, State::Tanh) => x.map(|x| x.tanh()),
             _ => unreachable!("invalid state"),
         }
@@ -136,6 +187,7 @@ impl Effector {
             (Effector::Delay, State::Delay { .. }) => {}
             (Effector::Reverb, State::Reverb { .. }) => {}
             (Effector::Gain { .. }, State::Gain) => {}
+            (Effector::Compressor { .. }, State::Compressor { .. }) => {}
             (Effector::Tanh, State::Tanh) => {}
             (Effector::Filter { .. }, state) => {
                 *state = State::Filter {
@@ -165,6 +217,11 @@ impl Effector {
             }
             (Effector::Gain { .. }, state) => {
                 *state = State::Gain;
+            }
+            (Effector::Compressor { .. }, state) => {
+                *state = State::Compressor {
+                    compressor: Compressor::new(),
+                }
             }
             (Effector::Tanh, state) => {
                 *state = State::Tanh;
