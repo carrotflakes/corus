@@ -17,7 +17,7 @@ impl WavetableSettings {
     pub fn new(seed: u64) -> Self {
         WavetableSettings {
             seed,
-            wt_cache: Cache::new(generate_wavetable),
+            wt_cache: Cache::new(|seed| generate_wavetable(seed).into()),
             wt_buffer_cache: Cache::new(|seed: u64| {
                 let wt = generate_wavetable(seed);
                 let buffer: Vec<_> = (0..2048).map(|i| wt(i as f64 / 2048.0)).collect();
@@ -38,7 +38,7 @@ impl WavetableSettings {
     }
 }
 
-pub fn generate_wavetable(seed: u64) -> WT {
+pub fn generate_wavetable(seed: u64) -> Box<dyn Fn(f64) -> f64 + Send + Sync + 'static> {
     match seed {
         0 => wavetables::tree::Tree::Sin.build(),
         1 => wavetables::tree::Tree::Saw.build(),
@@ -56,5 +56,4 @@ pub fn generate_wavetable(seed: u64) -> WT {
             .build()
         }
     }
-    .into()
 }

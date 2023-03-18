@@ -13,12 +13,12 @@ use num_traits::*;
 
 use super::{
     all_pass_filter::AllPassFilter, comb_filter::CombFilter,
-    first_order_filter::FirstOrderLowPassFilter, multi_tap_delay::MultiTapDelay,
+    first_order_filter::LowPassFilter, multi_tap_delay::MultiTapDelay,
 };
 
 pub struct DelayFx<S: Signal> {
     buffer: RingBuffer<S>,
-    filter: FirstOrderLowPassFilter<S>,
+    filter: LowPassFilter<S>,
 }
 
 impl<S: Signal> DelayFx<S>
@@ -28,7 +28,7 @@ where
     pub fn new(len: usize) -> Self {
         Self {
             buffer: RingBuffer::new(len),
-            filter: FirstOrderLowPassFilter::new(),
+            filter: LowPassFilter::new(),
         }
     }
 

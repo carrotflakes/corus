@@ -5,7 +5,10 @@ pub mod param_f64;
 pub mod wavetable;
 
 use corus_v2::{
-    nodes::{envelope::Envelope, sine::Sine, unison::Unison, voice_manager::VoiceManager},
+    nodes::{
+        envelope::Envelope, first_order_filter::HighPassFilter, sine::Sine, unison::Unison,
+        voice_manager::VoiceManager,
+    },
     signal::{IntoStereo, StereoF64},
     ProcessContext,
 };
@@ -130,11 +133,11 @@ impl MySynth {
                             envelope: None,
                         },
                         attack: ParamF64 {
-                            value: 0.001,
+                            value: 0.01,
                             envelope: None,
                         },
                         release: ParamF64 {
-                            value: 0.02,
+                            value: 0.03,
                             envelope: None,
                         },
                         gain: ParamF64 {
@@ -234,6 +237,7 @@ pub struct MyVoice {
     velocity: f64,
     unison: Unison,
     note_time: Option<(f64, f64)>,
+    high_pass_filter: HighPassFilter<StereoF64>,
     effector_states: Vec<effectors::State>,
 }
 
@@ -244,6 +248,7 @@ impl MyVoice {
             velocity: 0.0,
             unison: Unison::new(3),
             note_time: None,
+            high_pass_filter: HighPassFilter::new(),
             effector_states: vec![],
         }
     }
@@ -264,10 +269,6 @@ impl MyVoice {
             return StereoF64::default();
         };
 
-        let env = param
-            .env
-            .compute(env_state.elapsed, env_state.note_off_time);
-        let gain = self.velocity * env;
         let wt = param.wavetable_settings.generator();
         let mut x = self.unison.process(
             ctx,
@@ -277,6 +278,9 @@ impl MyVoice {
             |phase| (wt)(param.bender.process(param.bend_level, phase)),
         );
 
+        // DC offset cancel
+        x = self.high_pass_filter.process(ctx, 0.999, x);
+
         for ((enabled, effector), state) in
             param.effectors.iter().zip(self.effector_states.iter_mut())
         {
@@ -284,6 +288,11 @@ impl MyVoice {
                 x = effector.process(state, ctx, &env_state, x);
             }
         }
+
+        let env = param
+            .env
+            .compute(env_state.elapsed, env_state.note_off_time);
+        let gain = self.velocity * env;
 
         x * gain
     }
