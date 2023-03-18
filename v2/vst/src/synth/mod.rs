@@ -2,8 +2,7 @@ pub mod bender;
 mod cache;
 pub mod effectors;
 pub mod param_f64;
-
-use std::sync::Arc;
+pub mod wavetable;
 
 use corus_v2::{
     nodes::{envelope::Envelope, sine::Sine, unison::Unison, voice_manager::VoiceManager},
@@ -11,10 +10,9 @@ use corus_v2::{
     ProcessContext,
 };
 
-use self::{
-    effectors::Effector,
-    param_f64::{EnvelopeState, ParamF64},
-};
+use effectors::Effector;
+use param_f64::{EnvelopeState, ParamF64};
+use wavetable::WavetableSettings;
 
 pub struct MySynth {
     voices: VoiceManager<u8, MyVoice>,
@@ -32,11 +30,8 @@ pub struct MySynth {
     global_params: Vec<f64>,
 }
 
-type WT = Arc<dyn Fn(f64) -> f64 + Send + Sync + 'static>;
-
 pub struct VoiceParams {
-    pub seed: u64,
-    pub wt_cache: cache::Cache<u64, WT, fn(u64) -> WT>,
+    pub wavetable_settings: WavetableSettings,
     pub bender: bender::Bender,
     pub bend_level: f64,
     pub unison_settings: UnisonSettings,
@@ -64,34 +59,7 @@ impl MySynth {
             frequency: 1000.0,
             q: 1.0,
             voice_params: VoiceParams {
-                seed: 0,
-                wt_cache: cache::Cache::new(|seed: u64| {
-                    match seed {
-                        0 => wavetables::tree::Tree::Sin.build(),
-                        1 => wavetables::tree::Tree::Saw.build(),
-                        2 => wavetables::tree::Tree::Triangle.build(),
-                        3 => wavetables::tree::Tree::Square.build(),
-                        4 => wavetables::tree::Tree::Pulse(wavetables::tree::Value::Constant(
-                            3.0 / 4.0,
-                        ))
-                        .build(),
-                        5 => wavetables::tree::Tree::Pulse(wavetables::tree::Value::Constant(
-                            7.0 / 8.0,
-                        ))
-                        .build(),
-                        _ => {
-                            let mut rng: rand::rngs::StdRng =
-                                rand::SeedableRng::seed_from_u64(seed);
-                            rand_wt::Config {
-                                least_depth: 1,
-                                variable_num: 0,
-                            }
-                            .generate(&mut rng)
-                            .build()
-                        }
-                    }
-                    .into()
-                }),
+                wavetable_settings: WavetableSettings::new(0),
                 bender: bender::Bender::None,
                 bend_level: 0.0,
                 unison_settings: UnisonSettings {
@@ -300,7 +268,7 @@ impl MyVoice {
             .env
             .compute(env_state.elapsed, env_state.note_off_time);
         let gain = self.velocity * env;
-        let wt = param.wt_cache.get(param.seed).clone();
+        let wt = param.wavetable_settings.generator();
         let mut x = self.unison.process(
             ctx,
             self.frequency * pitch,

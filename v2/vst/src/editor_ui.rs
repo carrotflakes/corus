@@ -20,12 +20,13 @@ pub fn editor_updator(
 
         ui.horizontal(|ui| {
             let wt = {
-                let seed = synth.voice_params.seed;
-                synth.voice_params.wt_cache.update(seed);
+                let seed = synth.voice_params.wavetable_settings.seed;
+                synth.voice_params.wavetable_settings.wt_cache.update(seed);
                 synth
                     .voice_params
+                    .wavetable_settings
                     .wt_cache
-                    .get_ref(synth.voice_params.seed)
+                    .get_ref(synth.voice_params.wavetable_settings.seed)
                     .unwrap()
                     .clone()
             };
@@ -52,7 +53,7 @@ pub fn editor_updator(
             });
 
             ui.vertical(|ui| {
-                ui.add(egui::widgets::DragValue::new(&mut synth.voice_params.seed));
+                ui.add(egui::widgets::DragValue::new(&mut synth.voice_params.wavetable_settings.seed));
 
                 ui.horizontal(|ui| {
                     egui::Frame::canvas(ui.style()).show(ui, |ui| {
@@ -106,6 +107,8 @@ pub fn editor_updator(
                         ui.selectable_value(&mut synth.voice_params.bender, Bender::Sin, "sin");
                         ui.selectable_value(&mut synth.voice_params.bender, Bender::Cos, "cos");
                     });
+
+                ui.checkbox(&mut synth.voice_params.wavetable_settings.use_buffer, "prerender");
             });
         });
         ui.horizontal(|ui| {
@@ -242,7 +245,13 @@ fn effectors(effectors: &mut Vec<(bool, crate::synth::effectors::Effector)>, ui:
                     // ui.add(egui::widgets::Slider::new(gain, 0.0..=1.5));
                     ui.add(crate::widgets::knob::knob(0.0..1.5, &mut gain.value));
                 }
-                Effector::Compressor { threshold, ratio, attack, release, gain } => {
+                Effector::Compressor {
+                    threshold,
+                    ratio,
+                    attack,
+                    release,
+                    gain,
+                } => {
                     ui.add(crate::widgets::knob::knob(0.0..1.0, &mut threshold.value));
                     ui.add(crate::widgets::knob::knob(0.0..1.0, &mut ratio.value));
                     ui.add(crate::widgets::knob::knob(0.001..1.0, &mut attack.value));
