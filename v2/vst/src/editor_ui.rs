@@ -11,6 +11,12 @@ pub enum EnvelopeLocation {
     MasterEffector(usize, usize),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum EffectorsLocation {
+    Voice,
+    Master,
+}
+
 pub fn editor_updator(
     egui_ctx: &egui::Context,
     setter: &ParamSetter,
@@ -32,7 +38,7 @@ pub fn editor_updator(
                     .clone()
             };
             egui::Frame::canvas(ui.style()).show(ui, |ui| {
-                let (_id, rect) = ui.allocate_space(egui::vec2(100.0, 100.0));
+                let (_id, rect) = ui.allocate_space(egui::vec2(80.0, 80.0));
                 let to_screen = emath::RectTransform::from_to(
                     egui::Rect::from_x_y_ranges(0.0..=1.0, -1.0..=1.0),
                     rect,
@@ -48,7 +54,7 @@ pub fn editor_updator(
                 }
                 shapes.push(egui::Shape::line(
                     points,
-                    egui::Stroke::new(1.0, egui::Color32::RED),
+                    egui::Stroke::new(1.0, egui::Color32::LIGHT_BLUE),
                 ));
                 ui.painter().extend(shapes);
             });
@@ -80,7 +86,7 @@ pub fn editor_updator(
                         }
                         shapes.push(egui::Shape::line(
                             points,
-                            egui::Stroke::new(1.0, egui::Color32::RED),
+                            egui::Stroke::new(1.0, egui::Color32::LIGHT_BLUE),
                         ));
                         ui.painter().extend(shapes);
                     });
@@ -95,21 +101,29 @@ pub fn editor_updator(
                     {
                         synth.voice_params.bend_level = 0.0;
                     };
-                });
 
-                egui::ComboBox::from_label("bend")
-                    .selected_text(format!("{:?}", &synth.voice_params.bender))
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut synth.voice_params.bender, Bender::None, "none");
-                        ui.selectable_value(
-                            &mut synth.voice_params.bender,
-                            Bender::Quadratic,
-                            "quadratic",
-                        );
-                        ui.selectable_value(&mut synth.voice_params.bender, Bender::Cubic, "cubic");
-                        ui.selectable_value(&mut synth.voice_params.bender, Bender::Sin, "sin");
-                        ui.selectable_value(&mut synth.voice_params.bender, Bender::Cos, "cos");
-                    });
+                    egui::ComboBox::from_label("bend")
+                        .selected_text(format!("{:?}", &synth.voice_params.bender))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(
+                                &mut synth.voice_params.bender,
+                                Bender::None,
+                                "none",
+                            );
+                            ui.selectable_value(
+                                &mut synth.voice_params.bender,
+                                Bender::Quadratic,
+                                "quadratic",
+                            );
+                            ui.selectable_value(
+                                &mut synth.voice_params.bender,
+                                Bender::Cubic,
+                                "cubic",
+                            );
+                            ui.selectable_value(&mut synth.voice_params.bender, Bender::Sin, "sin");
+                            ui.selectable_value(&mut synth.voice_params.bender, Bender::Cos, "cos");
+                        });
+                });
 
                 ui.checkbox(
                     &mut synth.voice_params.wavetable_settings.use_buffer,
@@ -176,11 +190,34 @@ pub fn editor_updator(
             }
         });
 
-        ui.collapsing("Voice effectors", |ui| {
-            effectors(&mut synth.voice_params.effectors, ui);
-        });
-        ui.collapsing("Master", |ui| {
-            effectors(&mut synth.effectors, ui);
+        ui.collapsing("Effectors", |ui| {
+            ui.horizontal(|ui| {
+                if ui.button("voice").clicked() {
+                    *state.effectors_location.lock().unwrap() = EffectorsLocation::Voice;
+                }
+                if ui.button("master").clicked() {
+                    *state.effectors_location.lock().unwrap() = EffectorsLocation::Master;
+                }
+            });
+
+            match state.effectors_location.lock().unwrap().clone() {
+                EffectorsLocation::Voice => {
+                    effectors(
+                        &mut synth.voice_params.effectors,
+                        ui,
+                        |i: usize, j: usize| {
+                            *state.envelope_location.lock().unwrap() =
+                                EnvelopeLocation::VoiceEffector(i, j);
+                        },
+                    );
+                }
+                EffectorsLocation::Master => {
+                    effectors(&mut synth.effectors, ui, |i: usize, j: usize| {
+                        *state.envelope_location.lock().unwrap() =
+                            EnvelopeLocation::MasterEffector(i, j);
+                    });
+                }
+            }
         });
 
         ui.label("Gain");
@@ -253,19 +290,20 @@ fn lfo(ui: &mut egui::Ui, lfo: &mut crate::synth::param_f64::Lfo) {
     });
 }
 
-fn effectors(effectors: &mut Vec<(bool, crate::synth::effectors::Effector)>, ui: &mut egui::Ui) {
-    for (enabled, effector) in effectors {
+fn effectors(
+    effectors: &mut Vec<(bool, crate::synth::effectors::Effector)>,
+    ui: &mut egui::Ui,
+    setter: impl Fn(usize, usize),
+) {
+    for (i, (enabled, effector)) in effectors.iter_mut().enumerate() {
         ui.horizontal(|ui| {
             ui.add(egui::widgets::Checkbox::new(enabled, effector.name()));
             use crate::synth::effectors::Effector;
 
             match effector {
                 Effector::Filter { frequency, q } => {
-                    ui.add(crate::widgets::knob::knob(
-                        20.0..10000.0,
-                        &mut frequency.value,
-                    ));
-                    ui.add(crate::widgets::knob::knob(0.7..10.0, &mut q.value));
+                    add_knob(ui, frequency, 20.0..10000.0, || setter(i, 0));
+                    add_knob(ui, q, 0.7..10.0, || setter(i, 1));
                 }
                 Effector::Phaser => {}
                 Effector::Chorus => {}
@@ -273,7 +311,7 @@ fn effectors(effectors: &mut Vec<(bool, crate::synth::effectors::Effector)>, ui:
                 Effector::Reverb => {}
                 Effector::Gain { gain } => {
                     // ui.add(egui::widgets::Slider::new(gain, 0.0..=1.5));
-                    ui.add(crate::widgets::knob::knob(0.0..1.5, &mut gain.value));
+                    add_knob(ui, gain, 0.0..1.5, || setter(i, 0));
                 }
                 Effector::Compressor {
                     threshold,
@@ -282,14 +320,28 @@ fn effectors(effectors: &mut Vec<(bool, crate::synth::effectors::Effector)>, ui:
                     release,
                     gain,
                 } => {
-                    ui.add(crate::widgets::knob::knob(0.0..1.0, &mut threshold.value));
-                    ui.add(crate::widgets::knob::knob(0.0..1.0, &mut ratio.value));
-                    ui.add(crate::widgets::knob::knob(0.001..1.0, &mut attack.value));
-                    ui.add(crate::widgets::knob::knob(0.001..1.0, &mut release.value));
-                    ui.add(crate::widgets::knob::knob(0.0..1.5, &mut gain.value));
+                    add_knob(ui, threshold, 0.0..1.0, || setter(i, 0));
+                    add_knob(ui, ratio, 0.0..1.0, || setter(i, 1));
+                    add_knob(ui, attack, 0.001..1.0, || setter(i, 2));
+                    add_knob(ui, release, 0.001..1.0, || setter(i, 3));
+                    add_knob(ui, gain, 0.0..1.5, || setter(i, 4));
                 }
                 Effector::Tanh {} => {}
             }
         });
+    }
+}
+
+fn add_knob(
+    ui: &mut egui::Ui,
+    param: &mut crate::synth::param_f64::ParamF64,
+    range: std::ops::Range<f64>,
+    on_click: impl Fn() -> (),
+) {
+    if ui
+        .add(crate::widgets::knob::knob(range, &mut param.value))
+        .clicked()
+    {
+        on_click();
     }
 }

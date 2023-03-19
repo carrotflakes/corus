@@ -63,7 +63,7 @@ impl MySynth {
             frequency: 1000.0,
             q: 1.0,
             voice_params: VoiceParams {
-                wavetable_settings: WavetableSettings::new(0),
+                wavetable_settings: WavetableSettings::new(1),
                 bender: bender::Bender::None,
                 bend_level: 0.0,
                 unison_settings: UnisonSettings {
