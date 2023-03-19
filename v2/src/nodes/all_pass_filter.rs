@@ -2,6 +2,7 @@ use crate::{interpolate_get, ring_buffer::RingBuffer, signal::Signal, ProcessCon
 
 use num_traits::*;
 
+/// FIR all-pass filter.
 pub struct AllPassFilter<S: Signal> {
     buffer: RingBuffer<S>,
 }

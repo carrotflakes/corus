@@ -9,7 +9,8 @@ impl<S: Signal> LowPassFilter<S> {
         Self { prev: S::default() }
     }
 
-    pub fn process(&mut self, _ctx: &ProcessContext, k: S::Float, x: S) -> S { // TODO: k???
+    pub fn process(&mut self, _ctx: &ProcessContext, k: S::Float, x: S) -> S {
+        // TODO: k???
         self.prev = self.prev + (x - self.prev) * k;
         self.prev
     }
@@ -32,5 +33,22 @@ impl<S: Signal> HighPassFilter<S> {
         self.prev = (self.prev + x - self.prev_x) * k;
         self.prev_x = x;
         self.prev
+    }
+}
+
+pub struct AllPassFilter<S: Signal> {
+    prev: S,
+}
+
+impl<S: Signal> AllPassFilter<S> {
+    pub fn new() -> Self {
+        Self { prev: S::default() }
+    }
+
+    pub fn process(&mut self, _ctx: &ProcessContext, k: S::Float, x: S) -> S {
+        let x = x + self.prev * k;
+        let y = self.prev - x * k;
+        self.prev = x;
+        y
     }
 }
