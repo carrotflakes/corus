@@ -71,7 +71,6 @@ pub fn editor_updator(
                             egui::Rect::from_x_y_ranges(0.0..=1.0, -1.0..=0.0),
                             rect,
                         );
-                        let mut shapes = vec![];
 
                         let w = rect.width() as usize;
                         let mut points = vec![];
@@ -84,11 +83,10 @@ pub fn editor_updator(
                                 as f32;
                             points.push(to_screen * egui::pos2(p as f32, -v));
                         }
-                        shapes.push(egui::Shape::line(
+                        ui.painter().add(egui::Shape::line(
                             points,
                             egui::Stroke::new(1.0, egui::Color32::LIGHT_BLUE),
                         ));
-                        ui.painter().extend(shapes);
                     });
 
                     let r = synth.voice_params.bender.level_range();
@@ -192,11 +190,14 @@ pub fn editor_updator(
 
         ui.collapsing("Effectors", |ui| {
             ui.horizontal(|ui| {
-                if ui.button("voice").clicked() {
-                    *state.effectors_location.lock().unwrap() = EffectorsLocation::Voice;
-                }
-                if ui.button("master").clicked() {
-                    *state.effectors_location.lock().unwrap() = EffectorsLocation::Master;
+                for (name, location) in [
+                    ("voice", EffectorsLocation::Voice),
+                    ("master", EffectorsLocation::Master),
+                ] {
+                    let mut loc = state.effectors_location.lock().unwrap();
+                    if ui.selectable_label(*loc == location, name).clicked() {
+                        *loc = location;
+                    }
                 }
             });
 
