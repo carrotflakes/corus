@@ -1,14 +1,12 @@
 pub mod event_queue;
 pub mod nodes;
+pub mod ring_buffer;
 pub mod signal;
 pub mod unsafe_wrapper;
 
-#[path = "./../../src/ring_buffer.rs"]
-pub mod ring_buffer;
-
 use std::collections::VecDeque;
 
-use num_traits::{Float, FromPrimitive, ToPrimitive};
+use num_traits::{FromPrimitive, ToPrimitive};
 use signal::Signal;
 
 #[derive(Debug, Clone)]
