@@ -103,6 +103,10 @@ impl State {
 }
 
 impl Curve {
+    pub fn to_level(&self) -> f64 {
+        -self.0.ln()
+    }
+
     pub fn from_level(level: f64) -> Self {
         Curve((-level).exp())
     }

@@ -264,11 +264,44 @@ pub fn editor_updator(
 }
 
 fn envelope(ui: &mut egui::Ui, envelope: &mut corus_v2::nodes::envelope::Envelope) {
+    let release_time: f64 = envelope.points.iter().map(|p| p.0).sum();
+    egui::Frame::canvas(ui.style()).show(ui, |ui| {
+        let (_id, rect) = ui.allocate_space(egui::vec2(80.0, 40.0));
+        let to_screen =
+            emath::RectTransform::from_to(egui::Rect::from_x_y_ranges(0.0..=1.0, -1.0..=0.0), rect);
+        let w = rect.width() as usize;
+        let mut points = vec![];
+        for i in 0..=w {
+            let p = i as f64 / w as f64 * (release_time + envelope.release_length);
+            let v = if p < release_time {
+                envelope.compute_level(p)
+            } else {
+                envelope.compute_release(envelope.points.last().unwrap().1, p - release_time)
+            };
+            points.push(to_screen * egui::pos2(i as f32 / w as f32, -v as f32));
+        }
+        ui.painter().add(egui::Shape::line(
+            points,
+            egui::Stroke::new(1.0, egui::Color32::LIGHT_BLUE),
+        ));
+    });
+
+    fn env_curve_know(ui: &mut egui::Ui, curve: &mut corus_v2::nodes::envelope::Curve) {
+        let mut l = curve.to_level();
+        if ui
+            .add(crate::widgets::knob::knob(-3.0..3.0, &mut l))
+            .changed()
+        {
+            *curve = corus_v2::nodes::envelope::Curve::from_level(l);
+        };
+    }
+
     ui.horizontal(|ui| {
         ui.add(crate::widgets::knob::knob(
             0.0..1.0,
             &mut envelope.points[0].0,
         ));
+        env_curve_know(ui, &mut envelope.points[0].2);
         ui.add(crate::widgets::knob::knob(
             0.0..8.0,
             &mut envelope.points[1].0,
@@ -277,10 +310,12 @@ fn envelope(ui: &mut egui::Ui, envelope: &mut corus_v2::nodes::envelope::Envelop
             0.0..1.0,
             &mut envelope.points[1].1,
         ));
+        env_curve_know(ui, &mut envelope.points[1].2);
         ui.add(crate::widgets::knob::knob(
             0.0..1.0,
             &mut envelope.release_length,
         ));
+        env_curve_know(ui, &mut envelope.release_curve);
     });
 }
 
