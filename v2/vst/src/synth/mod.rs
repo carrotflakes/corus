@@ -31,8 +31,6 @@ pub struct MySynth {
     mod_sine: Sine<f64>,
     pub effectors: Vec<(bool, Effector)>,
     pub effector_states: Vec<effectors::State>,
-    // lfo: Vec<Oscillator>,
-    global_params: Vec<f64>,
 }
 
 pub struct VoiceParams {
@@ -41,6 +39,7 @@ pub struct VoiceParams {
     pub bend_level: f64,
     pub unison_settings: UnisonSettings,
     pub level: ParamF64,
+    pub detune: ParamF64,
     pub effectors: Vec<(bool, Effector)>,
     pub env: Envelope,
 }
@@ -87,6 +86,11 @@ impl MySynth {
                         },
                     )),
                 },
+                detune: ParamF64 {
+                    value: 0.0,
+                    envelope: None,
+                    lfo: None,
+                },
                 effectors: vec![(
                     false,
                     Effector::Filter {
@@ -97,7 +101,13 @@ impl MySynth {
                                 5000.0,
                                 Envelope::new(&[(0.01, 1.0, -1.0), (0.4, 0.3, 1.0)], 0.3, 1.0),
                             )),
-                            lfo: Some((true, Lfo { frequency: 1.0, amp: 1000.0 })),
+                            lfo: Some((
+                                true,
+                                Lfo {
+                                    frequency: 1.0,
+                                    amp: 1000.0,
+                                },
+                            )),
                         },
                         q: ParamF64 {
                             value: 1.0,
@@ -173,7 +183,6 @@ impl MySynth {
                 ),
             ],
             effector_states: vec![],
-            global_params: vec![20.0, 1.5],
         }
     }
 
@@ -186,7 +195,7 @@ impl MySynth {
         };
         let mut x = StereoF64::default();
         for voice in self.voices.iter_mut() {
-            x = x + voice.process(ctx, &mut self.voice_params, pitch, &self.global_params);
+            x = x + voice.process(ctx, &mut self.voice_params, pitch);
         }
         for ((enabled, effector), state) in
             self.effectors.iter().zip(self.effector_states.iter_mut())
@@ -283,7 +292,6 @@ impl MyVoice {
         ctx: &ProcessContext,
         param: &mut VoiceParams,
         pitch: f64,
-        global_params: &[f64],
     ) -> StereoF64 {
         let env_state = if let Some((start_time, end_time)) = self.note_time {
             EnvelopeState {

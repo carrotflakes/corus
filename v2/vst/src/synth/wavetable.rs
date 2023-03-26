@@ -7,9 +7,10 @@ use super::cache::Cache;
 pub type WT = Arc<dyn Fn(f64) -> f64 + Send + Sync + 'static>;
 
 pub struct WavetableSettings {
-    pub seed: u64,
-    pub wt_cache: Cache<u64, WT, fn(u64) -> WT>,
-    pub wt_buffer_cache: Cache<u64, WT, fn(u64) -> WT>,
+    seed: u64,
+    wt_cache: Cache<u64, WT, fn(u64) -> WT>,
+    custome_wt: Option<(wavetables::tree::Tree, WT)>,
+    buffer: Option<WT>,
     pub use_buffer: bool,
 }
 
@@ -18,20 +19,59 @@ impl WavetableSettings {
         WavetableSettings {
             seed,
             wt_cache: Cache::new(|seed| generate_wavetable(seed).into()),
-            wt_buffer_cache: Cache::new(|seed: u64| {
-                let wt = generate_wavetable(seed);
-                let buffer: Vec<_> = (0..2048).map(|i| wt(i as f64 / 2048.0)).collect();
-                Arc::new(move |x| {
-                    interpolate_get(x * buffer.len() as f64, |i| buffer[i % buffer.len()])
-                })
-            }),
+            custome_wt: None,
+            buffer: None,
             use_buffer: true,
         }
     }
 
+    pub fn seed(&self) -> u64 {
+        self.seed
+    }
+
+    pub fn set_seed(&mut self, seed: u64) {
+        self.seed = seed;
+        self.buffer = None;
+    }
+
+    pub fn set_custom_wavetable(&mut self, wt: wavetables::tree::Tree) {
+        let built = wt.build();
+        self.custome_wt = Some((wt, built.into()));
+        self.buffer = None;
+    }
+
+    pub fn is_custom_wavetable(&self) -> bool {
+        self.custome_wt.is_some()
+    }
+
+    pub fn clear_custom_wavetable(&mut self) {
+        self.custome_wt = None;
+        self.buffer = None;
+    }
+
     pub fn generator(&mut self) -> WT {
         if self.use_buffer {
-            self.wt_buffer_cache.get(self.seed).clone()
+            if let Some(buffer) = &self.buffer {
+                buffer.clone()
+            } else {
+                let wt = self.wavetable();
+                let buffer = {
+                    let buffer: Vec<_> = (0..2048).map(|i| wt(i as f64 / 2048.0)).collect();
+                    Arc::new(move |x| {
+                        interpolate_get(x * buffer.len() as f64, |i| buffer[i % buffer.len()])
+                    })
+                };
+                self.buffer = Some(buffer.clone());
+                buffer
+            }
+        } else {
+            self.wavetable()
+        }
+    }
+
+    pub fn wavetable(&mut self) -> Arc<dyn Fn(f64) -> f64 + Send + Sync> {
+        if let Some((_, wt)) = &self.custome_wt {
+            wt.clone()
         } else {
             self.wt_cache.get(self.seed).clone()
         }

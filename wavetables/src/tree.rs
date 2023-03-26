@@ -44,6 +44,13 @@ impl Value {
             Value::Variable(i) => params[*i],
         }
     }
+
+    pub fn variable_num(&self) -> usize {
+        match self {
+            Value::Constant(_) => 0,
+            Value::Variable(i) => *i + 1,
+        }
+    }
 }
 
 impl Tree {
@@ -202,6 +209,36 @@ impl Tree {
                 let f = f.build_parameterized();
                 Box::new(move |params, t| functions::mirror(|t| f(params, t))(t))
             }
+        }
+    }
+
+    pub fn variable_num(&self) -> usize {
+        match self {
+            Tree::Sin => 0,
+            Tree::Triangle => 0,
+            Tree::ShiftedTriangle => 0,
+            Tree::Saw => 0,
+            Tree::ShiftedSaw => 0,
+            Tree::Square => 0,
+            Tree::Pulse(width) => width.variable_num(),
+            Tree::Steps(_) => 0,
+            Tree::Quadratic => 0,
+            Tree::Negative(f) => f.variable_num(),
+            Tree::Reversed(f) => f.variable_num(),
+            Tree::Join(f1, f2) => f1.variable_num().max(f2.variable_num()),
+            Tree::Shift(shift, f) => shift.variable_num().max(f.variable_num()),
+            Tree::Scale(scale, f) => scale.variable_num().max(f.variable_num()),
+            Tree::Blend(r, f1, f2) => r
+                .variable_num()
+                .max(f1.variable_num())
+                .max(f2.variable_num()),
+            Tree::DynamicBlend(f, f1, f2) => f
+                .variable_num()
+                .max(f1.variable_num())
+                .max(f2.variable_num()),
+            Tree::Product(f1, f2) => f1.variable_num().max(f2.variable_num()),
+            Tree::Mul(f1, f2) => f1.variable_num().max(f2.variable_num()),
+            Tree::Mirror(f) => f.variable_num(),
         }
     }
 }

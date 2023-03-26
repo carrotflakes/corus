@@ -3,7 +3,7 @@ mod synth;
 mod widgets;
 
 use corus_v2::{event_queue::EventQueue, signal::Stereo};
-use editor_ui::{EnvelopeLocation, EffectorsLocation};
+use editor_ui::{EffectorsLocation, EnvelopeLocation};
 use nih_plug::prelude::*;
 use nih_plug_egui::{create_egui_editor, EguiState};
 use std::sync::{Arc, Mutex};
@@ -22,6 +22,7 @@ pub struct MyPluginParams {
     synth: Arc<Mutex<MySynth>>,
     envelope_location: Mutex<EnvelopeLocation>,
     effectors_location: Mutex<EffectorsLocation>,
+    wavetable_lab: Mutex<widgets::wavetable_lab::WavetableLab>,
 
     #[id = "gain"]
     pub gain: FloatParam,
@@ -48,6 +49,7 @@ impl Default for MyPluginParams {
             synth: Arc::new(Mutex::new(MySynth::new())),
             envelope_location: Mutex::new(EnvelopeLocation::VoiceGain),
             effectors_location: Mutex::new(EffectorsLocation::Master),
+            wavetable_lab: Mutex::new(widgets::wavetable_lab::WavetableLab::new()),
             gain: FloatParam::new(
                 "Gain",
                 util::db_to_gain(0.0),
