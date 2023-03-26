@@ -1,6 +1,10 @@
 use crate::{functions, primitives};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Tree {
     Sin,
     Triangle,
@@ -25,6 +29,7 @@ pub enum Tree {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Value {
     Constant(f64),
     Variable(usize),

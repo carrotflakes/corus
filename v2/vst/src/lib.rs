@@ -19,7 +19,9 @@ pub struct MyPlugin {
 pub struct MyPluginParams {
     #[persist = "editor-state"]
     editor_state: Arc<EguiState>,
+    #[persist = "synth"]
     synth: Arc<Mutex<MySynth>>,
+    synth_state: Arc<Mutex<synth::State>>,
     envelope_location: Mutex<EnvelopeLocation>,
     effectors_location: Mutex<EffectorsLocation>,
     wavetable_lab: Mutex<widgets::wavetable_lab::WavetableLab>,
@@ -47,6 +49,7 @@ impl Default for MyPluginParams {
         Self {
             editor_state: EguiState::from_size(400, 400),
             synth: Arc::new(Mutex::new(MySynth::new())),
+            synth_state: Arc::new(Mutex::new(synth::State::new())),
             envelope_location: Mutex::new(EnvelopeLocation::VoiceGain),
             effectors_location: Mutex::new(EffectorsLocation::Master),
             wavetable_lab: Mutex::new(widgets::wavetable_lab::WavetableLab::new()),
@@ -219,8 +222,8 @@ impl Plugin for MyPlugin {
                     let time = self.context.current_time() + timing as f64 / sample_rate;
                     match cc {
                         control_change::MODULATION_MSB => {
-                            let value = value as f64 / 12.0;
-                            self.event_queue.push(time, MyEvent::SetModLevel(value));
+                            // let value = value as f64 / 12.0;
+                            // self.event_queue.push(time, MyEvent::SetModLevel(value));
                         }
                         //     control_change::SOUND_CONTROLLER_5 => {
                         //         // cutoff
@@ -269,7 +272,8 @@ impl Plugin for MyPlugin {
         }
 
         let mut synth = self.params.synth.lock().unwrap();
-        synth.ensure_state();
+        let mut synth_state = self.params.synth_state.lock().unwrap();
+        synth.ensure_state(&mut synth_state);
 
         // apply params
         synth.frequency = self.params.frequency.value() as f64;
@@ -278,11 +282,11 @@ impl Plugin for MyPlugin {
         for mut channel_samples in buffer.iter_samples() {
             self.event_queue
                 .dispatch(self.context.current_time(), |_eq, time, event| {
-                    synth.handle_event(event, time)
+                    synth.handle_event(&mut synth_state, event, time)
                 });
             // Smoothing is optionally built into the parameters themselves
             let gain = self.params.gain.smoothed.next();
-            let x = synth.process(&self.context);
+            let x = synth.process(&mut synth_state, &self.context);
 
             *channel_samples.get_mut(0).unwrap() = gain * x.get_l() as f32;
             *channel_samples.get_mut(1).unwrap() = gain * x.get_r() as f32;

@@ -1,11 +1,14 @@
 use corus_v2::nodes::envelope::Envelope;
+use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize)]
 pub struct ParamF64 {
     pub value: f64,
     pub envelope: Option<(bool, f64, Envelope)>,
     pub lfo: Option<(bool, Lfo)>,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Lfo {
     pub frequency: f64,
     pub amp: f64,

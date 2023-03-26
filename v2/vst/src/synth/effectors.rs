@@ -12,6 +12,7 @@ use corus_v2::{
     signal::StereoF64,
     ProcessContext,
 };
+use serde::{Deserialize, Serialize};
 
 use super::param_f64::{self, EnvelopeState};
 
@@ -34,6 +35,7 @@ use super::param_f64::{self, EnvelopeState};
 //     None,
 // }
 
+#[derive(Serialize, Deserialize)]
 pub enum Effector {
     Filter {
         frequency: param_f64::ParamF64,
@@ -135,9 +137,12 @@ impl Effector {
         x: StereoF64,
     ) -> StereoF64 {
         match (self, state) {
-            (Effector::Filter { frequency, q }, State::Filter { filter }) => {
-                filter.process(ctx, frequency.compute(env_state).max(20.0), q.compute(env_state), x)
-            }
+            (Effector::Filter { frequency, q }, State::Filter { filter }) => filter.process(
+                ctx,
+                frequency.compute(env_state).max(20.0),
+                q.compute(env_state),
+                x,
+            ),
             (Effector::Phaser, State::Phaser { phaser }) => phaser.process(ctx, x),
             (Effector::Chorus, State::Chorus { chorus }) => chorus.process(ctx, 0.001, 0.001, x),
             (Effector::Delay, State::Delay { delay }) => delay.process(ctx, x, 0.5, 0.3, 0.2),

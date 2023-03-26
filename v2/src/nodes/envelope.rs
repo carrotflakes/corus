@@ -1,6 +1,10 @@
 use crate::ProcessContext;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 #[derive(Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Envelope {
     pub points: Vec<(f64, f64, Curve)>, // length, level, curve
     pub release_length: f64,
@@ -15,6 +19,7 @@ pub struct State {
 }
 
 #[derive(Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Curve(pub f64);
 
 impl Envelope {

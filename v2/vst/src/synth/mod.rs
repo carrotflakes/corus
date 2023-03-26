@@ -1,12 +1,15 @@
 pub mod bender;
-mod cache;
 pub mod effectors;
 pub mod param_f64;
 pub mod wavetable;
 
+use std::sync::Arc;
+
+use serde::{Deserialize, Serialize};
+
 use corus_v2::{
     nodes::{
-        envelope::Envelope, first_order_filter::HighPassFilter, sine::Sine, unison::Unison,
+        envelope::Envelope, first_order_filter::HighPassFilter, unison::Unison,
         voice_manager::VoiceManager,
     },
     signal::{IntoStereo, StereoF64},
@@ -19,20 +22,32 @@ use wavetable::WavetableSettings;
 
 use self::param_f64::Lfo;
 
+#[derive(Serialize, Deserialize)]
 pub struct MySynth {
-    voices: VoiceManager<u8, MyVoice>,
     gain: f64,
     pan: f64,
     pub pitch: f64,
     pub frequency: f64,
     pub q: f64,
     pub voice_params: VoiceParams,
-    mod_level: f64,
-    mod_sine: Sine<f64>,
     pub effectors: Vec<(bool, Effector)>,
-    pub effector_states: Vec<effectors::State>,
 }
 
+pub struct State {
+    voices: VoiceManager<u8, VoiceState>,
+    pub effectors: Vec<effectors::State>,
+}
+
+impl State {
+    pub fn new() -> Self {
+        Self {
+            voices: VoiceManager::new(|| VoiceState::new(), 8),
+            effectors: vec![],
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct VoiceParams {
     pub wavetable_settings: WavetableSettings,
     pub bender: bender::Bender,
@@ -44,6 +59,7 @@ pub struct VoiceParams {
     pub env: Envelope,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct UnisonSettings {
     pub num: usize,
     pub detune: f64,
@@ -53,9 +69,7 @@ pub struct UnisonSettings {
 
 impl MySynth {
     pub fn new() -> Self {
-        let voices = VoiceManager::new(|| MyVoice::new(), 8);
         Self {
-            voices,
             gain: 1.0,
             pan: 0.0,
             pitch: 1.0,
@@ -118,8 +132,6 @@ impl MySynth {
                 )],
                 env: Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
             },
-            mod_level: 0.0,
-            mod_sine: Sine::new(),
             effectors: vec![
                 (
                     false,
@@ -182,24 +194,20 @@ impl MySynth {
                     },
                 ),
             ],
-            effector_states: vec![],
         }
     }
 
-    pub fn process(&mut self, ctx: &ProcessContext) -> StereoF64 {
-        let modu = self.mod_sine.process(ctx, 3.0) * self.mod_level;
-        let pitch = self.pitch * modu.exp2();
+    pub fn process(&mut self, state: &mut State, ctx: &ProcessContext) -> StereoF64 {
+        let pitch = self.pitch;
         let env_state = EnvelopeState {
             elapsed: ctx.current_time(),
             note_off_time: f64::INFINITY,
         };
         let mut x = StereoF64::default();
-        for voice in self.voices.iter_mut() {
+        for voice in state.voices.iter_mut() {
             x = x + voice.process(ctx, &mut self.voice_params, pitch);
         }
-        for ((enabled, effector), state) in
-            self.effectors.iter().zip(self.effector_states.iter_mut())
-        {
+        for ((enabled, effector), state) in self.effectors.iter().zip(state.effectors.iter_mut()) {
             if *enabled {
                 x = effector.process(state, ctx, &env_state, x);
             }
@@ -208,18 +216,15 @@ impl MySynth {
         x
     }
 
-    pub fn ensure_state(&mut self) {
-        self.effector_states
-            .resize_with(self.effectors.len(), || effectors::State::None);
-        for ((_, effector), state) in self
+    pub fn ensure_state(&mut self, state: &mut State) {
+        state
             .effectors
-            .iter_mut()
-            .zip(self.effector_states.iter_mut())
-        {
+            .resize_with(self.effectors.len(), || effectors::State::None);
+        for ((_, effector), state) in self.effectors.iter().zip(state.effectors.iter_mut()) {
             effector.ensure_state(state);
         }
 
-        for voice in self.voices.iter_mut() {
+        for voice in state.voices.iter_mut() {
             voice
                 .unison
                 .set_voice_num(self.voice_params.unison_settings.num);
@@ -234,13 +239,15 @@ impl MySynth {
             {
                 effector.ensure_state(state);
             }
+
+            voice.wt = self.voice_params.wavetable_settings.generator();
         }
     }
 
-    pub fn handle_event(&mut self, event: MyEvent, time: f64) {
+    pub fn handle_event(&self, state: &mut State, event: MyEvent, time: f64) {
         match event {
             MyEvent::NoteOn(notenum, velocity) => {
-                let v = self.voices.note_on(notenum);
+                let v = state.voices.note_on(notenum);
                 v.frequency = 440.0 * 2.0f64.powf((notenum as f64 - 69.0) / 12.0);
                 if self.voice_params.unison_settings.phase_reset {
                     v.unison.reset();
@@ -249,12 +256,9 @@ impl MySynth {
                 v.note_time = Some((time, f64::INFINITY));
             }
             MyEvent::NoteOff(notenum) => {
-                if let Some(v) = self.voices.note_off(notenum) {
+                if let Some(v) = state.voices.note_off(notenum) {
                     v.note_time.iter_mut().for_each(|x| x.1 = time);
                 }
-            }
-            MyEvent::SetModLevel(level) => {
-                self.mod_level = level;
             }
         }
     }
@@ -263,19 +267,25 @@ impl MySynth {
 pub enum MyEvent {
     NoteOn(u8, f64),
     NoteOff(u8),
-    SetModLevel(f64),
 }
 
-pub struct MyVoice {
+pub struct VoiceState {
     frequency: f64,
     velocity: f64,
     unison: Unison,
     note_time: Option<(f64, f64)>,
     high_pass_filter: HighPassFilter<StereoF64>,
     effector_states: Vec<effectors::State>,
+    wt: Arc<dyn Fn(f64) -> f64 + Send + Sync>,
 }
 
-impl MyVoice {
+impl Default for VoiceState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl VoiceState {
     pub fn new() -> Self {
         Self {
             frequency: 440.0,
@@ -284,6 +294,7 @@ impl MyVoice {
             note_time: None,
             high_pass_filter: HighPassFilter::new(),
             effector_states: vec![],
+            wt: Arc::new(|_| 0.0),
         }
     }
 
@@ -302,13 +313,12 @@ impl MyVoice {
             return StereoF64::default();
         };
 
-        let wt = param.wavetable_settings.generator();
         let mut x = self.unison.process(
             ctx,
             self.frequency * pitch,
             param.unison_settings.detune,
             param.unison_settings.stereo_width,
-            |phase| (wt)(param.bender.process(param.bend_level, phase)),
+            |phase| (self.wt)(param.bender.process(param.bend_level, phase)),
         );
 
         // DC offset cancel

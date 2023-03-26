@@ -1,15 +1,19 @@
 use std::sync::Arc;
 
 use corus_v2::interpolate_get;
-
-use super::cache::Cache;
+use serde::{Deserialize, Serialize};
 
 pub type WT = Arc<dyn Fn(f64) -> f64 + Send + Sync + 'static>;
 
+#[derive(Serialize, Deserialize)]
 pub struct WavetableSettings {
     seed: u64,
-    wt_cache: Cache<u64, WT, fn(u64) -> WT>,
-    custome_wt: Option<(wavetables::tree::Tree, WT)>,
+    #[serde(skip)]
+    wt_cache: Option<(u64, WT)>,
+    custome_wt_tree: Option<wavetables::tree::Tree>,
+    #[serde(skip)]
+    custome_wt: Option<WT>,
+    #[serde(skip)]
     buffer: Option<WT>,
     pub use_buffer: bool,
 }
@@ -18,7 +22,8 @@ impl WavetableSettings {
     pub fn new(seed: u64) -> Self {
         WavetableSettings {
             seed,
-            wt_cache: Cache::new(|seed| generate_wavetable(seed).into()),
+            wt_cache: None,
+            custome_wt_tree: None,
             custome_wt: None,
             buffer: None,
             use_buffer: true,
@@ -35,8 +40,7 @@ impl WavetableSettings {
     }
 
     pub fn set_custom_wavetable(&mut self, wt: wavetables::tree::Tree) {
-        let built = wt.build();
-        self.custome_wt = Some((wt, built.into()));
+        self.custome_wt_tree = Some(wt);
         self.buffer = None;
     }
 
@@ -45,7 +49,7 @@ impl WavetableSettings {
     }
 
     pub fn clear_custom_wavetable(&mut self) {
-        self.custome_wt = None;
+        self.custome_wt_tree = None;
         self.buffer = None;
     }
 
@@ -70,10 +74,20 @@ impl WavetableSettings {
     }
 
     pub fn wavetable(&mut self) -> Arc<dyn Fn(f64) -> f64 + Send + Sync> {
-        if let Some((_, wt)) = &self.custome_wt {
-            wt.clone()
+        if let Some(wt) = &self.custome_wt_tree {
+            if self.custome_wt.is_none() {
+                self.custome_wt = Some(wt.build().into());
+            }
+            self.custome_wt.clone().unwrap()
         } else {
-            self.wt_cache.get(self.seed).clone()
+            if let Some((seed, wt)) = &self.wt_cache {
+                if *seed == self.seed {
+                    return wt.clone();
+                }
+            }
+            let wt: WT = generate_wavetable(self.seed).into();
+            self.wt_cache = Some((self.seed, wt.clone()));
+            wt
         }
     }
 }
