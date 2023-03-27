@@ -52,7 +52,7 @@ pub fn pulse(width: f64, t: f64) -> f64 {
 
 pub fn steps(n: f64, t: f64) -> f64 {
     let n = n.max(1.01);
-    (t * n).floor() / (n - 1.0) * 2.0 - 1.0
+    ((t * n).floor() / (n - 1.0) * 2.0 - 1.0).min(1.0)
 }
 
 pub fn quadratic(t: f64) -> f64 {

@@ -41,15 +41,17 @@ impl WavetableSettings {
 
     pub fn set_custom_wavetable(&mut self, wt: wavetables::tree::Tree) {
         self.custome_wt_tree = Some(wt);
+        self.custome_wt = None;
         self.buffer = None;
     }
 
     pub fn is_custom_wavetable(&self) -> bool {
-        self.custome_wt.is_some()
+        self.custome_wt_tree.is_some()
     }
 
     pub fn clear_custom_wavetable(&mut self) {
         self.custome_wt_tree = None;
+        self.custome_wt = None;
         self.buffer = None;
     }
 

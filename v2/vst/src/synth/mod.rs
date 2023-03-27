@@ -35,7 +35,7 @@ pub struct MySynth {
 
 pub struct State {
     voices: VoiceManager<u8, VoiceState>,
-    pub effectors: Vec<effectors::State>,
+    effectors: Vec<effectors::State>,
 }
 
 impl State {
