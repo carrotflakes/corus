@@ -1,15 +1,11 @@
 use std::sync::Arc;
 
-use crate::{synth::bender::Bender, MyPluginParams};
+use crate::{
+    synth::{bender::Bender, param_pool::ProducerId},
+    MyPluginParams,
+};
 use nih_plug::prelude::*;
 use nih_plug_egui::egui::{self, emath};
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum EnvelopeLocation {
-    VoiceGain,
-    VoiceEffector(usize, usize),
-    MasterEffector(usize, usize),
-}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum EffectorsLocation {
@@ -27,7 +23,7 @@ pub fn editor_updator(
 
         ui.collapsing("Generator", |ui| {
             ui.horizontal(|ui| {
-                let wt = { synth.voice_params.wavetable_settings.wavetable() };
+                let wt = { synth.voice.wavetable_settings.wavetable() };
                 egui::Frame::canvas(ui.style()).show(ui, |ui| {
                     let (_id, rect) = ui.allocate_space(egui::vec2(80.0, 80.0));
                     let to_screen = emath::RectTransform::from_to(
@@ -65,10 +61,7 @@ pub fn editor_updator(
                             let mut points = vec![];
                             for i in 0..=w {
                                 let p = i as f64 / w as f64;
-                                let v = synth
-                                    .voice_params
-                                    .bender
-                                    .process(synth.voice_params.bend_level, p)
+                                let v = synth.voice.bender.process(synth.voice.bend_level.value, p)
                                     as f32;
                                 points.push(to_screen * egui::pos2(p as f32, -v));
                             }
@@ -78,83 +71,57 @@ pub fn editor_updator(
                             ));
                         });
 
-                        let r = synth.voice_params.bender.level_range();
-                        if ui
-                            .add(crate::widgets::knob::knob(
-                                r.start..r.end,
-                                &mut synth.voice_params.bend_level,
-                            ))
-                            .secondary_clicked()
-                        {
-                            synth.voice_params.bend_level = 0.0;
-                        };
+                        let r = synth.voice.bender.level_range();
+                        add_knob(ui, &mut synth.voice.bend_level, r, true, || ());
 
                         egui::ComboBox::from_label("bend")
-                            .selected_text(format!("{:?}", &synth.voice_params.bender))
+                            .selected_text(format!("{:?}", &synth.voice.bender))
                             .show_ui(ui, |ui| {
+                                ui.selectable_value(&mut synth.voice.bender, Bender::None, "none");
                                 ui.selectable_value(
-                                    &mut synth.voice_params.bender,
-                                    Bender::None,
-                                    "none",
-                                );
-                                ui.selectable_value(
-                                    &mut synth.voice_params.bender,
+                                    &mut synth.voice.bender,
                                     Bender::Quadratic,
                                     "quadratic",
                                 );
                                 ui.selectable_value(
-                                    &mut synth.voice_params.bender,
+                                    &mut synth.voice.bender,
                                     Bender::Cubic,
                                     "cubic",
                                 );
-                                ui.selectable_value(
-                                    &mut synth.voice_params.bender,
-                                    Bender::Sin,
-                                    "sin",
-                                );
-                                ui.selectable_value(
-                                    &mut synth.voice_params.bender,
-                                    Bender::Cos,
-                                    "cos",
-                                );
+                                ui.selectable_value(&mut synth.voice.bender, Bender::Sin, "sin");
+                                ui.selectable_value(&mut synth.voice.bender, Bender::Cos, "cos");
                             });
                     });
 
-                    ui.checkbox(
-                        &mut synth.voice_params.wavetable_settings.use_buffer,
-                        "prerender",
-                    );
+                    ui.checkbox(&mut synth.voice.wavetable_settings.use_buffer, "prerender");
                 });
             });
 
             if ui
                 .add(crate::widgets::knob::knob(
                     0.0..1.0,
-                    &mut synth.voice_params.level.value,
+                    &mut synth.voice.level.value,
                 ))
                 .clicked()
             {
-                *state.envelope_location.lock().unwrap() = EnvelopeLocation::VoiceGain;
+                // *state.envelope_location.lock().unwrap() = EnvelopeLocation::VoiceGain;
             };
 
             ui.collapsing("Unison", |ui| {
                 ui.horizontal(|ui| {
                     ui.add(
-                        egui::widgets::DragValue::new(&mut synth.voice_params.unison_settings.num)
+                        egui::widgets::DragValue::new(&mut synth.voice.unison_settings.num)
                             .clamp_range(1..=10),
                     );
                     ui.label("voices");
-                    ui.checkbox(
-                        &mut synth.voice_params.unison_settings.phase_reset,
-                        "phase reset",
-                    );
+                    ui.checkbox(&mut synth.voice.unison_settings.phase_reset, "phase reset");
                 });
                 ui.add(egui::widgets::Slider::new(
-                    &mut synth.voice_params.unison_settings.detune,
+                    &mut synth.voice.unison_settings.detune,
                     0.0..=1.0,
                 ));
                 ui.add(egui::widgets::Slider::new(
-                    &mut synth.voice_params.unison_settings.stereo_width,
+                    &mut synth.voice.unison_settings.stereo_width,
                     0.0..=1.0,
                 ));
             });
@@ -163,38 +130,17 @@ pub fn editor_updator(
         ui.collapsing("Envelope", |ui| {
             ui.horizontal(|ui| {
                 if ui.button("gain").clicked() {
-                    *state.envelope_location.lock().unwrap() = EnvelopeLocation::VoiceGain;
+                    *state.envelope_location.lock().unwrap() = 0;
                 }
                 if ui.button("filter freq").clicked() {
-                    *state.envelope_location.lock().unwrap() =
-                        EnvelopeLocation::VoiceEffector(0, 0);
+                    *state.envelope_location.lock().unwrap() = 1;
                 }
             });
 
-            match state.envelope_location.lock().unwrap().clone() {
-                EnvelopeLocation::VoiceGain => {
-                    ui.label("Voice gain");
-                    envelope(ui, &mut synth.voice_params.env);
-                }
-                EnvelopeLocation::VoiceEffector(i, j) => {
-                    if let Some((_, fx)) = synth.voice_params.effectors.get_mut(i) {
-                        ui.label(format!("V {} {}", fx.name(), fx.param_names()[j]));
-                        if let Some(p) = fx.param_muts().get_mut(j) {
-                            p.envelope.as_mut().map(|e| envelope(ui, &mut e.2));
-                            p.lfo.as_mut().map(|l| lfo(ui, &mut l.1));
-                        }
-                    }
-                }
-                EnvelopeLocation::MasterEffector(i, j) => {
-                    if let Some((_, fx)) = synth.effectors.get_mut(i) {
-                        ui.label(format!("M {} {}", fx.name(), fx.param_names()[0]));
-                        if let Some(p) = fx.param_muts().get_mut(j) {
-                            p.envelope.as_mut().map(|e| envelope(ui, &mut e.2));
-                            p.lfo.as_mut().map(|l| lfo(ui, &mut l.1));
-                        }
-                    }
-                }
-            }
+            let i = state.envelope_location.lock().unwrap().clone();
+            ui.label(format!("{:?}", i));
+            envelope(ui, &mut synth.voice.envs[i]);
+            lfo(ui, &mut synth.lfos[0]);
         });
 
         ui.collapsing("Effectors", |ui| {
@@ -213,18 +159,19 @@ pub fn editor_updator(
             match state.effectors_location.lock().unwrap().clone() {
                 EffectorsLocation::Voice => {
                     effectors(
-                        &mut synth.voice_params.effectors,
+                        &mut synth.voice.effectors,
                         ui,
+                        true,
                         |i: usize, j: usize| {
-                            *state.envelope_location.lock().unwrap() =
-                                EnvelopeLocation::VoiceEffector(i, j);
+                            // *state.envelope_location.lock().unwrap() =
+                            //     EnvelopeLocation::VoiceEffector(i, j);
                         },
                     );
                 }
                 EffectorsLocation::Master => {
-                    effectors(&mut synth.effectors, ui, |i: usize, j: usize| {
-                        *state.envelope_location.lock().unwrap() =
-                            EnvelopeLocation::MasterEffector(i, j);
+                    effectors(&mut synth.effectors, ui, false, |i: usize, j: usize| {
+                        // *state.envelope_location.lock().unwrap() =
+                        //     EnvelopeLocation::MasterEffector(i, j);
                     });
                 }
             }
@@ -239,7 +186,7 @@ pub fn editor_updator(
                         .synth
                         .lock()
                         .unwrap()
-                        .voice_params
+                        .voice
                         .wavetable_settings
                         .set_custom_wavetable(tree);
                 }),
@@ -289,21 +236,18 @@ pub fn editor_updator(
 }
 
 fn wavetable_seed(synth: &mut std::sync::MutexGuard<crate::synth::MySynth>, ui: &mut egui::Ui) {
-    if synth.voice_params.wavetable_settings.is_custom_wavetable() {
+    if synth.voice.wavetable_settings.is_custom_wavetable() {
         ui.horizontal(|ui| {
             ui.label("Custom");
             if ui.button("reset").clicked() {
-                synth
-                    .voice_params
-                    .wavetable_settings
-                    .clear_custom_wavetable();
+                synth.voice.wavetable_settings.clear_custom_wavetable();
             }
         });
         return;
     }
-    let mut seed = synth.voice_params.wavetable_settings.seed();
+    let mut seed = synth.voice.wavetable_settings.seed();
     if ui.add(egui::widgets::DragValue::new(&mut seed)).changed() {
-        synth.voice_params.wavetable_settings.set_seed(seed);
+        synth.voice.wavetable_settings.set_seed(seed);
     };
 }
 
@@ -373,6 +317,7 @@ fn lfo(ui: &mut egui::Ui, lfo: &mut crate::synth::param_f64::Lfo) {
 fn effectors(
     effectors: &mut Vec<(bool, crate::synth::effectors::Effector)>,
     ui: &mut egui::Ui,
+    is_voice: bool,
     setter: impl Fn(usize, usize),
 ) {
     for (i, (enabled, effector)) in effectors.iter_mut().enumerate() {
@@ -382,8 +327,8 @@ fn effectors(
 
             match effector {
                 Effector::Filter { frequency, q } => {
-                    add_knob(ui, frequency, 20.0..10000.0, || setter(i, 0));
-                    add_knob(ui, q, 0.7..10.0, || setter(i, 1));
+                    add_knob(ui, frequency, 20.0..10000.0, is_voice, || setter(i, 0));
+                    add_knob(ui, q, 0.7..10.0, is_voice, || setter(i, 1));
                 }
                 Effector::Phaser => {}
                 Effector::Chorus => {}
@@ -391,7 +336,7 @@ fn effectors(
                 Effector::Reverb => {}
                 Effector::Gain { gain } => {
                     // ui.add(egui::widgets::Slider::new(gain, 0.0..=1.5));
-                    add_knob(ui, gain, 0.0..1.5, || setter(i, 0));
+                    add_knob(ui, gain, 0.0..1.5, is_voice, || setter(i, 0));
                 }
                 Effector::Compressor {
                     threshold,
@@ -400,11 +345,11 @@ fn effectors(
                     release,
                     gain,
                 } => {
-                    add_knob(ui, threshold, 0.0..1.0, || setter(i, 0));
-                    add_knob(ui, ratio, 0.0..1.0, || setter(i, 1));
-                    add_knob(ui, attack, 0.001..1.0, || setter(i, 2));
-                    add_knob(ui, release, 0.001..1.0, || setter(i, 3));
-                    add_knob(ui, gain, 0.0..1.5, || setter(i, 4));
+                    add_knob(ui, threshold, 0.0..1.0, is_voice, || setter(i, 0));
+                    add_knob(ui, ratio, 0.0..1.0, is_voice, || setter(i, 1));
+                    add_knob(ui, attack, 0.001..1.0, is_voice, || setter(i, 2));
+                    add_knob(ui, release, 0.001..1.0, is_voice, || setter(i, 3));
+                    add_knob(ui, gain, 0.0..1.5, is_voice, || setter(i, 4));
                 }
                 Effector::Tanh {} => {}
             }
@@ -416,12 +361,77 @@ fn add_knob(
     ui: &mut egui::Ui,
     param: &mut crate::synth::param_f64::ParamF64,
     range: std::ops::Range<f64>,
+    is_voice: bool,
     on_click: impl Fn() -> (),
 ) {
-    if ui
-        .add(crate::widgets::knob::knob(range, &mut param.value))
-        .clicked()
-    {
+    let res = ui
+        .add(crate::widgets::knob::knob(range.clone(), &mut param.value))
+        .context_menu(|ui| {
+            if ui.button("reset").clicked() {
+                param.value = 0.0;
+            }
+
+            ui.label("global");
+            let producer_id = ProducerId::new(0);
+            if param
+                .consumer
+                .producers
+                .iter_mut()
+                .find(|p| p.1 == producer_id)
+                .is_some()
+            {
+                if ui.button("Remove").clicked() {
+                    param.consumer.producers.retain(|p| p.1 != producer_id);
+                }
+                param
+                    .consumer
+                    .producers
+                    .iter_mut()
+                    .find(|p| p.1 == producer_id)
+                    .map(|p| {
+                        ui.add(crate::widgets::knob::knob(range.clone(), &mut p.0));
+                    });
+            } else {
+                if ui.button("Add").clicked() {
+                    param.consumer.producers.push((0.0, producer_id));
+                }
+            }
+
+            if !is_voice {
+                return;
+            }
+            ui.label("voice");
+            for i in 0..2 {
+                let producer_id = ProducerId::new(i);
+                if param
+                    .voice_consumer
+                    .producers
+                    .iter_mut()
+                    .find(|p| p.1 == producer_id)
+                    .is_some()
+                {
+                    if ui.button("Remove").clicked() {
+                        param
+                            .voice_consumer
+                            .producers
+                            .retain(|p| p.1 != producer_id);
+                    }
+                    param
+                        .voice_consumer
+                        .producers
+                        .iter_mut()
+                        .find(|p| p.1 == producer_id)
+                        .map(|p| {
+                            ui.add(crate::widgets::knob::knob(range.clone(), &mut p.0));
+                        });
+                } else {
+                    if ui.button("Add").clicked() {
+                        param.voice_consumer.producers.push((0.0, producer_id));
+                    }
+                }
+            }
+        });
+    if res.clicked() {
         on_click();
     }
 }

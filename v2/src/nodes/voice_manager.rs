@@ -49,6 +49,10 @@ impl<ID: PartialEq + Default + 'static, V: 'static> VoiceManager<ID, V> {
         None
     }
 
+    pub fn voice_num(&self) -> usize {
+        self.voices.len()
+    }
+
     pub fn set_voice_num(&mut self, voice_num: usize) {
         if self.voices.len() < voice_num {
             for _ in self.voices.len()..voice_num {

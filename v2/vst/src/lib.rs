@@ -3,7 +3,7 @@ mod synth;
 mod widgets;
 
 use corus_v2::{event_queue::EventQueue, signal::Stereo};
-use editor_ui::{EffectorsLocation, EnvelopeLocation};
+use editor_ui::EffectorsLocation;
 use nih_plug::prelude::*;
 use nih_plug_egui::{create_egui_editor, EguiState};
 use std::sync::{Arc, Mutex};
@@ -22,7 +22,7 @@ pub struct MyPluginParams {
     #[persist = "synth"]
     synth: Arc<Mutex<MySynth>>,
     synth_state: Arc<Mutex<synth::State>>,
-    envelope_location: Mutex<EnvelopeLocation>,
+    envelope_location: Mutex<usize>,
     effectors_location: Mutex<EffectorsLocation>,
     wavetable_lab: Mutex<widgets::wavetable_lab::WavetableLab>,
 
@@ -46,11 +46,13 @@ impl Default for MyPlugin {
 
 impl Default for MyPluginParams {
     fn default() -> Self {
+        let synth = Arc::new(Mutex::new(MySynth::new()));
+        let synth_state = Arc::new(Mutex::new(synth::State::new(&synth.lock().unwrap())));
         Self {
             editor_state: EguiState::from_size(400, 400),
-            synth: Arc::new(Mutex::new(MySynth::new())),
-            synth_state: Arc::new(Mutex::new(synth::State::new())),
-            envelope_location: Mutex::new(EnvelopeLocation::VoiceGain),
+            synth,
+            synth_state,
+            envelope_location: Mutex::new(0),
             effectors_location: Mutex::new(EffectorsLocation::Master),
             wavetable_lab: Mutex::new(widgets::wavetable_lab::WavetableLab::new()),
             gain: FloatParam::new(

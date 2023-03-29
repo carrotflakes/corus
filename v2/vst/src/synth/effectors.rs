@@ -14,7 +14,7 @@ use corus_v2::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::param_f64::{self, EnvelopeState};
+use super::{param_f64, param_pool::ParamPool};
 
 // pub enum MonoEffector {
 //     Filter { frequency: f64, q: f64 },
@@ -133,14 +133,14 @@ impl Effector {
         &self,
         state: &mut State,
         ctx: &ProcessContext,
-        env_state: &EnvelopeState,
+        param_pools: &[&ParamPool],
         x: StereoF64,
     ) -> StereoF64 {
         match (self, state) {
             (Effector::Filter { frequency, q }, State::Filter { filter }) => filter.process(
                 ctx,
-                frequency.compute(env_state).max(20.0),
-                q.compute(env_state),
+                frequency.compute(param_pools).clamp(20.0, 20000.0),
+                q.compute(param_pools),
                 x,
             ),
             (Effector::Phaser, State::Phaser { phaser }) => phaser.process(ctx, x),
@@ -151,7 +151,7 @@ impl Effector {
                 (0.3, er.process(ctx, x)),
                 (0.2, reverb.process(ctx, x)),
             ]),
-            (Effector::Gain { gain }, State::Gain) => x * gain.compute(env_state),
+            (Effector::Gain { gain }, State::Gain) => x * gain.compute(param_pools),
             (
                 Effector::Compressor {
                     threshold,
@@ -162,11 +162,11 @@ impl Effector {
                 },
                 State::Compressor { compressor },
             ) => {
-                let threshold = threshold.compute(env_state);
-                let ratio = ratio.compute(env_state);
-                let attack = attack.compute(env_state);
-                let release = release.compute(env_state);
-                let gain = gain.compute(env_state);
+                let threshold = threshold.compute(param_pools);
+                let ratio = ratio.compute(param_pools);
+                let attack = attack.compute(param_pools);
+                let release = release.compute(param_pools);
+                let gain = gain.compute(param_pools);
                 compressor.process(
                     &CompressorParam {
                         threshold,

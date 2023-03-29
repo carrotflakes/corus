@@ -1,6 +1,7 @@
 pub mod bender;
 pub mod effectors;
 pub mod param_f64;
+pub mod param_pool;
 pub mod wavetable;
 
 use std::sync::Arc;
@@ -20,7 +21,10 @@ use effectors::Effector;
 use param_f64::{EnvelopeState, ParamF64};
 use wavetable::WavetableSettings;
 
-use self::param_f64::Lfo;
+use self::{
+    param_f64::Lfo,
+    param_pool::{ParamPool, ProducerId},
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct MySynth {
@@ -29,34 +33,51 @@ pub struct MySynth {
     pub pitch: f64,
     pub frequency: f64,
     pub q: f64,
-    pub voice_params: VoiceParams,
+    pub voice: Voice,
     pub effectors: Vec<(bool, Effector)>,
+    pub lfos: Vec<Lfo>,
 }
 
 pub struct State {
     voices: VoiceManager<u8, VoiceState>,
     effectors: Vec<effectors::State>,
+    params: ParamPool,
 }
 
 impl State {
-    pub fn new() -> Self {
+    pub fn new(synth: &MySynth) -> Self {
+        let producers: Vec<_> = synth
+            .lfos
+            .iter()
+            .enumerate()
+            .map(|(i, _)| ProducerId::new(i))
+            .collect();
         Self {
             voices: VoiceManager::new(|| VoiceState::new(), 8),
             effectors: vec![],
+            params: ParamPool::new(&producers),
         }
+    }
+
+    pub fn voice_num(&self) -> usize {
+        self.voices.voice_num()
+    }
+
+    pub fn set_voice_num(&mut self, voice_num: usize) {
+        self.voices.set_voice_num(voice_num);
     }
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct VoiceParams {
+pub struct Voice {
     pub wavetable_settings: WavetableSettings,
     pub bender: bender::Bender,
-    pub bend_level: f64,
+    pub bend_level: ParamF64,
     pub unison_settings: UnisonSettings,
     pub level: ParamF64,
     pub detune: ParamF64,
     pub effectors: Vec<(bool, Effector)>,
-    pub env: Envelope,
+    pub envs: Vec<Envelope>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -75,77 +96,52 @@ impl MySynth {
             pitch: 1.0,
             frequency: 1000.0,
             q: 1.0,
-            voice_params: VoiceParams {
+            voice: Voice {
                 wavetable_settings: WavetableSettings::new(1),
                 bender: bender::Bender::None,
-                bend_level: 0.0,
+                bend_level: ParamF64::new(0.0),
                 unison_settings: UnisonSettings {
                     num: 1,
                     detune: 0.02,
                     stereo_width: 0.95,
                     phase_reset: false,
                 },
-                level: ParamF64 {
-                    value: 0.7,
-                    envelope: Some((
-                        true,
-                        0.0,
-                        Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
-                    )),
-                    lfo: Some((
-                        false,
-                        Lfo {
-                            frequency: 1.0,
-                            amp: 0.5,
-                        },
-                    )),
-                },
-                detune: ParamF64 {
-                    value: 0.0,
-                    envelope: None,
-                    lfo: None,
-                },
+                level: ParamF64::new(0.7),
+                detune: ParamF64::new(0.0),
                 effectors: vec![(
                     false,
                     Effector::Filter {
-                        frequency: ParamF64 {
-                            value: 50.0,
-                            envelope: Some((
-                                true,
-                                5000.0,
-                                Envelope::new(&[(0.01, 1.0, -1.0), (0.4, 0.3, 1.0)], 0.3, 1.0),
-                            )),
-                            lfo: Some((
-                                true,
-                                Lfo {
-                                    frequency: 1.0,
-                                    amp: 1000.0,
-                                },
-                            )),
-                        },
-                        q: ParamF64 {
-                            value: 1.0,
-                            envelope: None,
-                            lfo: None,
-                        },
+                        frequency: ParamF64::new(5000.0),
+                        // frequency: ParamF64 {
+                        //     value: 50.0,
+                        //     envelope: Some((
+                        //         true,
+                        //         5000.0,
+                        //         Envelope::new(&[(0.01, 1.0, -1.0), (0.4, 0.3, 1.0)], 0.3, 1.0),
+                        //     )),
+                        //     lfo: Some((
+                        //         true,
+                        //         Lfo {
+                        //             frequency: 1.0,
+                        //             amp: 1000.0,
+                        //         },
+                        //     )),
+                        //     consumer: Consumer::new(),
+                        // },
+                        q: ParamF64::new(1.0),
                     },
                 )],
-                env: Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
+                envs: vec![
+                    Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
+                    Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
+                ],
             },
             effectors: vec![
                 (
                     false,
                     Effector::Filter {
-                        frequency: ParamF64 {
-                            value: 10000.0,
-                            envelope: None,
-                            lfo: None,
-                        },
-                        q: ParamF64 {
-                            value: 1.0,
-                            envelope: None,
-                            lfo: None,
-                        },
+                        frequency: ParamF64::new(10000.0),
+                        q: ParamF64::new(1.0),
                     },
                 ),
                 (false, Effector::Tanh),
@@ -156,44 +152,24 @@ impl MySynth {
                 (
                     true,
                     Effector::Gain {
-                        gain: ParamF64 {
-                            value: 1.0,
-                            envelope: None,
-                            lfo: None,
-                        },
+                        gain: ParamF64::new(1.0),
                     },
                 ),
                 (
                     true,
                     Effector::Compressor {
-                        threshold: ParamF64 {
-                            value: 0.8,
-                            envelope: None,
-                            lfo: None,
-                        },
-                        ratio: ParamF64 {
-                            value: 0.5,
-                            envelope: None,
-                            lfo: None,
-                        },
-                        attack: ParamF64 {
-                            value: 0.01,
-                            envelope: None,
-                            lfo: None,
-                        },
-                        release: ParamF64 {
-                            value: 0.03,
-                            envelope: None,
-                            lfo: None,
-                        },
-                        gain: ParamF64 {
-                            value: 1.0,
-                            envelope: None,
-                            lfo: None,
-                        },
+                        threshold: ParamF64::new(0.8),
+                        ratio: ParamF64::new(0.5),
+                        attack: ParamF64::new(0.01),
+                        release: ParamF64::new(0.03),
+                        gain: ParamF64::new(1.0),
                     },
                 ),
             ],
+            lfos: vec![Lfo {
+                frequency: 1.0,
+                amp: 1.0,
+            }],
         }
     }
 
@@ -203,13 +179,20 @@ impl MySynth {
             elapsed: ctx.current_time(),
             note_off_time: f64::INFINITY,
         };
+        for (i, lfo) in self.lfos.iter().enumerate() {
+            state
+                .params
+                .set(ProducerId::new(i), lfo.compute(env_state.elapsed));
+        }
+
         let mut x = StereoF64::default();
         for voice in state.voices.iter_mut() {
-            x = x + voice.process(ctx, &mut self.voice_params, pitch);
+            x = x + self.voice.process(voice, ctx, &state.params, pitch);
         }
-        for ((enabled, effector), state) in self.effectors.iter().zip(state.effectors.iter_mut()) {
+        for ((enabled, effector), e_state) in self.effectors.iter().zip(state.effectors.iter_mut())
+        {
             if *enabled {
-                x = effector.process(state, ctx, &env_state, x);
+                x = effector.process(e_state, ctx, &[&state.params], x);
             }
         }
         x = (x * self.gain.into_stereo()).into_stereo_with_pan(self.pan);
@@ -225,14 +208,12 @@ impl MySynth {
         }
 
         for voice in state.voices.iter_mut() {
-            voice
-                .unison
-                .set_voice_num(self.voice_params.unison_settings.num);
+            voice.unison.set_voice_num(self.voice.unison_settings.num);
             voice
                 .effector_states
-                .resize_with(self.voice_params.effectors.len(), || effectors::State::None);
+                .resize_with(self.voice.effectors.len(), || effectors::State::None);
             for ((_, effector), state) in self
-                .voice_params
+                .voice
                 .effectors
                 .iter()
                 .zip(voice.effector_states.iter_mut())
@@ -240,7 +221,7 @@ impl MySynth {
                 effector.ensure_state(state);
             }
 
-            voice.wt = self.voice_params.wavetable_settings.generator();
+            voice.wt = self.voice.wavetable_settings.generator();
         }
     }
 
@@ -249,7 +230,7 @@ impl MySynth {
             MyEvent::NoteOn(notenum, velocity) => {
                 let v = state.voices.note_on(notenum);
                 v.frequency = 440.0 * 2.0f64.powf((notenum as f64 - 69.0) / 12.0);
-                if self.voice_params.unison_settings.phase_reset {
+                if self.voice.unison_settings.phase_reset {
                     v.unison.reset();
                 }
                 v.velocity = velocity;
@@ -276,6 +257,7 @@ pub struct VoiceState {
     note_time: Option<(f64, f64)>,
     high_pass_filter: HighPassFilter<StereoF64>,
     effector_states: Vec<effectors::State>,
+    params: ParamPool,
     wt: Arc<dyn Fn(f64) -> f64 + Send + Sync>,
 }
 
@@ -294,17 +276,21 @@ impl VoiceState {
             note_time: None,
             high_pass_filter: HighPassFilter::new(),
             effector_states: vec![],
+            params: ParamPool::new(&[ProducerId::new(0), ProducerId::new(1)]),
             wt: Arc::new(|_| 0.0),
         }
     }
+}
 
+impl Voice {
     pub fn process(
-        &mut self,
+        &self,
+        state: &mut VoiceState,
         ctx: &ProcessContext,
-        param: &mut VoiceParams,
+        param_pool: &ParamPool,
         pitch: f64,
     ) -> StereoF64 {
-        let env_state = if let Some((start_time, end_time)) = self.note_time {
+        let env_state = if let Some((start_time, end_time)) = state.note_time {
             EnvelopeState {
                 elapsed: ctx.current_time() - start_time,
                 note_off_time: end_time - start_time,
@@ -313,32 +299,40 @@ impl VoiceState {
             return StereoF64::default();
         };
 
-        let mut x = self.unison.process(
+        for i in 0..self.envs.len() {
+            state.params.set(
+                ProducerId::new(i),
+                self.envs[i].compute(env_state.elapsed, env_state.note_off_time),
+            );
+        }
+
+        let bend_amount = self.bend_level.compute(&[&param_pool, &state.params]);
+        let mut x = state.unison.process(
             ctx,
-            self.frequency * pitch,
-            param.unison_settings.detune,
-            param.unison_settings.stereo_width,
-            |phase| (self.wt)(param.bender.process(param.bend_level, phase)),
+            state.frequency * pitch,
+            self.unison_settings.detune,
+            self.unison_settings.stereo_width,
+            |phase| (state.wt)(self.bender.process(bend_amount, phase)),
         );
 
         // DC offset cancel
-        x = self.high_pass_filter.process(ctx, 0.999, x);
+        x = state.high_pass_filter.process(ctx, 0.999, x);
 
-        for ((enabled, effector), state) in
-            param.effectors.iter().zip(self.effector_states.iter_mut())
+        for ((enabled, effector), e_state) in
+            self.effectors.iter().zip(state.effector_states.iter_mut())
         {
             if *enabled {
-                x = effector.process(state, ctx, &env_state, x);
+                x = effector.process(e_state, ctx, &[&param_pool, &state.params], x);
             }
         }
 
-        let level = param.level.compute(&env_state).clamp(0.0, 1.0);
-        let gain = self.velocity * level;
+        let level = self
+            .level
+            .compute(&[&param_pool, &state.params])
+            .clamp(0.0, 1.0);
+        let gain = state.velocity * level;
 
-        let env = param
-            .env
-            .compute(env_state.elapsed, env_state.note_off_time);
-
+        let env = state.params.get(ProducerId::new(0));
         x * gain * env
     }
 }

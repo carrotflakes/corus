@@ -1,11 +1,12 @@
-use corus_v2::nodes::envelope::Envelope;
 use serde::{Deserialize, Serialize};
+
+use super::param_pool::{Consumer, ParamPool};
 
 #[derive(Serialize, Deserialize)]
 pub struct ParamF64 {
     pub value: f64,
-    pub envelope: Option<(bool, f64, Envelope)>,
-    pub lfo: Option<(bool, Lfo)>,
+    pub consumer: Consumer,
+    pub voice_consumer: Consumer,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -21,23 +22,25 @@ pub struct EnvelopeState {
 }
 
 impl ParamF64 {
-    pub fn compute(&self, env_state: &EnvelopeState) -> f64 {
-        let EnvelopeState {
-            elapsed,
-            note_off_time,
-        } = *env_state;
+    pub fn new(value: f64) -> Self {
+        Self {
+            value,
+            consumer: Consumer::new(),
+            voice_consumer: Consumer::new(),
+        }
+    }
 
-        self.value
-            + if let Some((true, amount, envelope)) = &self.envelope {
-                let envelope_level = envelope.compute(elapsed, note_off_time);
-                amount * envelope_level
-            } else {
-                0.0
-            }
-            + if let Some((true, lfo)) = &self.lfo {
-                (elapsed * lfo.frequency * std::f64::consts::TAU).sin() * lfo.amp
-            } else {
-                0.0
-            }
+    pub fn compute(&self, param_pools: &[&ParamPool]) -> f64 {
+        match param_pools {
+            [ps1] => self.value + self.consumer.get(ps1),
+            [ps1, ps2] => self.value + self.consumer.get(ps1) + self.voice_consumer.get(ps2),
+            _ => panic!("Invalid param_pools"),
+        }
+    }
+}
+
+impl Lfo {
+    pub fn compute(&self, elapsed: f64) -> f64 {
+        (elapsed * self.frequency * std::f64::consts::TAU).sin() * self.amp
     }
 }
