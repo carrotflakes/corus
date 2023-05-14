@@ -1,140 +1,47 @@
-use crate::{
-    core::Node,
-    proc_context::ProcContext,
-    signal::C1f64,
-};
-
-use super::{
-    glottis::Glottis,
-    tract::{Constriction, Tract},
-    F,
-};
+use super::{glottis::Glottis, tract::Tract, F};
 
 pub struct Benihora {
-    node: Box<dyn Node<Output = f64> + Send + Sync>,
-    glottis: Glottis,
-    tract: Tract,
+    pub glottis: Glottis,
+    pub tract: Tract,
     block_time: f64,         // sec
     block_updated_time: f64, // sec
     proc_num: usize,
 }
 
 impl Benihora {
-    pub fn new(node: Box<dyn Node<Output = f64> + Send + Sync>, proc_num: usize) -> Self {
+    pub fn new(proc_num: usize) -> Self {
         Self {
             glottis: Glottis::new(),
             tract: Tract::new(),
-            node,
             block_time: 0.04,
             block_updated_time: 0.0,
             proc_num,
         }
     }
-}
 
-impl Node for Benihora {
-    type Output = C1f64;
-
-    #[inline]
-    fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
-        if self.block_updated_time + self.block_time <= ctx.current_time {
+    pub fn process(&mut self, current_time: F, sample_rate: u64, v: F) -> F {
+        if self.block_updated_time + self.block_time <= current_time {
             self.block_updated_time += self.block_time;
-            self.glottis.update_block(ctx.current_time, self.block_time);
+            self.glottis.update_block(current_time, self.block_time);
             self.tract.update_block(self.block_time);
         }
 
-        let v = self.node.as_mut().proc(ctx);
-        let lambda = (ctx.current_time - self.block_updated_time) / self.block_time; // TODO: lambdaなくしたい
-        let (glottal_output, turbulence_noise) = self.glottis.run_step(
-            ctx.current_time,
-            ctx.sample_rate as usize,
-            lambda,
-            v,
-        );
+        let lambda = (current_time - self.block_updated_time) / self.block_time; // TODO: lambdaなくしたい
+        let (glottal_output, turbulence_noise) =
+            self.glottis
+                .run_step(current_time, sample_rate as usize, lambda, v);
         let glottal_output = glottal_output + v * 1.0e-20; // tract に 0.0 を渡すと何故か遅くなるので僅かにノイズを混ぜる
         let mut vocal_out = 0.0;
         for i in 0..self.proc_num {
-            let time =
-                ctx.current_time + (i as f64 / self.proc_num as f64) / ctx.sample_rate as f64;
+            let time = current_time + (i as f64 / self.proc_num as f64) / sample_rate as f64;
             vocal_out += self.tract.run_step(
                 time,
                 glottal_output,
                 turbulence_noise,
                 (time - self.block_updated_time) / self.block_time,
-                ctx.sample_rate as usize * self.proc_num,
+                sample_rate as usize * self.proc_num,
             );
         }
         (vocal_out / self.proc_num as f64).into()
-    }
-
-    fn lock(&mut self, ctx: &ProcContext) {
-        self.node.lock(ctx);
-    }
-
-    fn unlock(&mut self) {
-        self.node.unlock();
-    }
-}
-
-pub enum BenihoraEvent {
-    MoveTangue(F, F),
-    SetOtherConstrictions(Vec<(F, F)>),
-    SetFrequency(F),
-    SetTenseness(F),
-    SetStatus(bool, bool),
-    SetVibrato(F, F),
-}
-
-impl crate::EventListener<BenihoraEvent> for Benihora {
-    #[inline]
-    fn apply_event(&mut self, time: f64, event: &BenihoraEvent) {
-        match event {
-            BenihoraEvent::MoveTangue(index, diameter) => {
-                self.tract.mouth.tongue = self.tract.mouth.tangue_clamp(*index, *diameter);
-                self.tract.calculate_diameter();
-            }
-            BenihoraEvent::SetOtherConstrictions(new_ocs) => {
-                let ocs = &mut self.tract.mouth.other_constrictions;
-                for c in new_ocs.iter() {
-                    if ocs
-                        .iter()
-                        .find(|x| x.index == c.0 && x.diameter == c.1 && x.end_time.is_none())
-                        .is_none()
-                    {
-                        ocs.push(Constriction {
-                            index: c.0,
-                            diameter: c.1,
-                            start_time: time,
-                            end_time: None,
-                        });
-                    }
-                }
-                for c in ocs.iter_mut() {
-                    if c.end_time.is_none()
-                        && new_ocs
-                            .iter()
-                            .find(|x| c.index == x.0 && c.diameter == x.1)
-                            .is_none()
-                    {
-                        c.end_time = Some(time);
-                    }
-                }
-                self.tract.calculate_diameter();
-            }
-            BenihoraEvent::SetFrequency(frequency) => {
-                self.glottis.frequency.set(*frequency);
-            }
-            BenihoraEvent::SetTenseness(tenseness) => {
-                self.glottis.set_tenseness(*tenseness);
-            }
-            BenihoraEvent::SetStatus(breath, close) => {
-                self.glottis.breath = *breath;
-                self.glottis.glottis_close = *close;
-            }
-            BenihoraEvent::SetVibrato(amount, frequency) => {
-                self.glottis.frequency.vibrato_amount = *amount;
-                self.glottis.frequency.vibrato_frequency = *frequency;
-            }
-        }
     }
 }
