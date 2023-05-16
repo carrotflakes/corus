@@ -81,12 +81,14 @@ pub struct Mouth {
     tip_start: usize,
     lip_start: usize,
 
+    original_diameter: Vec<F>,
     diameter: Vec<F>,
-    rest_diameter: Vec<F>,
     target_diameter: Vec<F>,
 
-    a: Vec<F>,
+    area: Vec<F>,
 
+    reflection: Vec<F>,
+    new_reflection: Vec<F>,
     reflection_left: F,
     reflection_right: F,
     reflection_nose: F,
@@ -98,8 +100,6 @@ pub struct Mouth {
     l: Vec<F>,
     junction_output_r: Vec<F>,
     junction_output_l: Vec<F>,
-    reflection: Vec<F>,
-    new_reflection: Vec<F>,
 
     glottal_reflection: F,
     lip_reflection: F,
@@ -138,9 +138,9 @@ impl Mouth {
             junction_output_r: vec![0.0; length + 1],
             junction_output_l: vec![0.0; length + 1],
             diameter: diameter.clone(),
-            rest_diameter: diameter.clone(),
+            original_diameter: diameter.clone(),
             target_diameter: diameter.clone(),
-            a: vec![0.0; length],
+            area: vec![0.0; length],
             glottal_reflection: 0.75,
             lip_reflection: -0.85,
             last_obstruction: usize::MAX,
@@ -220,7 +220,7 @@ impl Mouth {
         }
         if self.last_obstruction != usize::MAX
             && new_last_obstruction == usize::MAX
-            && nose.a[0] < 0.05
+            && nose.area[0] < 0.05
         {
             self.add_transient(self.last_obstruction);
         }
@@ -229,26 +229,25 @@ impl Mouth {
 
     fn calculate_reflections(&mut self, nose: &Nose) {
         for i in 0..self.length {
-            self.a[i] = self.diameter[i].powi(2); //ignoring PI etc.
+            self.area[i] = self.diameter[i].powi(2); //ignoring PI etc.
         }
         for i in 1..self.length {
             self.reflection[i] = self.new_reflection[i];
-            self.new_reflection[i] = if self.a[i] == 0.0 {
+            self.new_reflection[i] = if self.area[i] == 0.0 {
                 0.999
             } else {
-                (self.a[i - 1] - self.a[i]) / (self.a[i - 1] + self.a[i])
+                (self.area[i - 1] - self.area[i]) / (self.area[i - 1] + self.area[i])
             };
         }
 
         //now at junction with nose
-
         self.reflection_left = self.new_reflection_left;
         self.reflection_right = self.new_reflection_right;
         self.reflection_nose = self.new_reflection_nose;
-        let sum = self.a[nose.start] + self.a[nose.start + 1] + nose.a[0];
-        self.new_reflection_left = (2.0 * self.a[nose.start] - sum) / sum;
-        self.new_reflection_right = (2.0 * self.a[nose.start + 1] - sum) / sum;
-        self.new_reflection_nose = (2.0 * nose.a[0] - sum) / sum;
+        let sum = self.area[nose.start] + self.area[nose.start + 1] + nose.area[0];
+        self.new_reflection_left = 2.0 * self.area[nose.start] / sum - 1.0;
+        self.new_reflection_right = 2.0 * self.area[nose.start + 1] / sum - 1.0;
+        self.new_reflection_nose = 2.0 * nose.area[0] / sum - 1.0;
     }
 
     fn add_transient(&mut self, position: usize) {
@@ -306,6 +305,8 @@ impl Mouth {
 
         let (tongue_index, tongue_diameter) = self.tongue;
 
+        self.target_diameter
+            .copy_from_slice(&self.original_diameter);
         for i in self.blade_start..self.lip_start {
             let t = 1.1 * PI * (tongue_index - i as F) / (self.tip_start - self.blade_start) as F;
             let fixed_tongue_diameter = 2.0 + (tongue_diameter - 2.0) / 1.5;
@@ -316,11 +317,7 @@ impl Mouth {
             if i == self.blade_start || i == self.lip_start - 2 {
                 curve *= 0.94;
             }
-            self.rest_diameter[i] = 1.5 - curve;
-        }
-
-        for i in 0..self.length {
-            self.target_diameter[i] = self.rest_diameter[i];
+            self.target_diameter[i] = 1.5 - curve;
         }
 
         for constriction in self.other_constrictions.iter() {
@@ -408,8 +405,8 @@ fn add_turbulence_noise_at_index(
 pub struct Nose {
     length: usize,
     start: usize,
-    pub diameter: Vec<F>,
-    a: Vec<F>,
+    diameter: Vec<F>,
+    area: Vec<F>,
     r: Vec<F>,
     l: Vec<F>,
     junction_output_r: Vec<F>,
@@ -442,7 +439,7 @@ impl Nose {
                     })
                 })
                 .collect(),
-            a: vec![0.0; length],
+            area: vec![0.0; length],
             fade: 0.999,
             velum_target: 0.01,
             lip_reflection: -0.85,
@@ -473,15 +470,16 @@ impl Nose {
             amount * 0.25,
             amount * 0.1,
         );
-        self.a[0] = self.diameter[0].powi(2);
+        self.area[0] = self.diameter[0].powi(2);
     }
 
     fn calculate_reflections(&mut self) {
         for i in 0..self.length {
-            self.a[i] = self.diameter[i].powi(2);
+            self.area[i] = self.diameter[i].powi(2);
         }
         for i in 1..self.length {
-            self.reflection[i] = (self.a[i - 1] - self.a[i]) / (self.a[i - 1] + self.a[i]);
+            self.reflection[i] =
+                (self.area[i - 1] - self.area[i]) / (self.area[i - 1] + self.area[i]);
         }
     }
 }
