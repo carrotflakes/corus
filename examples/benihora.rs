@@ -91,8 +91,8 @@ fn main() {
     benihora_ctl.push_event(12.0, BenihoraEvent::SetTenseness(1.0));
     benihora_ctl.push_event(12.5, BenihoraEvent::SetTenseness(0.6));
 
-    benihora_ctl.push_event(13.0, BenihoraEvent::SetStatus(false, false));
-    benihora_ctl.push_event(14.0, BenihoraEvent::SetStatus(true, false));
+    benihora_ctl.push_event(13.0, BenihoraEvent::SetStatus(false));
+    benihora_ctl.push_event(14.0, BenihoraEvent::SetStatus(true));
 
     benihora_ctl.push_event(
         15.0,

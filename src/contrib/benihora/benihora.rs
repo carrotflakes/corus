@@ -26,21 +26,22 @@ impl Benihora {
             self.tract.update_block(self.block_time);
         }
 
-        let lambda = (current_time - self.block_updated_time) / self.block_time; // TODO: lambdaなくしたい
+        let lambda = (current_time - self.block_updated_time) / self.block_time; // TODO: wanna remove this
         let (glottal_output, turbulence_noise) =
             self.glottis
-                .run_step(current_time, sample_rate as usize, lambda, v);
-        let glottal_output = glottal_output + v * 1.0e-20; // tract に 0.0 を渡すと何故か遅くなるので僅かにノイズを混ぜる
+                .run_step(current_time, 1.0 / sample_rate as f64, lambda, v);
+        let glottal_output = glottal_output + v * 1.0e-16; // avoid subnormal
         let mut vocal_out = 0.0;
         for i in 0..self.proc_num {
-            let time = current_time + (i as f64 / self.proc_num as f64) / sample_rate as f64;
-            vocal_out += self.tract.run_step(
+            let time = current_time + i as f64 / self.proc_num as f64 / sample_rate as f64;
+            let (mouth, nose) = self.tract.run_step(
                 time,
                 glottal_output,
                 turbulence_noise,
                 (time - self.block_updated_time) / self.block_time,
-                sample_rate as usize * self.proc_num,
+                1.0 / (sample_rate as usize * self.proc_num) as f64,
             );
+            vocal_out += mouth + nose;
         }
         (vocal_out / self.proc_num as f64).into()
     }

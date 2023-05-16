@@ -60,7 +60,7 @@ impl Node for Benihora {
 
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
-        let v = self.node.as_mut().proc(ctx);
+        let v = self.node.proc(ctx);
         self.benihora.process(ctx.current_time, ctx.sample_rate, v)
     }
 
@@ -76,9 +76,10 @@ impl Node for Benihora {
 pub enum BenihoraEvent {
     MoveTangue(F, F),
     SetOtherConstrictions(Vec<(F, F)>),
+    SetVelum(F),
     SetFrequency(F),
     SetTenseness(F),
-    SetStatus(bool, bool),
+    SetStatus(bool),
     SetVibrato(F, F),
 }
 
@@ -94,10 +95,9 @@ impl crate::EventListener<BenihoraEvent> for Benihora {
             BenihoraEvent::SetOtherConstrictions(new_ocs) => {
                 let ocs = &mut self.benihora.tract.mouth.other_constrictions;
                 for c in new_ocs.iter() {
-                    if ocs
+                    if !ocs
                         .iter()
-                        .find(|x| x.index == c.0 && x.diameter == c.1 && x.end_time.is_none())
-                        .is_none()
+                        .any(|x| x.index == c.0 && x.diameter == c.1 && x.end_time.is_none())
                     {
                         ocs.push(Constriction {
                             index: c.0,
@@ -119,15 +119,17 @@ impl crate::EventListener<BenihoraEvent> for Benihora {
                 }
                 self.benihora.tract.calculate_diameter();
             }
+            BenihoraEvent::SetVelum(velum) => {
+                self.benihora.tract.nose.velum_target = *velum;
+            }
             BenihoraEvent::SetFrequency(frequency) => {
                 self.benihora.glottis.frequency.set(*frequency);
             }
             BenihoraEvent::SetTenseness(tenseness) => {
                 self.benihora.glottis.set_tenseness(*tenseness);
             }
-            BenihoraEvent::SetStatus(breath, close) => {
-                self.benihora.glottis.breath = *breath;
-                self.benihora.glottis.glottis_close = *close;
+            BenihoraEvent::SetStatus(sound) => {
+                self.benihora.glottis.sound = *sound;
             }
             BenihoraEvent::SetVibrato(amount, frequency) => {
                 self.benihora.glottis.frequency.vibrato_amount = *amount;
@@ -135,4 +137,9 @@ impl crate::EventListener<BenihoraEvent> for Benihora {
             }
         }
     }
+}
+
+#[inline]
+fn lerp(a: F, b: F, t: F) -> F {
+    a + (b - a) * t
 }

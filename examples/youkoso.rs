@@ -113,8 +113,8 @@ fn main() {
         SAMPLE_RATE,
         time,
         node,
-        Some(0x66927d1309bf9ecc),
-        Some(0x6c6ecb9aa4f5d12e),
+        Some(0x542be1ea38577947),
+        Some(0x9d2f7b4678170344),
     );
     println!("saved {:?}", &file);
 }
@@ -276,7 +276,7 @@ fn benihora_builder() -> MyVoice {
     let mut ctrl2 = benihora.controller();
     ctrl2
         .lock()
-        .push_event(0.0, BenihoraEvent::SetStatus(false, false));
+        .push_event(0.0, BenihoraEvent::SetStatus(false));
     let benihora = corus::contrib::simple_comp::SimpleComp::new(
         benihora,
         Var::from(0.2),
@@ -289,7 +289,7 @@ fn benihora_builder() -> MyVoice {
             let time = time - 0.05;
             ctrl1
                 .lock()
-                .push_event(time, BenihoraEvent::SetStatus(true, false));
+                .push_event(time, BenihoraEvent::SetStatus(true));
             ctrl1.lock().push_event(
                 time,
                 BenihoraEvent::SetTenseness(db_to_amp((velocity - 1.0) * DB_MIN)),
@@ -310,7 +310,7 @@ fn benihora_builder() -> MyVoice {
             let time = time - 0.05;
             ctrl2
                 .lock()
-                .push_event(time, BenihoraEvent::SetStatus(false, false));
+                .push_event(time, BenihoraEvent::SetStatus(false));
         }),
     )
 }

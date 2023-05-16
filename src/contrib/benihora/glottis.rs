@@ -1,13 +1,12 @@
 use std::f64::consts::PI;
 
-use super::{simplex1, F};
+use super::{lerp, simplex1, F};
 
 pub struct Glottis {
     pub frequency: FrequencyCtrl,
     tenseness: TensenessCtrl,
 
-    pub breath: bool,
-    pub glottis_close: bool,
+    pub sound: bool,
 
     waveform_length: F,
     time_in_waveform: F,
@@ -26,8 +25,7 @@ impl Glottis {
 
             intensity: 0.0,
             loudness: 1.0,
-            breath: true,
-            glottis_close: false,
+            sound: true,
 
             waveform_length: 1.0 / 140.0,
             time_in_waveform: 0.0,
@@ -40,13 +38,13 @@ impl Glottis {
     pub fn set_tenseness(&mut self, tenseness: F) {
         let tenseness = tenseness.clamp(0.0, 1.0);
         self.tenseness.ui_tenseness = tenseness;
-        self.loudness = self.tenseness.ui_tenseness.powf(0.25);
+        self.loudness = tenseness.powf(0.25);
     }
 
-    pub fn run_step(&mut self, time: f64, sample_rate: usize, lambda: F, input: F) -> (F, F) {
+    pub fn run_step(&mut self, time: f64, dtime: f64, lambda: F, input: F) -> (F, F) {
         let tenseness = self.tenseness.get(lambda);
 
-        self.time_in_waveform += 1.0 / sample_rate as F;
+        self.time_in_waveform += dtime;
         if self.waveform_length < self.time_in_waveform {
             self.time_in_waveform -= self.waveform_length;
             self.waveform_length = 1.0 / self.frequency.get(lambda);
@@ -57,7 +55,7 @@ impl Glottis {
             * self
                 .waveform
                 .normalized_lf_waveform(self.time_in_waveform / self.waveform_length);
-        let noise = self.get_noise_modulator(lambda) * input;
+        let noise = self.get_noise_modulator(tenseness) * input;
         let aspiration = self.intensity
             * (1.0 - tenseness.sqrt())
             * noise
@@ -65,8 +63,7 @@ impl Glottis {
         (out + aspiration, noise)
     }
 
-    fn get_noise_modulator(&mut self, lambda: F) -> F {
-        let tenseness = self.tenseness.get(lambda); // ?
+    fn get_noise_modulator(&mut self, tenseness: F) -> F {
         let voiced =
             0.1 + 0.2 * 0.0f64.max((PI * 2.0 * self.time_in_waveform / self.waveform_length).sin());
         tenseness * self.intensity * voiced + (1.0 - tenseness * self.intensity) * 0.3
@@ -74,13 +71,12 @@ impl Glottis {
 
     pub fn update_block(&mut self, time: f64, block_time: F) {
         self.frequency.update(time);
-        self.tenseness
-            .update(time, self.glottis_close, self.intensity);
+        self.tenseness.update(time);
 
-        if self.breath {
-            self.intensity += 0.13
+        if self.sound {
+            self.intensity += block_time * 3.25;
         } else {
-            self.intensity -= block_time * 5.0
+            self.intensity -= block_time * 5.0;
         }
         self.intensity = self.intensity.clamp(0.0, 1.0);
     }
@@ -124,7 +120,7 @@ impl FrequencyCtrl {
     }
 
     fn get(&self, lambda: F) -> F {
-        self.old_frequency * (1.0 - lambda) + self.new_frequency * lambda
+        lerp(self.old_frequency, self.new_frequency, lambda)
     }
 }
 pub struct TensenessCtrl {
@@ -142,19 +138,14 @@ impl TensenessCtrl {
         }
     }
 
-    fn update(&mut self, time: F, glottis_close: bool, intensity: F) {
+    fn update(&mut self, time: F) {
         self.old_tenseness = self.new_tenseness;
         self.new_tenseness =
             self.ui_tenseness + 0.1 * simplex1(time * 0.46) + 0.05 * simplex1(time * 0.36);
-
-        if glottis_close {
-            // なにこれ？
-            self.new_tenseness += (3.0 - self.ui_tenseness) * (1.0 - intensity);
-        }
     }
 
     fn get(&self, lambda: F) -> F {
-        self.old_tenseness * (1.0 - lambda) + self.new_tenseness * lambda
+        lerp(self.old_tenseness, self.new_tenseness, lambda)
     }
 }
 
