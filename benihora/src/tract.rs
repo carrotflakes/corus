@@ -9,21 +9,13 @@ pub struct Tract {
     pub movement_speed: F, // CM per second
 }
 
-struct Transient {
-    position: usize,
-    time_alive: F,
-    life_time: F,
-    strength: F,
-    exponent: F,
-}
-
 impl Tract {
     pub fn new() -> Self {
         let mouth_length = 44;
         let nose_length = 28;
         let mut tract = Tract {
-            mouth: Mouth::new(mouth_length),
-            nose: Nose::new(nose_length, mouth_length),
+            mouth: Mouth::new(mouth_length, nose_length),
+            nose: Nose::new(nose_length),
             movement_speed: 15.0,
         };
 
@@ -67,7 +59,7 @@ impl Tract {
         self.mouth.calculate_diameter();
 
         // let velum_open = self.mouth.other_constrictions.iter().any(|constriction| {
-        //     constriction.index > self.nose.start as F
+        //     constriction.index > self.self.nose_start as F
         //         && constriction.diameter < -NOSE_OFFSET
         //         && constriction.end_time.is_none()
         // });
@@ -80,6 +72,7 @@ pub struct Mouth {
     blade_start: usize,
     tip_start: usize,
     lip_start: usize,
+    nose_start: usize,
 
     original_diameter: Vec<F>,
     diameter: Vec<F>,
@@ -114,7 +107,7 @@ pub struct Mouth {
 }
 
 impl Mouth {
-    fn new(length: usize) -> Self {
+    fn new(length: usize, nose_length: usize) -> Self {
         let diameter: Vec<_> = (0..length)
             .map(|i| {
                 if (i as f64) < (7.0 / 44.0 * length as F - 0.5) {
@@ -131,6 +124,7 @@ impl Mouth {
             blade_start: (10.0 / 44.0 * length as f32).floor() as usize,
             tip_start: (32.0 / 44.0 * length as f32).floor() as usize,
             lip_start: (39.0 / 44.0 * length as f32).floor() as usize,
+            nose_start: length - nose_length + 1,
             r: vec![0.0; length],
             l: vec![0.0; length],
             reflection: vec![0.0; length + 1],
@@ -182,7 +176,7 @@ impl Mouth {
         }
 
         //now at junction with nose
-        let i = nose.start;
+        let i = self.nose_start;
         let r = lerp(self.reflection_left, self.new_reflection_left, lambda);
         self.junction_output_l[i] = r * self.r[i - 1] + (1.0 + r) * (nose.l[0] + self.l[i]);
         let r = lerp(self.reflection_right, self.new_reflection_right, lambda);
@@ -204,12 +198,13 @@ impl Mouth {
             if self.diameter[i] <= 0.0 {
                 new_last_obstruction = i;
             }
-            let slow_return = if i < nose.start {
+            let slow_return = if i < self.nose_start {
                 0.6
             } else if i >= self.tip_start {
                 1.0
             } else {
-                0.6 + 0.4 * (i as F - nose.start as F) / (self.tip_start as F - nose.start as F)
+                0.6 + 0.4 * (i as F - self.nose_start as F)
+                    / (self.tip_start as F - self.nose_start as F)
             };
             self.diameter[i] = move_towards(
                 self.diameter[i],
@@ -244,9 +239,9 @@ impl Mouth {
         self.reflection_left = self.new_reflection_left;
         self.reflection_right = self.new_reflection_right;
         self.reflection_nose = self.new_reflection_nose;
-        let sum = self.area[nose.start] + self.area[nose.start + 1] + nose.area[0];
-        self.new_reflection_left = 2.0 * self.area[nose.start] / sum - 1.0;
-        self.new_reflection_right = 2.0 * self.area[nose.start + 1] / sum - 1.0;
+        let sum = self.area[self.nose_start] + self.area[self.nose_start + 1] + nose.area[0];
+        self.new_reflection_left = 2.0 * self.area[self.nose_start] / sum - 1.0;
+        self.new_reflection_right = 2.0 * self.area[self.nose_start + 1] / sum - 1.0;
         self.new_reflection_nose = 2.0 * nose.area[0] / sum - 1.0;
     }
 
@@ -404,7 +399,6 @@ fn add_turbulence_noise_at_index(
 
 pub struct Nose {
     length: usize,
-    start: usize,
     diameter: Vec<F>,
     area: Vec<F>,
     r: Vec<F>,
@@ -420,10 +414,9 @@ pub struct Nose {
 }
 
 impl Nose {
-    fn new(length: usize, mouth_length: usize) -> Self {
+    fn new(length: usize) -> Self {
         Nose {
             length,
-            start: mouth_length - length + 1,
             r: vec![0.0; length],
             l: vec![0.0; length],
             junction_output_r: vec![0.0; length + 1],
@@ -490,6 +483,14 @@ fn move_towards(current: F, target: F, up: F, down: F) -> F {
     } else {
         target.max(current - down)
     }
+}
+
+struct Transient {
+    position: usize,
+    time_alive: F,
+    life_time: F,
+    strength: F,
+    exponent: F,
 }
 
 #[derive(Clone)]

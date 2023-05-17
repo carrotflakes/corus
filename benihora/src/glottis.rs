@@ -213,6 +213,5 @@ impl Waveform {
         } else {
             self.e0 * (self.alpha * t).exp() * (self.omega * t).sin()
         }
-        // - (PI * 2.0 * t).sin() * 0.5 // Fundamental tone canceling
     }
 }
