@@ -1,4 +1,5 @@
 pub mod bend;
+pub mod contrib;
 pub mod functions;
 pub mod primitives;
 pub mod tree;

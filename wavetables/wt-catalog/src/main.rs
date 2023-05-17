@@ -120,6 +120,7 @@ impl Application for App {
                         Box::new(wavetables::primitives::square),
                         Box::new(wavetables::primitives::quadratic),
                         Box::new(|t|wavetables::primitives::steps(3.0, t)),
+                        Box::new(|t| wavetables::contrib::unipolar_sin_pulse(0.25, t)),
                     ] {
                         row = row.push(make_canvas(f));
                     }
