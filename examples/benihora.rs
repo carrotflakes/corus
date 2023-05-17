@@ -22,7 +22,9 @@ fn main() {
     benihora_ctl.push_event(3.0, BenihoraEvent::MoveTangue(27.2, 2.2));
     benihora_ctl.push_event(4.0, BenihoraEvent::MoveTangue(12.9, 2.43));
     // benihora_ctl.push_event(5.0, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.6)]));
-    benihora_ctl.push_event(5.0, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.3)]));
+    benihora_ctl.push_event(4.5, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.3)]));
+    benihora_ctl.push_event(4.5, BenihoraEvent::SetVelum(0.4));
+    benihora_ctl.push_event(5.0, BenihoraEvent::SetVelum(0.01));
     benihora_ctl.push_event(5.1, BenihoraEvent::SetOtherConstrictions(vec![]));
     benihora_ctl.push_event(5.2, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.3)]));
     benihora_ctl.push_event(5.3, BenihoraEvent::SetOtherConstrictions(vec![]));
@@ -82,7 +84,7 @@ fn main() {
     benihora_ctl.push_event(7.5, BenihoraEvent::MoveTangue(19.4, 3.43));
     benihora_ctl.push_event(8.0, BenihoraEvent::MoveTangue(22.8, 2.05));
     benihora_ctl.push_event(8.5, BenihoraEvent::MoveTangue(27.2, 2.2));
-    benihora_ctl.push_event(9.0, BenihoraEvent::MoveTangue(12.9, 2.43));
+    benihora_ctl.push_event(9.0, BenihoraEvent::MoveTangue(14.0, 2.09));
 
     benihora_ctl.push_event(10.0, BenihoraEvent::SetTenseness(0.0));
     benihora_ctl.push_event(10.5, BenihoraEvent::SetTenseness(0.25));

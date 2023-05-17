@@ -1,7 +1,3 @@
-mod benihora;
-mod glottis;
-mod tract;
-
 use crate::{
     core::{
         add::Add,
@@ -13,15 +9,11 @@ use crate::{
     ProcContext,
 };
 
-use self::tract::Constriction;
+use benihora::Constriction;
 
-use super::{fn_processor::FnProcessor, perlin_noise, rand::Rand};
+use super::{fn_processor::FnProcessor, rand::Rand};
 
 type F = f64;
-
-fn simplex1(x: F) -> F {
-    perlin_noise(x * 1.2, -x * 0.7, 0.0) as F
-}
 
 pub fn make_noise_node() -> Box<dyn Node<Output = f64> + Send + Sync> {
     let node1 = BiquadFilter::new(
@@ -137,9 +129,4 @@ impl crate::EventListener<BenihoraEvent> for Benihora {
             }
         }
     }
-}
-
-#[inline]
-fn lerp(a: F, b: F, t: F) -> F {
-    a + (b - a) * t
 }

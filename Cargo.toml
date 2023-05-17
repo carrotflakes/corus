@@ -8,6 +8,7 @@ edition = "2021"
 
 [dependencies]
 biquad-filter = { path = "./biquad-filter" }
+benihora = { path = "./benihora" }
 
 [dev-dependencies]
 hound = "3.4"
