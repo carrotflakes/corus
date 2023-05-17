@@ -44,6 +44,7 @@ impl ProcessContext {
 
 pub type PackedEvent = Box<dyn FnOnce(f64) + Send + Sync>;
 
+#[deprecated]
 pub struct EventQueue {
     queue: VecDeque<(f64, PackedEvent)>,
 }

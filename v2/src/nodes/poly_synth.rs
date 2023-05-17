@@ -4,6 +4,7 @@ use crate::{
     signal::Signal, unsafe_wrapper::UnsafeWrapper, PackedEvent, ProcessContext, Producer,
 };
 
+#[deprecated]
 pub struct PolySynth<P1, P2, A: Producer + NoteHandler<P1, P2>, ID: PartialEq + Default> {
     voices: Vec<VoiceContainer<P1, P2, A, ID>>,
 }
