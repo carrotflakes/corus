@@ -3,7 +3,7 @@ mod write_to_file;
 use corus::{
     contrib::{
         amp_pan,
-        benihora::{make_noise_node, Benihora, BenihoraEvent},
+        benihora::{Benihora, BenihoraEvent},
     },
     core::var::Var,
     notenum_to_frequency, EventControllable, EventPusher, EventScheduleNode,
@@ -12,7 +12,7 @@ use corus::{
 const SAMPLE_RATE: usize = 44100;
 
 fn main() {
-    let benihora = Benihora::new(make_noise_node(), 2);
+    let benihora = Benihora::new(2);
     let benihora = EventScheduleNode::new(EventControllable::new(benihora));
     let mut benihora_ctl = benihora.get_scheduler();
 

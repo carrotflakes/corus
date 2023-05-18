@@ -1,6 +1,5 @@
 use crate::{
     core::{
-        add::Add,
         biquad_filter::{types::BandPass, BiquadFilter, BiquadFilterParams},
         var::Var,
         Node,
@@ -15,34 +14,34 @@ use super::{fn_processor::FnProcessor, rand::Rand};
 
 type F = f64;
 
-pub fn make_noise_node() -> Box<dyn Node<Output = f64> + Send + Sync> {
-    let node1 = BiquadFilter::new(
+pub fn make_noise_node(seed: u32, frequency: f64) -> Box<dyn Node<Output = f64> + Send + Sync> {
+    let node = BiquadFilter::new(
         {
-            let mut rand = Rand::new(1);
+            let mut rand = Rand::new(seed);
             FnProcessor::new(move || C1f64::from_m(rand.next_f64() * 2.0 - 1.0))
         },
-        BiquadFilterParams::new(BandPass, Var::from(500.0), Var::from(0.0), Var::from(2.5)),
-    ); // q 0.5
-    let node2 = BiquadFilter::new(
-        {
-            let mut rand = Rand::new(1);
-            FnProcessor::new(move || C1f64::from_m(rand.next_f64() * 2.0 - 1.0))
-        },
-        BiquadFilterParams::new(BandPass, Var::from(1000.0), Var::from(0.0), Var::from(2.5)),
-    ); // q 0.5
-    Box::new(Add::new(node1, node2))
+        BiquadFilterParams::new(
+            BandPass,
+            Var::from(frequency),
+            Var::from(0.0),
+            Var::from(0.5),
+        ),
+    );
+    Box::new(node)
 }
 
 pub struct Benihora {
     benihora: benihora::Benihora,
-    node: Box<dyn Node<Output = f64> + Send + Sync>,
+    aspiration_noise: Box<dyn Node<Output = f64> + Send + Sync>,
+    fricative_noise: Box<dyn Node<Output = f64> + Send + Sync>,
 }
 
 impl Benihora {
-    pub fn new(node: Box<dyn Node<Output = f64> + Send + Sync>, proc_num: usize) -> Self {
+    pub fn new(proc_num: usize) -> Self {
         Self {
             benihora: benihora::Benihora::new(proc_num),
-            node,
+            aspiration_noise: make_noise_node(1, 500.0),
+            fricative_noise: make_noise_node(2, 1000.0),
         }
     }
 }
@@ -52,16 +51,25 @@ impl Node for Benihora {
 
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
-        let v = self.node.proc(ctx);
-        self.benihora.process(ctx.current_time, ctx.sample_rate, v)
+        let aspiration_noise = self.aspiration_noise.proc(ctx);
+        let fricative_noise = self.fricative_noise.proc(ctx);
+
+        self.benihora.process(
+            ctx.current_time,
+            ctx.sample_rate,
+            aspiration_noise,
+            fricative_noise,
+        )
     }
 
     fn lock(&mut self, ctx: &ProcContext) {
-        self.node.lock(ctx);
+        self.aspiration_noise.lock(ctx);
+        self.fricative_noise.lock(ctx);
     }
 
     fn unlock(&mut self) {
-        self.node.unlock();
+        self.aspiration_noise.unlock();
+        self.fricative_noise.unlock();
     }
 }
 
@@ -115,17 +123,17 @@ impl crate::EventListener<BenihoraEvent> for Benihora {
                 self.benihora.tract.nose.velum_target = *velum;
             }
             BenihoraEvent::SetFrequency(frequency) => {
-                self.benihora.glottis.frequency.set(*frequency);
+                self.benihora.frequency.set(*frequency);
             }
             BenihoraEvent::SetTenseness(tenseness) => {
-                self.benihora.glottis.set_tenseness(*tenseness);
+                self.benihora.set_tenseness(*tenseness);
             }
             BenihoraEvent::SetStatus(sound) => {
                 self.benihora.glottis.sound = *sound;
             }
             BenihoraEvent::SetVibrato(amount, frequency) => {
-                self.benihora.glottis.frequency.vibrato_amount = *amount;
-                self.benihora.glottis.frequency.vibrato_frequency = *frequency;
+                self.benihora.frequency.vibrato_amount = *amount;
+                self.benihora.frequency.vibrato_frequency = *frequency;
             }
         }
     }

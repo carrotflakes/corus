@@ -1,31 +1,24 @@
 use std::f64::consts::PI;
 
-use super::{lerp, simplex1, F};
+use super::{simplex1, F};
 
 pub struct Glottis {
-    pub frequency: FrequencyCtrl,
-    tenseness: TensenessCtrl,
-
     pub sound: bool,
+    intensity: F,
+    pub(super) loudness: F,
 
     waveform_length: F,
     time_in_waveform: F,
 
     waveform: Waveform,
-
-    intensity: F,
-    loudness: F,
 }
 
 impl Glottis {
     pub fn new() -> Self {
         Self {
-            frequency: FrequencyCtrl::new(140.0, 0.005, 6.0),
-            tenseness: TensenessCtrl::new(0.6),
-
+            sound: true,
             intensity: 0.0,
             loudness: 1.0,
-            sound: true,
 
             waveform_length: 1.0 / 140.0,
             time_in_waveform: 0.0,
@@ -33,21 +26,11 @@ impl Glottis {
         }
     }
 
-    /// let v = v.clamp(0.0, 1.0);
-    /// set_tenseness(1.0 - (v * std::f64::consts::PI * 0.5).cos());
-    pub fn set_tenseness(&mut self, tenseness: F) {
-        let tenseness = tenseness.clamp(0.0, 1.0);
-        self.tenseness.ui_tenseness = tenseness;
-        self.loudness = tenseness.powf(0.25);
-    }
-
-    pub fn run_step(&mut self, time: f64, dtime: f64, lambda: F, input: F) -> (F, F) {
-        let tenseness = self.tenseness.get(lambda);
-
+    pub fn run_step(&mut self, time: f64, dtime: f64, noise: F, frequency: F, tenseness: F) -> F {
         self.time_in_waveform += dtime;
         if self.waveform_length < self.time_in_waveform {
             self.time_in_waveform -= self.waveform_length;
-            self.waveform_length = 1.0 / self.frequency.get(lambda);
+            self.waveform_length = 1.0 / frequency;
             self.waveform = Waveform::new(tenseness)
         }
         let out = self.intensity
@@ -55,12 +38,12 @@ impl Glottis {
             * self
                 .waveform
                 .normalized_lf_waveform(self.time_in_waveform / self.waveform_length);
-        let noise = self.get_noise_modulator(tenseness) * input;
+        let noise = self.get_noise_modulator(tenseness) * noise;
         let aspiration = self.intensity
             * (1.0 - tenseness.sqrt())
             * noise
             * (0.2 + 0.02 * simplex1(time * 1.99));
-        (out + aspiration, noise)
+        out + aspiration
     }
 
     fn get_noise_modulator(&mut self, tenseness: F) -> F {
@@ -69,83 +52,13 @@ impl Glottis {
         tenseness * self.intensity * voiced + (1.0 - tenseness * self.intensity) * 0.3
     }
 
-    pub fn update_block(&mut self, time: f64, block_time: F) {
-        self.frequency.update(time);
-        self.tenseness.update(time);
-
+    pub fn update_block(&mut self, block_time: F) {
         if self.sound {
             self.intensity += block_time * 3.25;
         } else {
             self.intensity -= block_time * 5.0;
         }
         self.intensity = self.intensity.clamp(0.0, 1.0);
-    }
-}
-
-pub struct FrequencyCtrl {
-    old_frequency: F,
-    new_frequency: F,
-    ui_frequency: F,
-    smooth_frequency: F,
-
-    pub vibrato_amount: F,
-    pub vibrato_frequency: F,
-}
-
-impl FrequencyCtrl {
-    fn new(frequency: F, vibrato_amount: F, vibrato_frequency: F) -> Self {
-        Self {
-            old_frequency: frequency,
-            new_frequency: frequency,
-            ui_frequency: frequency,
-            smooth_frequency: frequency,
-            vibrato_amount,
-            vibrato_frequency,
-        }
-    }
-
-    pub fn set(&mut self, frequency: F) {
-        self.ui_frequency = frequency;
-    }
-
-    fn update(&mut self, time: F) {
-        let mut vibrato = self.vibrato_amount * (2.0 * PI * time * self.vibrato_frequency).sin();
-        vibrato += 0.02 * simplex1(time * 4.07);
-        vibrato += 0.04 * simplex1(time * 2.15);
-
-        self.smooth_frequency = self.smooth_frequency * 0.5 + self.ui_frequency * 0.5;
-
-        self.old_frequency = self.new_frequency;
-        self.new_frequency = self.smooth_frequency * (1.0 + vibrato);
-    }
-
-    fn get(&self, lambda: F) -> F {
-        lerp(self.old_frequency, self.new_frequency, lambda)
-    }
-}
-pub struct TensenessCtrl {
-    old_tenseness: F,
-    new_tenseness: F,
-    ui_tenseness: F,
-}
-
-impl TensenessCtrl {
-    fn new(tenseness: F) -> Self {
-        Self {
-            old_tenseness: tenseness,
-            new_tenseness: tenseness,
-            ui_tenseness: tenseness,
-        }
-    }
-
-    fn update(&mut self, time: F) {
-        self.old_tenseness = self.new_tenseness;
-        self.new_tenseness =
-            self.ui_tenseness + 0.1 * simplex1(time * 0.46) + 0.05 * simplex1(time * 0.36);
-    }
-
-    fn get(&self, lambda: F) -> F {
-        lerp(self.old_tenseness, self.new_tenseness, lambda)
     }
 }
 

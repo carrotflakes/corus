@@ -113,8 +113,8 @@ fn main() {
         SAMPLE_RATE,
         time,
         node,
-        Some(0x542be1ea38577947),
-        Some(0x9d2f7b4678170344),
+        Some(0x633e358914660e24),
+        Some(0x26da54a8348390d),
     );
     println!("saved {:?}", &file);
 }
@@ -269,8 +269,8 @@ fn fm_synth_builder(seed: u32) -> MyVoice {
 }
 
 fn benihora_builder() -> MyVoice {
-    use corus::contrib::benihora::{make_noise_node, Benihora, BenihoraEvent};
-    let benihora = Benihora::new(make_noise_node(), 2);
+    use corus::contrib::benihora::{Benihora, BenihoraEvent};
+    let benihora = Benihora::new(2);
     let benihora = Controllable::new(EventControlInplace::new(benihora));
     let mut ctrl1 = benihora.controller();
     let mut ctrl2 = benihora.controller();
