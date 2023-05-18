@@ -40,7 +40,7 @@ impl ParamF64 {
 }
 
 impl Lfo {
-    pub fn compute(&self, elapsed: f64) -> f64 {
-        (elapsed * self.frequency * std::f64::consts::TAU).sin() * self.amp
+    pub fn compute(&self, phase: f64) -> f64 {
+        wavetables::primitives::sin(phase) * self.amp
     }
 }

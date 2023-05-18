@@ -128,19 +128,23 @@ pub fn editor_updator(
         });
 
         ui.collapsing("Envelope", |ui| {
+            let mut envloc = state.envelope_location.lock().unwrap();
             ui.horizontal(|ui| {
-                if ui.button("gain").clicked() {
-                    *state.envelope_location.lock().unwrap() = 0;
-                }
-                if ui.button("filter freq").clicked() {
-                    *state.envelope_location.lock().unwrap() = 1;
+                for i in 0..synth.voice.envs.len() {
+                    if ui
+                        .selectable_label(*envloc == i, format!("{}", i))
+                        .clicked()
+                    {
+                        *envloc = i;
+                    }
                 }
             });
 
-            let i = state.envelope_location.lock().unwrap().clone();
-            ui.label(format!("{:?}", i));
-            envelope(ui, &mut synth.voice.envs[i]);
-            lfo(ui, &mut synth.lfos[0]);
+            envelope(ui, &mut synth.voice.envs[*envloc]);
+
+            for l in synth.lfos.iter_mut() {
+                lfo(ui, l);
+            }
         });
 
         ui.collapsing("Effectors", |ui| {
@@ -285,23 +289,27 @@ fn envelope(ui: &mut egui::Ui, envelope: &mut corus_v2::nodes::envelope::Envelop
     }
 
     ui.horizontal(|ui| {
-        ui.add(crate::widgets::knob::knob(
+        ui.add(crate::widgets::knob::knob_named(
             0.0..1.0,
             &mut envelope.points[0].0,
+            "attack",
         ));
         env_curve_know(ui, &mut envelope.points[0].2);
-        ui.add(crate::widgets::knob::knob(
+        ui.add(crate::widgets::knob::knob_named(
             0.0..8.0,
             &mut envelope.points[1].0,
+            "decay",
         ));
-        ui.add(crate::widgets::knob::knob(
+        ui.add(crate::widgets::knob::knob_named(
             0.0..1.0,
             &mut envelope.points[1].1,
+            "sustain",
         ));
         env_curve_know(ui, &mut envelope.points[1].2);
-        ui.add(crate::widgets::knob::knob(
+        ui.add(crate::widgets::knob::knob_named(
             0.0..1.0,
             &mut envelope.release_length,
+            "release",
         ));
         env_curve_know(ui, &mut envelope.release_curve);
     });
@@ -309,8 +317,16 @@ fn envelope(ui: &mut egui::Ui, envelope: &mut corus_v2::nodes::envelope::Envelop
 
 fn lfo(ui: &mut egui::Ui, lfo: &mut crate::synth::param_f64::Lfo) {
     ui.horizontal(|ui| {
-        ui.add(crate::widgets::knob::knob(0.001..100.0, &mut lfo.frequency));
-        ui.add(crate::widgets::knob::knob(-10.0..10.0, &mut lfo.amp));
+        ui.add(crate::widgets::knob::knob_named(
+            0.001..100.0,
+            &mut lfo.frequency,
+            "freq",
+        ));
+        ui.add(crate::widgets::knob::knob_named(
+            -10.0..10.0,
+            &mut lfo.amp,
+            "amp",
+        ));
     });
 }
 

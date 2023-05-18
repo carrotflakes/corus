@@ -1,6 +1,11 @@
 use nih_plug_egui::egui::{self, CursorIcon, Label};
 
-pub fn knob_ui(ui: &mut egui::Ui, range: std::ops::Range<f64>, value: &mut f64) -> egui::Response {
+pub fn knob_ui(
+    ui: &mut egui::Ui,
+    range: std::ops::Range<f64>,
+    value: &mut f64,
+    name: Option<&str>,
+) -> egui::Response {
     let desired_size = egui::vec2(ui.spacing().interact_size.y, ui.spacing().interact_size.y);
 
     let (rect, mut response) = ui.allocate_exact_size(desired_size, egui::Sense::drag());
@@ -42,7 +47,11 @@ pub fn knob_ui(ui: &mut egui::Ui, range: std::ops::Range<f64>, value: &mut f64) 
                 response.id.with("__tooltip"),
                 &response.rect,
                 |ui| {
-                    ui.add(Label::new(format!("{:?}", *value)));
+                    ui.add(Label::new(if let Some(name) = name {
+                        format!("{} {:?}", name, *value)
+                    } else {
+                        format!("{:?}", *value)
+                    }))
                 },
             );
         }
@@ -52,5 +61,13 @@ pub fn knob_ui(ui: &mut egui::Ui, range: std::ops::Range<f64>, value: &mut f64) 
 }
 
 pub fn knob(range: std::ops::Range<f64>, value: &mut f64) -> impl egui::Widget + '_ {
-    move |ui: &mut egui::Ui| knob_ui(ui, range, value)
+    move |ui: &mut egui::Ui| knob_ui(ui, range, value, None)
+}
+
+pub fn knob_named<'a>(
+    range: std::ops::Range<f64>,
+    value: &'a mut f64,
+    name: &'a str,
+) -> impl egui::Widget + 'a {
+    move |ui: &mut egui::Ui| knob_ui(ui, range, value, Some(name))
 }

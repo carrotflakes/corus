@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use corus_v2::{
     nodes::{
-        envelope::Envelope, first_order_filter::HighPassFilter, unison::Unison,
+        envelope::Envelope, first_order_filter::HighPassFilter, phase::Phase, unison::Unison,
         voice_manager::VoiceManager,
     },
     signal::{IntoStereo, StereoF64},
@@ -42,6 +42,7 @@ pub struct State {
     voices: VoiceManager<u8, VoiceState>,
     effectors: Vec<effectors::State>,
     params: ParamPool,
+    lfos: Vec<Phase<f64>>,
 }
 
 impl State {
@@ -56,6 +57,7 @@ impl State {
             voices: VoiceManager::new(|| VoiceState::new(), 8),
             effectors: vec![],
             params: ParamPool::new(&producers),
+            lfos: synth.lfos.iter().map(|_| Phase::new()).collect(),
         }
     }
 
@@ -166,23 +168,26 @@ impl MySynth {
                     },
                 ),
             ],
-            lfos: vec![Lfo {
-                frequency: 1.0,
-                amp: 1.0,
-            }],
+            lfos: vec![
+                Lfo {
+                    frequency: 1.0,
+                    amp: 1.0,
+                },
+                Lfo {
+                    frequency: 1.0,
+                    amp: 1.0,
+                },
+            ],
         }
     }
 
     pub fn process(&mut self, state: &mut State, ctx: &ProcessContext) -> StereoF64 {
         let pitch = self.pitch;
-        let env_state = EnvelopeState {
-            elapsed: ctx.current_time(),
-            note_off_time: f64::INFINITY,
-        };
         for (i, lfo) in self.lfos.iter().enumerate() {
-            state
-                .params
-                .set(ProducerId::new(i), lfo.compute(env_state.elapsed));
+            state.params.set(ProducerId::new(i), {
+                let phase = state.lfos[i].process(ctx, lfo.frequency);
+                lfo.compute(phase)
+            });
         }
 
         let mut x = StereoF64::default();
