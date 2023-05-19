@@ -1,47 +1,17 @@
-use crate::{
-    core::{
-        biquad_filter::{types::BandPass, BiquadFilter, BiquadFilterParams},
-        var::Var,
-        Node,
-    },
-    signal::{C1f64, Mono},
-    ProcContext,
-};
+use crate::{core::Node, signal::C1f64, ProcContext};
 
 use benihora::Constriction;
 
-use super::{fn_processor::FnProcessor, rand::Rand};
-
 type F = f64;
-
-pub fn make_noise_node(seed: u32, frequency: f64) -> Box<dyn Node<Output = f64> + Send + Sync> {
-    let node = BiquadFilter::new(
-        {
-            let mut rand = Rand::new(seed);
-            FnProcessor::new(move || C1f64::from_m(rand.next_f64() * 2.0 - 1.0))
-        },
-        BiquadFilterParams::new(
-            BandPass,
-            Var::from(frequency),
-            Var::from(0.0),
-            Var::from(0.5),
-        ),
-    );
-    Box::new(node)
-}
 
 pub struct Benihora {
     benihora: benihora::Benihora,
-    aspiration_noise: Box<dyn Node<Output = f64> + Send + Sync>,
-    fricative_noise: Box<dyn Node<Output = f64> + Send + Sync>,
 }
 
 impl Benihora {
     pub fn new(proc_num: usize) -> Self {
         Self {
             benihora: benihora::Benihora::new(proc_num),
-            aspiration_noise: make_noise_node(1, 500.0),
-            fricative_noise: make_noise_node(2, 1000.0),
         }
     }
 }
@@ -51,26 +21,13 @@ impl Node for Benihora {
 
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
-        let aspiration_noise = self.aspiration_noise.proc(ctx);
-        let fricative_noise = self.fricative_noise.proc(ctx);
-
-        self.benihora.process(
-            ctx.current_time,
-            ctx.sample_rate,
-            aspiration_noise,
-            fricative_noise,
-        )
+        self.benihora
+            .process(ctx.current_time, ctx.sample_rate as f64)
     }
 
-    fn lock(&mut self, ctx: &ProcContext) {
-        self.aspiration_noise.lock(ctx);
-        self.fricative_noise.lock(ctx);
-    }
+    fn lock(&mut self, _ctx: &ProcContext) {}
 
-    fn unlock(&mut self) {
-        self.aspiration_noise.unlock();
-        self.fricative_noise.unlock();
-    }
+    fn unlock(&mut self) {}
 }
 
 pub enum BenihoraEvent {

@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-corus-v2 = { path = "../v2" }
+biquad = "0.4"
 perlin-noise = { path = "../perlin-noise" }

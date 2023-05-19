@@ -1,9 +1,13 @@
 mod glottis;
+mod interval_timer;
+mod noise;
 mod tract;
 
 use std::f64::consts::TAU;
 
 pub use glottis::Glottis;
+use interval_timer::IntervalTimer;
+use noise::Noise;
 pub use tract::{Constriction, Mouth, Nose, Tract};
 
 type F = f64;
@@ -15,26 +19,31 @@ pub struct Benihora {
     intensity: F,
     loudness: F,
 
+    aspiration_noise: Noise,
+    fricative_noise: Noise,
+    sample_rate: F,
     pub glottis: Glottis,
     pub tract: Tract,
-    block_time: f64,         // sec
-    block_updated_time: f64, // sec
+    update_timer: IntervalTimer,
     sound_speed: usize,
 }
 
 impl Benihora {
-    pub fn new(proc_num: usize) -> Self {
+    pub fn new(sound_speed: usize) -> Self {
+        let sample_rate = 48000.0;
         Self {
             sound: true,
             frequency: Frequency::new(140.0, 0.005, 6.0),
             tenseness: Tenseness::new(0.6),
             intensity: 0.0,
             loudness: 1.0,
+            aspiration_noise: Noise::new(1, sample_rate, 500.0),
+            fricative_noise: Noise::new(2, sample_rate, 1000.0),
+            sample_rate,
             glottis: Glottis::new(),
             tract: Tract::new(),
-            block_time: 0.04,
-            block_updated_time: 0.0,
-            sound_speed: proc_num,
+            update_timer: IntervalTimer::new_overflowed(0.04),
+            sound_speed,
         }
     }
 
@@ -46,32 +55,37 @@ impl Benihora {
         self.loudness = tenseness.powf(0.25);
     }
 
-    pub fn process(
-        &mut self,
-        current_time: F,
-        sample_rate: u64,
-        aspiration_noise: F,
-        fricative_noise: F,
-    ) -> F {
-        if self.block_updated_time + self.block_time <= current_time {
-            self.block_updated_time += self.block_time;
+    fn set_sample_rate(&mut self, sample_rate: F) {
+        if sample_rate != self.sample_rate {
+            self.sample_rate = sample_rate;
+            self.aspiration_noise = Noise::new(1, sample_rate, 500.0);
+            self.fricative_noise = Noise::new(2, sample_rate, 1000.0);
+        }
+    }
 
+    pub fn process(&mut self, current_time: F, sample_rate: F) -> F {
+        self.set_sample_rate(sample_rate);
+        let aspiration_noise = self.aspiration_noise.process();
+        let fricative_noise = self.fricative_noise.process();
+
+        if self.update_timer.overflowed() {
             if self.sound {
-                self.intensity += self.block_time * 3.25;
+                self.intensity += self.update_timer.interval * 3.25;
             } else {
-                self.intensity -= self.block_time * 5.0;
+                self.intensity -= self.update_timer.interval * 5.0;
             }
             self.intensity = self.intensity.clamp(0.0, 1.0);
 
             self.frequency.update(current_time);
             self.tenseness.update(current_time);
-            self.tract.update_block(self.block_time);
+            self.tract.update_block(self.update_timer.interval);
         }
+        self.update_timer.update(1.0 / sample_rate as f64);
 
-        let lambda = (current_time - self.block_updated_time) / self.block_time; // TODO: wanna remove this
+        let lambda = self.update_timer.progress();
         let frequency = self.frequency.get(lambda);
         let tenseness = self.tenseness.get(lambda);
-        let glottal_output = self.glottis.run_step(
+        let glottal_output = self.glottis.compute(
             current_time,
             1.0 / sample_rate as f64,
             aspiration_noise,
@@ -88,7 +102,7 @@ impl Benihora {
                 time,
                 glottal_output,
                 fricative_noise,
-                (time - self.block_updated_time) / self.block_time,
+                lambda,
                 1.0 / (sample_rate as usize * self.sound_speed) as f64,
             );
             vocal_out += mouth + nose;
@@ -137,7 +151,7 @@ impl Frequency {
         vibrato += 0.02 * simplex1(time * 4.07);
         vibrato += 0.04 * simplex1(time * 2.15);
 
-        self.smooth_frequency = self.smooth_frequency * 0.5 + self.target_frequency * 0.5;
+        self.smooth_frequency = (self.smooth_frequency + self.target_frequency) * 0.5;
 
         self.old_frequency = self.new_frequency;
         self.new_frequency = self.smooth_frequency * (1.0 + vibrato);
