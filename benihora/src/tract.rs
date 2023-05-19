@@ -91,8 +91,8 @@ pub struct Mouth {
 
     r: Vec<F>,
     l: Vec<F>,
-    junction_output_r: Vec<F>,
-    junction_output_l: Vec<F>,
+    r_: Vec<F>,
+    l_: Vec<F>,
 
     glottal_reflection: F,
     lip_reflection: F,
@@ -127,10 +127,10 @@ impl Mouth {
             nose_start: length - nose_length + 1,
             r: vec![0.0; length],
             l: vec![0.0; length],
+            r_: vec![0.0; length],
+            l_: vec![0.0; length],
             reflection: vec![0.0; length + 1],
             new_reflection: vec![0.0; length + 1],
-            junction_output_r: vec![0.0; length + 1],
-            junction_output_l: vec![0.0; length + 1],
             diameter: diameter.clone(),
             original_diameter: diameter.clone(),
             target_diameter: diameter.clone(),
@@ -165,28 +165,28 @@ impl Mouth {
         self.add_turbulence_noise(time, turbulence_noise);
 
         //self.glottalReflection = -0.8 + 1.6 * Glottis.newTenseness;
-        self.junction_output_r[0] = self.l[0] * self.glottal_reflection + glottal_output;
-        self.junction_output_l[self.length] = self.r[self.length - 1] * self.lip_reflection;
+        self.r_[0] = self.l[0] * self.glottal_reflection + glottal_output;
+        self.l_[self.length - 1] = self.r[self.length - 1] * self.lip_reflection;
 
         for i in 1..self.length {
             let r = lerp(self.reflection[i], self.new_reflection[i], lambda);
             let w = r * (self.r[i - 1] + self.l[i]);
-            self.junction_output_r[i] = self.r[i - 1] - w;
-            self.junction_output_l[i] = self.l[i] + w;
+            self.r_[i] = self.r[i - 1] - w;
+            self.l_[i - 1] = self.l[i] + w;
         }
 
         //now at junction with nose
         let i = self.nose_start;
         let r = lerp(self.reflection_left, self.new_reflection_left, lambda);
-        self.junction_output_l[i] = r * self.r[i - 1] + (1.0 + r) * (nose.l[0] + self.l[i]);
+        self.l_[i - 1] = r * self.r[i - 1] + (1.0 + r) * (nose.l[0] + self.l[i]);
         let r = lerp(self.reflection_right, self.new_reflection_right, lambda);
-        self.junction_output_r[i] = r * self.l[i] + (1.0 + r) * (self.r[i - 1] + nose.l[0]);
+        self.r_[i] = r * self.l[i] + (1.0 + r) * (self.r[i - 1] + nose.l[0]);
         let r = lerp(self.reflection_nose, self.new_reflection_nose, lambda);
-        nose.junction_output_r[0] = r * nose.l[0] + (1.0 + r) * (self.l[i] + self.r[i - 1]);
+        nose.r_[0] = r * nose.l[0] + (1.0 + r) * (self.l[i] + self.r[i - 1]);
 
         for i in 0..self.length {
-            self.r[i] = (self.junction_output_r[i] * self.fade).clamp(-1.0, 1.0);
-            self.l[i] = (self.junction_output_l[i + 1] * self.fade).clamp(-1.0, 1.0);
+            self.r[i] = (self.r_[i] * self.fade).clamp(-1.0, 1.0);
+            self.l[i] = (self.l_[i] * self.fade).clamp(-1.0, 1.0);
         }
 
         self.r[self.length - 1]
@@ -403,8 +403,8 @@ pub struct Nose {
     area: Vec<F>,
     r: Vec<F>,
     l: Vec<F>,
-    junction_output_r: Vec<F>,
-    junction_output_l: Vec<F>,
+    r_: Vec<F>,
+    l_: Vec<F>,
     reflection: Vec<F>,
 
     pub fade: F, // 0.9999
@@ -419,8 +419,8 @@ impl Nose {
             length,
             r: vec![0.0; length],
             l: vec![0.0; length],
-            junction_output_r: vec![0.0; length + 1],
-            junction_output_l: vec![0.0; length + 1],
+            r_: vec![0.0; length],
+            l_: vec![0.0; length],
             reflection: vec![0.0; length + 1],
             diameter: (0..length)
                 .map(|i| {
@@ -440,17 +440,17 @@ impl Nose {
     }
 
     fn run_step(&mut self) -> F {
-        self.junction_output_l[self.length] = self.r[self.length - 1] * self.lip_reflection;
+        self.l_[self.length - 1] = self.r[self.length - 1] * self.lip_reflection;
 
         for i in 1..self.length {
             let w = self.reflection[i] * (self.r[i - 1] + self.l[i]);
-            self.junction_output_r[i] = self.r[i - 1] - w;
-            self.junction_output_l[i] = self.l[i] + w;
+            self.r_[i] = self.r[i - 1] - w;
+            self.l_[i - 1] = self.l[i] + w;
         }
 
         for i in 0..self.length {
-            self.r[i] = (self.junction_output_r[i] * self.fade).clamp(-1.0, 1.0);
-            self.l[i] = (self.junction_output_l[i + 1] * self.fade).clamp(-1.0, 1.0);
+            self.r[i] = (self.r_[i] * self.fade).clamp(-1.0, 1.0);
+            self.l[i] = (self.l_[i] * self.fade).clamp(-1.0, 1.0);
         }
 
         self.r[self.length - 1]

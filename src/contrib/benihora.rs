@@ -129,7 +129,7 @@ impl crate::EventListener<BenihoraEvent> for Benihora {
                 self.benihora.set_tenseness(*tenseness);
             }
             BenihoraEvent::SetStatus(sound) => {
-                self.benihora.glottis.sound = *sound;
+                self.benihora.sound = *sound;
             }
             BenihoraEvent::SetVibrato(amount, frequency) => {
                 self.benihora.frequency.vibrato_amount = *amount;

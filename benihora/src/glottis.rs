@@ -1,64 +1,55 @@
 use std::f64::consts::PI;
 
+use crate::lerp;
+
 use super::{simplex1, F};
 
 pub struct Glottis {
-    pub sound: bool,
-    intensity: F,
-    pub(super) loudness: F,
-
     waveform_length: F,
     time_in_waveform: F,
-
     waveform: Waveform,
 }
 
 impl Glottis {
     pub fn new() -> Self {
         Self {
-            sound: true,
-            intensity: 0.0,
-            loudness: 1.0,
-
             waveform_length: 1.0 / 140.0,
             time_in_waveform: 0.0,
             waveform: Waveform::new(0.6),
         }
     }
 
-    pub fn run_step(&mut self, time: f64, dtime: f64, noise: F, frequency: F, tenseness: F) -> F {
+    pub fn run_step(
+        &mut self,
+        time: f64,
+        dtime: f64,
+        noise: F,
+        frequency: F,
+        tenseness: F,
+        intensity: F,
+        loudness: F,
+    ) -> F {
         self.time_in_waveform += dtime;
         if self.waveform_length < self.time_in_waveform {
             self.time_in_waveform -= self.waveform_length;
             self.waveform_length = 1.0 / frequency;
             self.waveform = Waveform::new(tenseness)
         }
-        let out = self.intensity
-            * self.loudness
+        let out = intensity
+            * loudness
             * self
                 .waveform
                 .normalized_lf_waveform(self.time_in_waveform / self.waveform_length);
-        let noise = self.get_noise_modulator(tenseness) * noise;
-        let aspiration = self.intensity
-            * (1.0 - tenseness.sqrt())
-            * noise
-            * (0.2 + 0.02 * simplex1(time * 1.99));
+        let noise = self.get_noise_modulator(tenseness * intensity) * noise;
+        let aspiration =
+            intensity * (1.0 - tenseness.sqrt()) * noise * (0.2 + 0.02 * simplex1(time * 1.99));
         out + aspiration
     }
 
-    fn get_noise_modulator(&mut self, tenseness: F) -> F {
+    fn get_noise_modulator(&mut self, rate: F) -> F {
         let voiced =
             0.1 + 0.2 * 0.0f64.max((PI * 2.0 * self.time_in_waveform / self.waveform_length).sin());
-        tenseness * self.intensity * voiced + (1.0 - tenseness * self.intensity) * 0.3
-    }
-
-    pub fn update_block(&mut self, block_time: F) {
-        if self.sound {
-            self.intensity += block_time * 3.25;
-        } else {
-            self.intensity -= block_time * 5.0;
-        }
-        self.intensity = self.intensity.clamp(0.0, 1.0);
+        lerp(0.3, voiced, rate)
     }
 }
 

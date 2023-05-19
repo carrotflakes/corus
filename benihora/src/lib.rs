@@ -9,25 +9,32 @@ pub use tract::{Constriction, Mouth, Nose, Tract};
 type F = f64;
 
 pub struct Benihora {
+    pub sound: bool,
     pub frequency: Frequency,
     tenseness: Tenseness,
+    intensity: F,
+    loudness: F,
+
     pub glottis: Glottis,
     pub tract: Tract,
     block_time: f64,         // sec
     block_updated_time: f64, // sec
-    proc_num: usize,
+    sound_speed: usize,
 }
 
 impl Benihora {
     pub fn new(proc_num: usize) -> Self {
         Self {
+            sound: true,
             frequency: Frequency::new(140.0, 0.005, 6.0),
             tenseness: Tenseness::new(0.6),
+            intensity: 0.0,
+            loudness: 1.0,
             glottis: Glottis::new(),
             tract: Tract::new(),
             block_time: 0.04,
             block_updated_time: 0.0,
-            proc_num,
+            sound_speed: proc_num,
         }
     }
 
@@ -36,7 +43,7 @@ impl Benihora {
     pub fn set_tenseness(&mut self, tenseness: F) {
         let tenseness = tenseness.clamp(0.0, 1.0);
         self.tenseness.target_tenseness = tenseness;
-        self.glottis.loudness = tenseness.powf(0.25);
+        self.loudness = tenseness.powf(0.25);
     }
 
     pub fn process(
@@ -48,9 +55,16 @@ impl Benihora {
     ) -> F {
         if self.block_updated_time + self.block_time <= current_time {
             self.block_updated_time += self.block_time;
+
+            if self.sound {
+                self.intensity += self.block_time * 3.25;
+            } else {
+                self.intensity -= self.block_time * 5.0;
+            }
+            self.intensity = self.intensity.clamp(0.0, 1.0);
+
             self.frequency.update(current_time);
             self.tenseness.update(current_time);
-            self.glottis.update_block(self.block_time);
             self.tract.update_block(self.block_time);
         }
 
@@ -63,21 +77,23 @@ impl Benihora {
             aspiration_noise,
             frequency,
             tenseness,
+            self.intensity,
+            self.loudness,
         );
         let glottal_output = glottal_output + aspiration_noise * 1.0e-16; // avoid subnormal
         let mut vocal_out = 0.0;
-        for i in 0..self.proc_num {
-            let time = current_time + i as f64 / self.proc_num as f64 / sample_rate as f64;
+        for i in 0..self.sound_speed {
+            let time = current_time + i as f64 / self.sound_speed as f64 / sample_rate as f64;
             let (mouth, nose) = self.tract.run_step(
                 time,
                 glottal_output,
                 fricative_noise,
                 (time - self.block_updated_time) / self.block_time,
-                1.0 / (sample_rate as usize * self.proc_num) as f64,
+                1.0 / (sample_rate as usize * self.sound_speed) as f64,
             );
             vocal_out += mouth + nose;
         }
-        (vocal_out / self.proc_num as f64).into()
+        (vocal_out / self.sound_speed as f64).into()
     }
 }
 
