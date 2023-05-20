@@ -5,13 +5,13 @@ use benihora::Constriction;
 type F = f64;
 
 pub struct Benihora {
-    benihora: benihora::Benihora,
+    benihora: benihora::BenihoraManaged,
 }
 
 impl Benihora {
     pub fn new(proc_num: usize, sample_rate: f64) -> Self {
         Self {
-            benihora: benihora::Benihora::new(proc_num, sample_rate),
+            benihora: benihora::BenihoraManaged::new(proc_num, sample_rate),
         }
     }
 }
@@ -44,12 +44,16 @@ impl crate::EventListener<BenihoraEvent> for Benihora {
     fn apply_event(&mut self, time: f64, event: &BenihoraEvent) {
         match event {
             BenihoraEvent::MoveTangue(index, diameter) => {
-                self.benihora.tract.mouth.tongue =
-                    self.benihora.tract.mouth.tangue_clamp(*index, *diameter);
-                self.benihora.tract.calculate_diameter();
+                self.benihora.benihora.tract.mouth.tongue = self
+                    .benihora
+                    .benihora
+                    .tract
+                    .mouth
+                    .tangue_clamp(*index, *diameter);
+                self.benihora.benihora.tract.calculate_diameter();
             }
             BenihoraEvent::SetOtherConstrictions(new_ocs) => {
-                let ocs = &mut self.benihora.tract.mouth.other_constrictions;
+                let ocs = &mut self.benihora.benihora.tract.mouth.other_constrictions;
                 for c in new_ocs.iter() {
                     if !ocs
                         .iter()
@@ -73,10 +77,10 @@ impl crate::EventListener<BenihoraEvent> for Benihora {
                         c.end_time = Some(time);
                     }
                 }
-                self.benihora.tract.calculate_diameter();
+                self.benihora.benihora.tract.calculate_diameter();
             }
             BenihoraEvent::SetVelum(velum) => {
-                self.benihora.tract.nose.velum_target = *velum;
+                self.benihora.benihora.tract.nose.velum_target = *velum;
             }
             BenihoraEvent::SetFrequency(frequency) => {
                 self.benihora.frequency.set(*frequency);

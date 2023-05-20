@@ -100,7 +100,7 @@ pub struct Mouth {
     last_obstruction: usize,
 
     transients: Vec<Transient>,
-    pub tongue: (F, F), // (index, diameter) // TODO index -> rate
+    pub tongue: (F, F), // (index, diameter) // TODO index -> rate, should this be here?
     pub other_constrictions: Vec<Constriction>,
 
     pub fade: F,
