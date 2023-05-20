@@ -358,7 +358,7 @@ impl Mouth {
         }
     }
 
-    pub fn tangue_clamp(&self, index: F, diameter: F) -> (F, F) {
+    pub fn tongue_clamp(&self, index: F, diameter: F) -> (F, F) {
         const INNER_RADIUS: F = 2.05;
         const OUTER_RADIUS: F = 3.5;
         let lower_index_bound = self.blade_start as F + 2.0;

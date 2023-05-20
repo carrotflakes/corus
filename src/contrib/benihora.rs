@@ -30,7 +30,7 @@ impl Node for Benihora {
 }
 
 pub enum BenihoraEvent {
-    MoveTangue(F, F),
+    MoveTongue(F, F),
     SetOtherConstrictions(Vec<(F, F)>),
     SetVelum(F),
     SetFrequency(F),
@@ -43,13 +43,13 @@ impl crate::EventListener<BenihoraEvent> for Benihora {
     #[inline]
     fn apply_event(&mut self, time: f64, event: &BenihoraEvent) {
         match event {
-            BenihoraEvent::MoveTangue(index, diameter) => {
+            BenihoraEvent::MoveTongue(index, diameter) => {
                 self.benihora.benihora.tract.mouth.tongue = self
                     .benihora
                     .benihora
                     .tract
                     .mouth
-                    .tangue_clamp(*index, *diameter);
+                    .tongue_clamp(*index, *diameter);
                 self.benihora.benihora.tract.calculate_diameter();
             }
             BenihoraEvent::SetOtherConstrictions(new_ocs) => {

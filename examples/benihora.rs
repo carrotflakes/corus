@@ -16,11 +16,11 @@ fn main() {
     let benihora = EventScheduleNode::new(EventControllable::new(benihora));
     let mut benihora_ctl = benihora.get_scheduler();
 
-    benihora_ctl.push_event(0.0, BenihoraEvent::MoveTangue(12.9, 2.43));
-    benihora_ctl.push_event(1.0, BenihoraEvent::MoveTangue(19.4, 3.43));
-    benihora_ctl.push_event(2.0, BenihoraEvent::MoveTangue(22.8, 2.05));
-    benihora_ctl.push_event(3.0, BenihoraEvent::MoveTangue(27.2, 2.2));
-    benihora_ctl.push_event(4.0, BenihoraEvent::MoveTangue(12.9, 2.43));
+    benihora_ctl.push_event(0.0, BenihoraEvent::MoveTongue(12.9, 2.43));
+    benihora_ctl.push_event(1.0, BenihoraEvent::MoveTongue(19.4, 3.43));
+    benihora_ctl.push_event(2.0, BenihoraEvent::MoveTongue(22.8, 2.05));
+    benihora_ctl.push_event(3.0, BenihoraEvent::MoveTongue(27.2, 2.2));
+    benihora_ctl.push_event(4.0, BenihoraEvent::MoveTongue(12.9, 2.43));
     // benihora_ctl.push_event(5.0, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.6)]));
     benihora_ctl.push_event(4.5, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.3)]));
     benihora_ctl.push_event(4.5, BenihoraEvent::SetVelum(0.4));
@@ -33,14 +33,14 @@ fn main() {
     benihora_ctl.push_event(5.6, BenihoraEvent::SetOtherConstrictions(vec![(36.0, 0.3)]));
     benihora_ctl.push_event(5.7, BenihoraEvent::SetOtherConstrictions(vec![]));
 
-    // benihora_ctl.push_event(5.0, BenihoraEvent::MoveTangue(36.0, 0.3));
-    // benihora_ctl.push_event(5.1, BenihoraEvent::MoveTangue(12.9, 2.43));
-    // benihora_ctl.push_event(5.2, BenihoraEvent::MoveTangue(36.0, 0.3));
-    // benihora_ctl.push_event(5.3, BenihoraEvent::MoveTangue(12.9, 2.43));
-    // benihora_ctl.push_event(5.4, BenihoraEvent::MoveTangue(36.0, 0.3));
-    // benihora_ctl.push_event(5.5, BenihoraEvent::MoveTangue(12.9, 2.43));
-    // benihora_ctl.push_event(5.6, BenihoraEvent::MoveTangue(36.0, 0.3));
-    // benihora_ctl.push_event(5.7, BenihoraEvent::MoveTangue(12.9, 2.43));
+    // benihora_ctl.push_event(5.0, BenihoraEvent::MoveTongue(36.0, 0.3));
+    // benihora_ctl.push_event(5.1, BenihoraEvent::MoveTongue(12.9, 2.43));
+    // benihora_ctl.push_event(5.2, BenihoraEvent::MoveTongue(36.0, 0.3));
+    // benihora_ctl.push_event(5.3, BenihoraEvent::MoveTongue(12.9, 2.43));
+    // benihora_ctl.push_event(5.4, BenihoraEvent::MoveTongue(36.0, 0.3));
+    // benihora_ctl.push_event(5.5, BenihoraEvent::MoveTongue(12.9, 2.43));
+    // benihora_ctl.push_event(5.6, BenihoraEvent::MoveTongue(36.0, 0.3));
+    // benihora_ctl.push_event(5.7, BenihoraEvent::MoveTongue(12.9, 2.43));
 
     // benihora_ctl.push_event(0.0, BenihoraEvent::SetFrequency(440.0));
     benihora_ctl.push_event(
@@ -80,21 +80,21 @@ fn main() {
         BenihoraEvent::SetFrequency(notenum_to_frequency(48) as f64),
     );
 
-    benihora_ctl.push_event(6.0, BenihoraEvent::MoveTangue(14.0, 2.09));
+    benihora_ctl.push_event(6.0, BenihoraEvent::MoveTongue(14.0, 2.09));
     benihora_ctl.push_event(
         5.95,
         BenihoraEvent::SetOtherConstrictions(vec![(20.0, 0.2), (25.0, 0.2)]),
     );
     benihora_ctl.push_event(6.0, BenihoraEvent::SetOtherConstrictions(vec![]));
 
-    benihora_ctl.push_event(6.5, BenihoraEvent::MoveTangue(19.4, 3.43));
+    benihora_ctl.push_event(6.5, BenihoraEvent::MoveTongue(19.4, 3.43));
     benihora_ctl.push_event(
         6.45,
         BenihoraEvent::SetOtherConstrictions(vec![(30.0, 0.2)]),
     );
     benihora_ctl.push_event(6.5, BenihoraEvent::SetOtherConstrictions(vec![]));
 
-    benihora_ctl.push_event(7.0, BenihoraEvent::MoveTangue(22.8, 2.05));
+    benihora_ctl.push_event(7.0, BenihoraEvent::MoveTongue(22.8, 2.05));
     benihora_ctl.push_event(
         6.95,
         BenihoraEvent::SetOtherConstrictions(vec![(41.0, 0.7)]),
@@ -103,35 +103,35 @@ fn main() {
     benihora_ctl.push_event(6.95, BenihoraEvent::SetVelum(0.4));
     benihora_ctl.push_event(7.0, BenihoraEvent::SetVelum(0.01));
 
-    benihora_ctl.push_event(7.5, BenihoraEvent::MoveTangue(12.9, 2.43));
+    benihora_ctl.push_event(7.5, BenihoraEvent::MoveTongue(12.9, 2.43));
     benihora_ctl.push_event(
         7.45,
         BenihoraEvent::SetOtherConstrictions(vec![(41.5, 0.6)]),
     );
     benihora_ctl.push_event(7.5, BenihoraEvent::SetOtherConstrictions(vec![]));
 
-    benihora_ctl.push_event(8.0, BenihoraEvent::MoveTangue(14.0, 2.09));
+    benihora_ctl.push_event(8.0, BenihoraEvent::MoveTongue(14.0, 2.09));
     benihora_ctl.push_event(
         7.98,
         BenihoraEvent::SetOtherConstrictions(vec![(41.0, 0.6)]),
     );
     benihora_ctl.push_event(8.0, BenihoraEvent::SetOtherConstrictions(vec![]));
 
-    benihora_ctl.push_event(8.5, BenihoraEvent::MoveTangue(12.9, 2.43));
+    benihora_ctl.push_event(8.5, BenihoraEvent::MoveTongue(12.9, 2.43));
     benihora_ctl.push_event(
         8.45,
         BenihoraEvent::SetOtherConstrictions(vec![(30.0, 0.2)]),
     );
     benihora_ctl.push_event(8.5, BenihoraEvent::SetOtherConstrictions(vec![]));
 
-    benihora_ctl.push_event(9.0, BenihoraEvent::MoveTangue(22.8, 2.05));
+    benihora_ctl.push_event(9.0, BenihoraEvent::MoveTongue(22.8, 2.05));
     benihora_ctl.push_event(
         8.98,
         BenihoraEvent::SetOtherConstrictions(vec![(41.0, 0.6)]),
     );
     benihora_ctl.push_event(9.0, BenihoraEvent::SetOtherConstrictions(vec![]));
 
-    benihora_ctl.push_event(9.5, BenihoraEvent::MoveTangue(14.0, 2.09));
+    benihora_ctl.push_event(9.5, BenihoraEvent::MoveTongue(14.0, 2.09));
     benihora_ctl.push_event(
         9.45,
         BenihoraEvent::SetOtherConstrictions(vec![(20.0, 0.2), (25.0, 0.2)]),

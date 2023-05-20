@@ -296,7 +296,7 @@ fn benihora_builder() -> MyVoice {
             );
             ctrl1.lock().push_event(
                 time,
-                BenihoraEvent::MoveTangue(
+                BenihoraEvent::MoveTongue(
                     perlin_noise(time * 2.3, time * 0.11, 0.0) * 19.0 + 22.0,
                     perlin_noise(time * 2.3, time * 0.11, 3.0) * 1.25 + 1.55,
                 ),
