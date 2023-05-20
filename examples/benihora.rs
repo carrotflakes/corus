@@ -12,7 +12,7 @@ use corus::{
 const SAMPLE_RATE: usize = 44100;
 
 fn main() {
-    let benihora = Benihora::new(2);
+    let benihora = Benihora::new(2, SAMPLE_RATE as f64);
     let benihora = EventScheduleNode::new(EventControllable::new(benihora));
     let mut benihora_ctl = benihora.get_scheduler();
 

@@ -6,7 +6,7 @@ mod tract;
 use std::f64::consts::TAU;
 
 pub use glottis::Glottis;
-use interval_timer::IntervalTimer;
+pub use interval_timer::IntervalTimer;
 use noise::Noise;
 pub use tract::{Constriction, Mouth, Nose, Tract};
 
@@ -29,8 +29,7 @@ pub struct Benihora {
 }
 
 impl Benihora {
-    pub fn new(sound_speed: usize) -> Self {
-        let sample_rate = 48000.0;
+    pub fn new(sound_speed: usize, sample_rate: F) -> Self {
         Self {
             sound: true,
             frequency: Frequency::new(140.0, 0.005, 6.0),
@@ -55,16 +54,7 @@ impl Benihora {
         self.loudness = tenseness.powf(0.25);
     }
 
-    fn set_sample_rate(&mut self, sample_rate: F) {
-        if sample_rate != self.sample_rate {
-            self.sample_rate = sample_rate;
-            self.aspiration_noise = Noise::new(1, sample_rate, 500.0);
-            self.fricative_noise = Noise::new(2, sample_rate, 1000.0);
-        }
-    }
-
-    pub fn process(&mut self, current_time: F, sample_rate: F) -> F {
-        self.set_sample_rate(sample_rate);
+    pub fn process(&mut self, current_time: F) -> F {
         let aspiration_noise = self.aspiration_noise.process();
         let fricative_noise = self.fricative_noise.process();
 
@@ -80,14 +70,14 @@ impl Benihora {
             self.tenseness.update(current_time);
             self.tract.update_block(self.update_timer.interval);
         }
-        self.update_timer.update(1.0 / sample_rate as f64);
+        self.update_timer.update(1.0 / self.sample_rate as f64);
 
         let lambda = self.update_timer.progress();
         let frequency = self.frequency.get(lambda);
         let tenseness = self.tenseness.get(lambda);
-        let glottal_output = self.glottis.compute(
+        let glottal_output = self.glottis.process(
             current_time,
-            1.0 / sample_rate as f64,
+            1.0 / self.sample_rate as f64,
             aspiration_noise,
             frequency,
             tenseness,
@@ -97,13 +87,13 @@ impl Benihora {
         let glottal_output = glottal_output + aspiration_noise * 1.0e-16; // avoid subnormal
         let mut vocal_out = 0.0;
         for i in 0..self.sound_speed {
-            let time = current_time + i as f64 / self.sound_speed as f64 / sample_rate as f64;
+            let time = current_time + i as f64 / self.sound_speed as f64 / self.sample_rate as f64;
             let (mouth, nose) = self.tract.run_step(
                 time,
                 glottal_output,
                 fricative_noise,
                 lambda,
-                1.0 / (sample_rate as usize * self.sound_speed) as f64,
+                1.0 / (self.sample_rate as usize * self.sound_speed) as f64,
             );
             vocal_out += mouth + nose;
         }

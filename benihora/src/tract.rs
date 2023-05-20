@@ -35,7 +35,7 @@ impl Tract {
         lambda: F,
         dtime: F,
     ) -> (F, F) {
-        let lip_output = self.mouth.run_step(
+        let lip_output = self.mouth.process(
             &mut self.nose,
             time,
             glottal_output,
@@ -152,7 +152,7 @@ impl Mouth {
         }
     }
 
-    fn run_step(
+    fn process(
         &mut self,
         nose: &mut Nose,
         time: f64,

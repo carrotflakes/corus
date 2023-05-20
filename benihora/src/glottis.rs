@@ -19,7 +19,7 @@ impl Glottis {
         }
     }
 
-    pub fn compute(
+    pub fn process(
         &mut self,
         time: f64,
         dtime: f64,

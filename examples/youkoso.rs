@@ -270,7 +270,7 @@ fn fm_synth_builder(seed: u32) -> MyVoice {
 
 fn benihora_builder() -> MyVoice {
     use corus::contrib::benihora::{Benihora, BenihoraEvent};
-    let benihora = Benihora::new(2);
+    let benihora = Benihora::new(2, SAMPLE_RATE as f64);
     let benihora = Controllable::new(EventControlInplace::new(benihora));
     let mut ctrl1 = benihora.controller();
     let mut ctrl2 = benihora.controller();

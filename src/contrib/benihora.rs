@@ -9,9 +9,9 @@ pub struct Benihora {
 }
 
 impl Benihora {
-    pub fn new(proc_num: usize) -> Self {
+    pub fn new(proc_num: usize, sample_rate: f64) -> Self {
         Self {
-            benihora: benihora::Benihora::new(proc_num),
+            benihora: benihora::Benihora::new(proc_num, sample_rate),
         }
     }
 }
@@ -21,8 +21,7 @@ impl Node for Benihora {
 
     #[inline]
     fn proc(&mut self, ctx: &ProcContext) -> C1f64 {
-        self.benihora
-            .process(ctx.current_time, ctx.sample_rate as f64)
+        self.benihora.process(ctx.current_time)
     }
 
     fn lock(&mut self, _ctx: &ProcContext) {}
