@@ -1,5 +1,7 @@
 use std::f64::consts::PI;
 
+use crate::IntervalTimer;
+
 use super::{lerp, F};
 const NOSE_OFFSET: F = 0.8;
 
@@ -7,16 +9,22 @@ pub struct Tract {
     pub mouth: Mouth,
     pub nose: Nose,
     pub movement_speed: F, // CM per second
+    pub sample_rate: F,
+    pub update_timer: IntervalTimer,
+    sound_speed: usize,
 }
 
 impl Tract {
-    pub fn new() -> Self {
+    pub fn new(sound_speed: usize, sample_rate: F) -> Self {
         let mouth_length = 44;
         let nose_length = 28;
         let mut tract = Tract {
             mouth: Mouth::new(mouth_length, nose_length),
             nose: Nose::new(nose_length),
             movement_speed: 15.0,
+            sample_rate,
+            update_timer: IntervalTimer::new_overflowed(0.04),
+            sound_speed,
         };
 
         tract.mouth.calculate_reflections(&tract.nose);
@@ -25,6 +33,28 @@ impl Tract {
         tract.calculate_diameter();
 
         tract
+    }
+
+    pub fn process(&mut self, current_time: F, fricative_noise: F, x: F) -> F {
+        if self.update_timer.overflowed() {
+            self.update_block(self.update_timer.interval);
+        }
+        let lambda = self.update_timer.progress();
+        self.update_timer.update(1.0 / self.sample_rate as f64);
+
+        let mut vocal_out = 0.0;
+        for i in 0..self.sound_speed {
+            let time = current_time + i as f64 / self.sound_speed as f64 / self.sample_rate as f64;
+            let (mouth, nose) = self.run_step(
+                time,
+                x,
+                fricative_noise,
+                lambda,
+                1.0 / (self.sample_rate as usize * self.sound_speed) as f64,
+            );
+            vocal_out += mouth + nose;
+        }
+        (vocal_out / self.sound_speed as f64).into()
     }
 
     pub fn run_step(

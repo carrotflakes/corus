@@ -43,11 +43,11 @@ impl BenihoraManaged {
     }
 
     pub fn process(&mut self, current_time: F) -> F {
-        if self.benihora.update_timer.overflowed() {
+        if self.benihora.tract.update_timer.overflowed() {
             if self.sound {
-                self.intensity += self.benihora.update_timer.interval * 3.25;
+                self.intensity += self.benihora.tract.update_timer.interval * 3.25;
             } else {
-                self.intensity -= self.benihora.update_timer.interval * 5.0;
+                self.intensity -= self.benihora.tract.update_timer.interval * 5.0;
             }
             self.intensity = self.intensity.clamp(0.0, 1.0);
 
@@ -55,7 +55,7 @@ impl BenihoraManaged {
             self.tenseness.update(current_time);
         }
 
-        let lambda = self.benihora.update_timer.progress();
+        let lambda = self.benihora.tract.update_timer.progress();
         let frequency = self.frequency.get(lambda);
         let tenseness = self.tenseness.get(lambda);
         self.benihora.process(
