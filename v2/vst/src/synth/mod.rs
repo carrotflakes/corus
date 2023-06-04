@@ -22,6 +22,7 @@ use param_f64::{EnvelopeState, ParamF64};
 use wavetable::WavetableSettings;
 
 use self::{
+    effectors::ShaperType,
     param_f64::Lfo,
     param_pool::{ParamPool, ProducerId},
 };
@@ -110,29 +111,38 @@ impl MySynth {
                 },
                 level: ParamF64::new(0.7),
                 detune: ParamF64::new(0.0),
-                effectors: vec![(
-                    false,
-                    Effector::Filter {
-                        frequency: ParamF64::new(5000.0),
-                        // frequency: ParamF64 {
-                        //     value: 50.0,
-                        //     envelope: Some((
-                        //         true,
-                        //         5000.0,
-                        //         Envelope::new(&[(0.01, 1.0, -1.0), (0.4, 0.3, 1.0)], 0.3, 1.0),
-                        //     )),
-                        //     lfo: Some((
-                        //         true,
-                        //         Lfo {
-                        //             frequency: 1.0,
-                        //             amp: 1000.0,
-                        //         },
-                        //     )),
-                        //     consumer: Consumer::new(),
-                        // },
-                        q: ParamF64::new(1.0),
-                    },
-                )],
+                effectors: vec![
+                    (
+                        false,
+                        Effector::Filter {
+                            frequency: ParamF64::new(5000.0),
+                            // frequency: ParamF64 {
+                            //     value: 50.0,
+                            //     envelope: Some((
+                            //         true,
+                            //         5000.0,
+                            //         Envelope::new(&[(0.01, 1.0, -1.0), (0.4, 0.3, 1.0)], 0.3, 1.0),
+                            //     )),
+                            //     lfo: Some((
+                            //         true,
+                            //         Lfo {
+                            //             frequency: 1.0,
+                            //             amp: 1000.0,
+                            //         },
+                            //     )),
+                            //     consumer: Consumer::new(),
+                            // },
+                            q: ParamF64::new(1.0),
+                        },
+                    ),
+                    (
+                        false,
+                        Effector::Shaper {
+                            pre_gain: ParamF64::new(1.0),
+                            r#type: ShaperType::Tanh,
+                        },
+                    ),
+                ],
                 envs: vec![
                     Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
                     Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
@@ -146,7 +156,13 @@ impl MySynth {
                         q: ParamF64::new(1.0),
                     },
                 ),
-                (false, Effector::Tanh),
+                (
+                    false,
+                    Effector::Shaper {
+                        pre_gain: ParamF64::new(1.0),
+                        r#type: ShaperType::Tanh,
+                    },
+                ),
                 (false, Effector::Phaser),
                 (false, Effector::Chorus),
                 (false, Effector::Delay),

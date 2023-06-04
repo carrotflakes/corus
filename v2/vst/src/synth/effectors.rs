@@ -13,6 +13,7 @@ use corus_v2::{
     ProcessContext,
 };
 use serde::{Deserialize, Serialize};
+use wavetables::shapers;
 
 use super::{param_f64, param_pool::ParamPool};
 
@@ -35,6 +36,15 @@ use super::{param_f64, param_pool::ParamPool};
 //     None,
 // }
 
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Serialize, Deserialize)]
+pub enum ShaperType {
+    HardClip,
+    Tanh,
+    Sin,
+    Wrap,
+    Triangle,
+}
+
 #[derive(Serialize, Deserialize)]
 pub enum Effector {
     Filter {
@@ -56,6 +66,10 @@ pub enum Effector {
         gain: param_f64::ParamF64,
     },
     Tanh,
+    Shaper {
+        pre_gain: param_f64::ParamF64,
+        r#type: ShaperType,
+    },
 }
 
 pub enum State {
@@ -80,6 +94,7 @@ pub enum State {
         compressor: Compressor<f64>,
     },
     Tanh,
+    Shaper,
     None,
 }
 
@@ -94,6 +109,7 @@ impl Effector {
             Effector::Gain { .. } => "Gain",
             Effector::Compressor { .. } => "Compressor",
             Effector::Tanh => "Tanh",
+            Effector::Shaper { .. } => "Shaper",
         }
     }
 
@@ -107,6 +123,7 @@ impl Effector {
             Effector::Gain { .. } => &["gain"],
             Effector::Compressor { .. } => &["threshold", "ratio", "attack", "release", "gain"],
             Effector::Tanh => &[],
+            Effector::Shaper { .. } => &["pre_gain"],
         }
     }
 
@@ -126,6 +143,7 @@ impl Effector {
                 gain,
             } => vec![threshold, ratio, attack, release, gain],
             Effector::Tanh => vec![],
+            Effector::Shaper { pre_gain, .. } => vec![pre_gain],
         }
     }
 
@@ -180,6 +198,17 @@ impl Effector {
                 )
             }
             (Effector::Tanh, State::Tanh) => x.map(|x| x.tanh()),
+            (Effector::Shaper { pre_gain, r#type }, State::Shaper) => {
+                let pre_gain = pre_gain.compute(param_pools);
+                let x = x * pre_gain;
+                match r#type {
+                    ShaperType::HardClip => x.map(|x| shapers::hard_clip(x)),
+                    ShaperType::Tanh => x.map(|x| shapers::tanh(x)),
+                    ShaperType::Sin => x.map(|x| shapers::sin(x)),
+                    ShaperType::Wrap => x.map(|x| shapers::wrap(x)),
+                    ShaperType::Triangle => x.map(|x| shapers::triangle(x)),
+                }
+            }
             _ => unreachable!("invalid state"),
         }
     }
@@ -231,6 +260,9 @@ impl Effector {
             (Effector::Tanh, state) => {
                 *state = State::Tanh;
             }
+            (Effector::Shaper { .. }, state) => {
+                *state = State::Shaper;
+            }
         }
     }
 }
@@ -238,5 +270,25 @@ impl Effector {
 impl Default for State {
     fn default() -> Self {
         State::None
+    }
+}
+
+impl ShaperType {
+    pub const ALL: [ShaperType; 5] = [
+        ShaperType::HardClip,
+        ShaperType::Tanh,
+        ShaperType::Sin,
+        ShaperType::Wrap,
+        ShaperType::Triangle,
+    ];
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            ShaperType::HardClip => "HardClip",
+            ShaperType::Tanh => "Tanh",
+            ShaperType::Sin => "Sin",
+            ShaperType::Wrap => "Wrap",
+            ShaperType::Triangle => "Triangle",
+        }
     }
 }

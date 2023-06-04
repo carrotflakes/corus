@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    synth::{bender::Bender, param_pool::ProducerId},
+    synth::{bender::Bender, effectors::ShaperType, param_pool::ProducerId},
     MyPluginParams,
 };
 use nih_plug::prelude::*;
@@ -368,6 +368,16 @@ fn effectors(
                     add_knob(ui, gain, 0.0..1.5, is_voice, || setter(i, 4));
                 }
                 Effector::Tanh {} => {}
+                Effector::Shaper { pre_gain, r#type } => {
+                    add_knob(ui, pre_gain, 0.0..32.0, is_voice, || setter(i, 0));
+                    egui::ComboBox::from_label("type")
+                        .selected_text(r#type.name())
+                        .show_ui(ui, |ui| {
+                            for st in &ShaperType::ALL {
+                                ui.selectable_value(r#type, *st, st.name());
+                            }
+                        });
+                }
             }
         });
     }
