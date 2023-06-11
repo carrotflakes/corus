@@ -17,7 +17,7 @@ pub struct BenihoraManaged {
     pub sound: bool,
     pub frequency: Frequency,
     tenseness: Tenseness,
-    intensity: F,
+    pub intensity: Intensity,
     loudness: F,
     pub benihora: benihora::Benihora,
 }
@@ -28,7 +28,7 @@ impl BenihoraManaged {
             sound: false,
             frequency: Frequency::new(140.0, 0.005, 6.0),
             tenseness: Tenseness::new(0.6),
-            intensity: 0.0,
+            intensity: Intensity::new(0.0),
             loudness: 1.0,
             benihora: benihora::Benihora::new(sound_speed, sample_rate),
         }
@@ -44,27 +44,18 @@ impl BenihoraManaged {
 
     pub fn process(&mut self, current_time: F) -> F {
         if self.benihora.tract.update_timer.overflowed() {
-            if self.sound {
-                self.intensity += self.benihora.tract.update_timer.interval * 3.25;
-            } else {
-                self.intensity -= self.benihora.tract.update_timer.interval * 5.0;
-            }
-            self.intensity = self.intensity.clamp(0.0, 1.0);
-
+            self.intensity
+                .update(self.sound, self.benihora.tract.update_timer.interval);
             self.frequency.update(current_time);
             self.tenseness.update(current_time);
         }
 
         let lambda = self.benihora.tract.update_timer.progress();
+        let intensity = self.intensity.get(lambda);
         let frequency = self.frequency.get(lambda);
         let tenseness = self.tenseness.get(lambda);
-        self.benihora.process(
-            current_time,
-            frequency,
-            tenseness,
-            self.intensity,
-            self.loudness,
-        )
+        self.benihora
+            .process(current_time, frequency, tenseness, intensity, self.loudness)
     }
 }
 
@@ -143,5 +134,37 @@ impl Tenseness {
 
     fn get(&self, lambda: F) -> F {
         lerp(self.old_tenseness, self.new_tenseness, lambda)
+    }
+}
+
+pub struct Intensity {
+    old_intensity: F,
+    new_intensity: F,
+    pub up_velocity: F,
+    pub down_velocity: F,
+}
+
+impl Intensity {
+    fn new(intensity: F) -> Self {
+        Self {
+            old_intensity: intensity,
+            new_intensity: intensity,
+            up_velocity: 3.25,
+            down_velocity: 5.0,
+        }
+    }
+
+    fn update(&mut self, sound: bool, interval: f64) {
+        self.old_intensity = self.new_intensity;
+        if sound {
+            self.new_intensity += interval * self.up_velocity;
+        } else {
+            self.new_intensity -= interval * self.down_velocity;
+        }
+        self.new_intensity = self.new_intensity.clamp(0.0, 1.0);
+    }
+
+    fn get(&self, lambda: F) -> F {
+        lerp(self.old_intensity, self.new_intensity, lambda)
     }
 }
