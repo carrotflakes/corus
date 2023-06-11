@@ -138,6 +138,7 @@ impl Tenseness {
         self.old_tenseness = self.new_tenseness;
         self.new_tenseness =
             self.target_tenseness + 0.1 * simplex1(time * 0.46) + 0.05 * simplex1(time * 0.36);
+        self.new_tenseness = self.new_tenseness.clamp(0.0, 1.0);
     }
 
     fn get(&self, lambda: F) -> F {
