@@ -16,6 +16,8 @@ fn main() {
     let benihora = EventScheduleNode::new(EventControllable::new(benihora));
     let mut benihora_ctl = benihora.get_scheduler();
 
+    benihora_ctl.push_event(0.0, BenihoraEvent::SetStatus(true));
+
     benihora_ctl.push_event(0.0, BenihoraEvent::MoveTongue(12.9, 2.43));
     benihora_ctl.push_event(1.0, BenihoraEvent::MoveTongue(19.4, 3.43));
     benihora_ctl.push_event(2.0, BenihoraEvent::MoveTongue(22.8, 2.05));

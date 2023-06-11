@@ -25,7 +25,7 @@ pub struct BenihoraManaged {
 impl BenihoraManaged {
     pub fn new(sound_speed: usize, sample_rate: F) -> Self {
         Self {
-            sound: true,
+            sound: false,
             frequency: Frequency::new(140.0, 0.005, 6.0),
             tenseness: Tenseness::new(0.6),
             intensity: 0.0,
