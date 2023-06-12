@@ -21,4 +21,13 @@ impl<F: Float + FromPrimitive> Phase<F> {
         self.phase = (self.phase + dphase).fract();
         phase
     }
+
+    /// Returns the current phase and next phase.
+    /// The next phase can overflow 1.0.
+    pub fn process_range(&mut self, ctx: &ProcessContext, frequency: F) -> (F, F) {
+        let dphase = frequency * F::from_f64(ctx.dtime()).unwrap();
+        let phase = self.phase;
+        self.phase = (self.phase + dphase).fract();
+        (phase, phase + dphase)
+    }
 }

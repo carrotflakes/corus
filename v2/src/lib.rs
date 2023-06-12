@@ -1,3 +1,4 @@
+pub mod contrib;
 pub mod event_queue;
 pub mod nodes;
 pub mod ring_buffer;
@@ -83,6 +84,7 @@ pub trait Producer {
     fn process(&mut self, ctx: &ProcessContext) -> Self::Output;
 }
 
+/// Don't forget to check the boundary value with getter
 #[inline]
 pub fn interpolate_get<T: Signal>(x: T::Float, getter: impl Fn(usize) -> T) -> T
 where

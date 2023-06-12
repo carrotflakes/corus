@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use corus_v2::interpolate_get;
 use serde::{Deserialize, Serialize};
 
+pub type WTRead = Arc<dyn Fn(f64, f64) -> f64 + Send + Sync + 'static>;
 pub type WT = Arc<dyn Fn(f64) -> f64 + Send + Sync + 'static>;
 
 #[derive(Serialize, Deserialize)]
@@ -14,7 +14,7 @@ pub struct WavetableSettings {
     #[serde(skip)]
     custome_wt: Option<WT>,
     #[serde(skip)]
-    buffer: Option<WT>,
+    buffer: Option<WTRead>,
     pub use_buffer: bool,
 }
 
@@ -55,23 +55,30 @@ impl WavetableSettings {
         self.buffer = None;
     }
 
-    pub fn generator(&mut self) -> WT {
+    pub fn generator(&mut self) -> WTRead {
         if self.use_buffer {
             if let Some(buffer) = &self.buffer {
                 buffer.clone()
             } else {
                 let wt = self.wavetable();
                 let buffer = {
-                    let buffer: Vec<_> = (0..2048).map(|i| wt(i as f64 / 2048.0)).collect();
-                    Arc::new(move |x| {
-                        interpolate_get(x * buffer.len() as f64, |i| buffer[i % buffer.len()])
-                    })
+                    let resolution = 2048;
+                    let buffer: Vec<_> = (0..resolution)
+                        .map(|i| wt(i as f64 / resolution as f64))
+                        .collect();
+                    // Arc::new(move |_, x| {
+                    //     corus_v2::interpolate_get(x * buffer.len() as f64, |i| buffer[i % buffer.len()])
+                    // })
+                    let buf =
+                        corus_v2::contrib::integrated_buffer::IntegratedBuffer::from_slice(&buffer);
+                    Arc::new(move |x, y| buf.get_by_normalized_f64_with_linear_interpolation(x..y))
                 };
                 self.buffer = Some(buffer.clone());
                 buffer
             }
         } else {
-            self.wavetable()
+            let wt = self.wavetable();
+            Arc::new(move |x, _| wt(x))
         }
     }
 

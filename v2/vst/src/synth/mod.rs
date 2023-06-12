@@ -279,7 +279,7 @@ pub struct VoiceState {
     high_pass_filter: HighPassFilter<StereoF64>,
     effector_states: Vec<effectors::State>,
     params: ParamPool,
-    wt: Arc<dyn Fn(f64) -> f64 + Send + Sync>,
+    wt: Arc<dyn Fn(f64, f64) -> f64 + Send + Sync>,
 }
 
 impl Default for VoiceState {
@@ -298,7 +298,7 @@ impl VoiceState {
             high_pass_filter: HighPassFilter::new(),
             effector_states: vec![],
             params: ParamPool::new(&[ProducerId::new(0), ProducerId::new(1)]),
-            wt: Arc::new(|_| 0.0),
+            wt: Arc::new(|_, _| 0.0),
         }
     }
 }
@@ -328,12 +328,17 @@ impl Voice {
         }
 
         let bend_amount = self.bend_level.compute(&[&param_pool, &state.params]);
-        let mut x = state.unison.process(
+        let mut x = state.unison.process_range(
             ctx,
             state.frequency * pitch,
             self.unison_settings.detune,
             self.unison_settings.stereo_width,
-            |phase| (state.wt)(self.bender.process(bend_amount, phase)),
+            |phase, next_phase| {
+                (state.wt)(
+                    self.bender.process(bend_amount, phase),
+                    self.bender.process(bend_amount, next_phase % 1.0) + next_phase.floor(),
+                )
+            },
         );
 
         // DC offset cancel
