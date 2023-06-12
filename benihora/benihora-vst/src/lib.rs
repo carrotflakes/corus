@@ -10,15 +10,15 @@ const SOUND_SPEED: usize = 2;
 
 struct Synth {
     time: f64,
-    benihora: BenihoraManaged,
+    benihora: Option<BenihoraManaged>,
     voice_manager: VoiceManager,
 }
 
 impl Synth {
-    pub fn new(sample_rate: f64) -> Self {
+    pub fn new() -> Self {
         Synth {
             time: 0.0,
-            benihora: BenihoraManaged::new(SOUND_SPEED, sample_rate),
+            benihora: None,
             voice_manager: VoiceManager::new(),
         }
     }
@@ -40,36 +40,35 @@ impl Synth {
                         (14.0, 2.09), // o
                         (22.8, 2.05), // u
                     ][*note as usize - 24];
-                    self.benihora.benihora.tract.mouth.tongue = self
-                        .benihora
-                        .benihora
-                        .tract
-                        .mouth
-                        .tongue_clamp(index, diameter);
-                    self.benihora.benihora.tract.calculate_diameter();
+                    let benihora = self.benihora.as_mut().unwrap();
+                    benihora.benihora.tract.mouth.tongue =
+                        benihora.benihora.tract.mouth.tongue_clamp(index, diameter);
+                    benihora.benihora.tract.calculate_diameter();
                     return;
                 }
                 if (24 + 5..24 + 5 + 3).contains(note) {
                     let (index, diameter) =
                         [(25.0, 0.2), (30.0, 0.2), (41.0, 0.7)][*note as usize - (24 + 5)];
-                    self.benihora.benihora.tract.mouth.other_constrictions =
+                    let benihora = self.benihora.as_mut().unwrap();
+                    benihora.benihora.tract.mouth.other_constrictions =
                         vec![benihora::Constriction {
                             index,
                             diameter,
                             start_time: time,
                             end_time: None,
                         }];
-                    self.benihora.benihora.tract.calculate_diameter();
+                    benihora.benihora.tract.calculate_diameter();
                     return;
                 }
 
                 self.voice_manager.noteon(*note);
                 if let Some(note) = self.voice_manager.get_voice() {
-                    self.benihora
+                    let benihora = self.benihora.as_mut().unwrap();
+                    benihora
                         .frequency
                         .set(440.0 * 2.0f64.powf((note as f64 - 69.0) / 12.0));
-                    self.benihora.set_tenseness(*velocity as f64);
-                    self.benihora.sound = true;
+                    benihora.set_tenseness(*velocity as f64);
+                    benihora.sound = true;
                 }
             }
             NoteEvent::NoteOff {
@@ -79,29 +78,23 @@ impl Synth {
                 note,
                 velocity,
             } => {
+                let benihora = self.benihora.as_mut().unwrap();
                 if (24 + 5..24 + 5 + 3).contains(note) {
-                    if let Some(c) = self
-                        .benihora
-                        .benihora
-                        .tract
-                        .mouth
-                        .other_constrictions
-                        .get_mut(0)
-                    {
+                    if let Some(c) = benihora.benihora.tract.mouth.other_constrictions.get_mut(0) {
                         c.end_time = Some(time);
                     }
-                    self.benihora.benihora.tract.calculate_diameter();
+                    benihora.benihora.tract.calculate_diameter();
                     return;
                 }
 
                 self.voice_manager.noteoff(*note);
                 if let Some(note) = self.voice_manager.get_voice() {
-                    self.benihora
+                    benihora
                         .frequency
                         .set(440.0 * 2.0f64.powf((note as f64 - 69.0) / 12.0));
-                    self.benihora.sound = true;
+                    benihora.sound = true;
                 } else {
-                    self.benihora.sound = false;
+                    benihora.sound = false;
                 }
             }
             NoteEvent::PolyPressure {
@@ -179,7 +172,7 @@ impl Default for MyPluginParams {
             .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
             .with_string_to_value(formatters::s2v_f32_gain_to_db()),
 
-            synth: Mutex::new(Synth::new(48000.0)),
+            synth: Mutex::new(Synth::new()),
         }
     }
 }
@@ -262,8 +255,9 @@ impl Plugin for MyPlugin {
         let mut synth = self.params.synth.lock().unwrap();
 
         let sample_rate = context.transport().sample_rate as f64;
-        if synth.benihora.benihora.tract.sample_rate != sample_rate {
-            synth.benihora = BenihoraManaged::new(SOUND_SPEED, sample_rate);
+        if synth.benihora.is_none() {
+            synth.benihora = Some(BenihoraManaged::new(SOUND_SPEED, sample_rate));
+            synth.benihora.as_mut().unwrap().frequency.wobble_amount = 0.1;
         }
 
         let mut count = 0;
@@ -282,7 +276,8 @@ impl Plugin for MyPlugin {
             }
             count += 1;
 
-            *channel_samples.get_mut(0).unwrap() = synth.benihora.process(current_time) as f32;
+            let benihora = synth.benihora.as_mut().unwrap();
+            *channel_samples.get_mut(0).unwrap() = benihora.process(current_time) as f32;
             synth.time += 1.0 / sample_rate;
         }
 

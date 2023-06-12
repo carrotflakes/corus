@@ -18,7 +18,7 @@ pub struct BenihoraManaged {
     pub frequency: Frequency,
     tenseness: Tenseness,
     pub intensity: Intensity,
-    loudness: F,
+    loudness: Loudness,
     pub benihora: benihora::Benihora,
 }
 
@@ -29,7 +29,7 @@ impl BenihoraManaged {
             frequency: Frequency::new(140.0, 0.005, 6.0),
             tenseness: Tenseness::new(0.6),
             intensity: Intensity::new(0.0),
-            loudness: 1.0,
+            loudness: Loudness::new(0.6f64.powf(0.25)),
             benihora: benihora::Benihora::new(sound_speed, sample_rate),
         }
     }
@@ -39,7 +39,7 @@ impl BenihoraManaged {
     pub fn set_tenseness(&mut self, tenseness: F) {
         let tenseness = tenseness.clamp(0.0, 1.0);
         self.tenseness.target_tenseness = tenseness;
-        self.loudness = tenseness.powf(0.25);
+        self.loudness.new_loudness = tenseness.powf(0.25);
     }
 
     pub fn process(&mut self, current_time: F) -> F {
@@ -48,14 +48,16 @@ impl BenihoraManaged {
                 .update(self.sound, self.benihora.tract.update_timer.interval);
             self.frequency.update(current_time);
             self.tenseness.update(current_time);
+            self.loudness.update();
         }
 
         let lambda = self.benihora.tract.update_timer.progress();
         let intensity = self.intensity.get(lambda);
         let frequency = self.frequency.get(lambda);
         let tenseness = self.tenseness.get(lambda);
+        let loudness = self.loudness.get(lambda);
         self.benihora
-            .process(current_time, frequency, tenseness, intensity, self.loudness)
+            .process(current_time, frequency, tenseness, intensity, loudness)
     }
 }
 
@@ -76,6 +78,7 @@ pub struct Frequency {
 
     pub vibrato_amount: F,
     pub vibrato_frequency: F,
+    pub wobble_amount: F,
 }
 
 impl Frequency {
@@ -87,6 +90,7 @@ impl Frequency {
             smooth_frequency: frequency,
             vibrato_amount,
             vibrato_frequency,
+            wobble_amount: 1.0,
         }
     }
 
@@ -96,8 +100,8 @@ impl Frequency {
 
     fn update(&mut self, time: F) {
         let mut vibrato = self.vibrato_amount * (TAU * time * self.vibrato_frequency).sin();
-        vibrato += 0.02 * simplex1(time * 4.07);
-        vibrato += 0.04 * simplex1(time * 2.15);
+        vibrato +=
+            self.wobble_amount * (0.02 * simplex1(time * 4.07) + 0.04 * simplex1(time * 2.15));
 
         self.smooth_frequency = (self.smooth_frequency + self.target_frequency) * 0.5;
 
@@ -166,5 +170,27 @@ impl Intensity {
 
     fn get(&self, lambda: F) -> F {
         lerp(self.old_intensity, self.new_intensity, lambda)
+    }
+}
+
+pub struct Loudness {
+    old_loudness: F,
+    new_loudness: F,
+}
+
+impl Loudness {
+    fn new(loudness: F) -> Self {
+        Self {
+            old_loudness: loudness,
+            new_loudness: loudness,
+        }
+    }
+
+    fn update(&mut self) {
+        self.old_loudness = self.new_loudness;
+    }
+
+    fn get(&self, lambda: F) -> F {
+        lerp(self.old_loudness, self.new_loudness, lambda)
     }
 }
