@@ -30,6 +30,7 @@ impl Synth {
     }
 
     pub fn handle_event(&mut self, time: f64, event: &NoteEvent<()>) {
+        let base = 0;
         match event {
             NoteEvent::NoteOn {
                 channel,
@@ -37,23 +38,23 @@ impl Synth {
                 velocity,
                 ..
             } => {
-                if (24..24 + 5).contains(note) {
+                if (base..base + 5).contains(note) {
                     let (index, diameter) = [
                         (27.2, 2.20), // i
                         (19.4, 3.43), // e
                         (12.9, 2.43), // a
                         (14.0, 2.09), // o
                         (22.8, 2.05), // u
-                    ][*note as usize - 24];
+                    ][*note as usize - base as usize];
                     let benihora = self.benihora.as_mut().unwrap();
                     benihora.benihora.tract.mouth.tongue =
                         benihora.benihora.tract.mouth.tongue_clamp(index, diameter);
                     benihora.benihora.tract.calculate_diameter();
                     return;
                 }
-                if (24 + 5..24 + 5 + 3).contains(note) {
-                    let (index, diameter) =
-                        [(25.0, 0.2), (30.0, 0.2), (41.0, 0.7)][*note as usize - (24 + 5)];
+                if (base + 5..base + 5 + 3).contains(note) {
+                    let (index, diameter) = [(25.0, 0.2), (30.0, 0.2), (41.0, 0.7)]
+                        [*note as usize - (base as usize + 5)];
                     let benihora = self.benihora.as_mut().unwrap();
                     benihora.benihora.tract.mouth.other_constrictions =
                         vec![benihora::Constriction {
@@ -83,7 +84,7 @@ impl Synth {
                 ..
             } => {
                 let benihora = self.benihora.as_mut().unwrap();
-                if (24 + 5..24 + 5 + 3).contains(note) {
+                if (base + 5..base + 5 + 3).contains(note) {
                     if let Some(c) = benihora.benihora.tract.mouth.other_constrictions.get_mut(0) {
                         c.end_time = Some(time);
                     }
