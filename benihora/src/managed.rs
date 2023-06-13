@@ -12,14 +12,14 @@ pub struct BenihoraManaged {
 }
 
 impl BenihoraManaged {
-    pub fn new(sound_speed: usize, sample_rate: F) -> Self {
+    pub fn new(sound_speed: usize, sample_rate: F, seed: u32) -> Self {
         Self {
             sound: false,
             frequency: Frequency::new(140.0, 0.005, 6.0),
             tenseness: Tenseness::new(0.6),
             intensity: Intensity::new(0.0),
             loudness: Loudness::new(0.6f64.powf(0.25)),
-            benihora: Benihora::new(sound_speed, sample_rate),
+            benihora: Benihora::new(sound_speed, sample_rate, seed),
         }
     }
 

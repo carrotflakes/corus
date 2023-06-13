@@ -13,17 +13,19 @@ pub struct BenihoraManaged {
     pub intensity: Intensity,
     loudness: Loudness,
     pub benihora: Benihora,
+    time_offset: f64,
 }
 
 impl BenihoraManaged {
-    pub fn new(sound_speed: usize, sample_rate: f64) -> Self {
+    pub fn new(sound_speed: usize, sample_rate: f64, seed: u32) -> Self {
         Self {
             sound: false,
             frequency: Frequency::new(140.0, 0.005, 6.0),
             tenseness: Tenseness::new(0.6),
             intensity: Intensity::new(0.0),
             loudness: Loudness::new(0.6f64.powf(0.25)),
-            benihora: Benihora::new(sound_speed, sample_rate),
+            benihora: Benihora::new(sound_speed, sample_rate, seed),
+            time_offset: seed as f64 * 8.0,
         }
     }
 
@@ -39,8 +41,8 @@ impl BenihoraManaged {
         if self.benihora.tract.update_timer.overflowed() {
             self.intensity
                 .update(self.sound, self.benihora.tract.update_timer.interval);
-            self.frequency.update(current_time);
-            self.tenseness.update(current_time);
+            self.frequency.update(current_time + self.time_offset);
+            self.tenseness.update(current_time + self.time_offset);
             self.loudness.update();
         }
 

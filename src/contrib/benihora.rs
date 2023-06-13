@@ -11,7 +11,7 @@ pub struct Benihora {
 impl Benihora {
     pub fn new(proc_num: usize, sample_rate: f64) -> Self {
         Self {
-            benihora: benihora::BenihoraManaged::new(proc_num, sample_rate),
+            benihora: benihora::BenihoraManaged::new(proc_num, sample_rate, 0),
         }
     }
 }

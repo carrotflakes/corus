@@ -11,6 +11,7 @@ use voice_manager::VoiceManager;
 #[derive(Serialize, Deserialize)]
 struct Synth {
     sound_speed: usize,
+    seed: u32,
     #[serde(skip)]
     time: f64,
     #[serde(skip)]
@@ -23,6 +24,7 @@ impl Synth {
     pub fn new() -> Self {
         Synth {
             sound_speed: 3,
+            seed: 0,
             time: 0.0,
             benihora: None,
             voice_manager: VoiceManager::new(),
@@ -244,6 +246,17 @@ impl Plugin for MyPlugin {
                         }
                         ui.label("sound speed");
                     });
+                    ui.horizontal(|ui| {
+                        if ui
+                            .add(
+                                egui::widgets::DragValue::new(&mut synth.seed).clamp_range(0..=100),
+                            )
+                            .changed()
+                        {
+                            synth.benihora = None;
+                        }
+                        ui.label("seed");
+                    });
                 });
             },
         )
@@ -276,7 +289,11 @@ impl Plugin for MyPlugin {
 
         let sample_rate = context.transport().sample_rate as f64;
         if synth.benihora.is_none() {
-            synth.benihora = Some(BenihoraManaged::new(synth.sound_speed, sample_rate));
+            synth.benihora = Some(BenihoraManaged::new(
+                synth.sound_speed,
+                sample_rate,
+                synth.seed,
+            ));
             synth.benihora.as_mut().unwrap().frequency.wobble_amount = 0.1;
         }
 

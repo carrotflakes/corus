@@ -12,10 +12,11 @@ pub struct Benihora {
 }
 
 impl Benihora {
-    pub fn new(sound_speed: usize, sample_rate: F) -> Self {
+    pub fn new(sound_speed: usize, sample_rate: F, seed: u32) -> Self {
+        assert!(seed < u32::MAX - 2);
         Self {
-            aspiration_noise: Noise::new(1, sample_rate, 500.0),
-            fricative_noise: Noise::new(2, sample_rate, 1000.0),
+            aspiration_noise: Noise::new(seed + 1, sample_rate, 500.0),
+            fricative_noise: Noise::new(seed + 2, sample_rate, 1000.0),
             sample_rate,
             glottis: Glottis::new(),
             tract: Tract::new(sound_speed, sample_rate),
