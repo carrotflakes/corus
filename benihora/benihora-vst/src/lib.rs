@@ -4,20 +4,25 @@ mod voice_manager;
 use benhora_managed::BenihoraManaged;
 use nih_plug::prelude::*;
 use nih_plug_egui::{create_egui_editor, egui, EguiState};
+use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use voice_manager::VoiceManager;
 
-const SOUND_SPEED: usize = 2;
-
+#[derive(Serialize, Deserialize)]
 struct Synth {
+    sound_speed: usize,
+    #[serde(skip)]
     time: f64,
+    #[serde(skip)]
     benihora: Option<BenihoraManaged>,
+    #[serde(skip)]
     voice_manager: VoiceManager,
 }
 
 impl Synth {
     pub fn new() -> Self {
         Synth {
+            sound_speed: 3,
             time: 0.0,
             benihora: None,
             voice_manager: VoiceManager::new(),
@@ -143,7 +148,8 @@ struct MyPluginParams {
     #[id = "gain"]
     pub gain: FloatParam,
 
-    synth: Mutex<Synth>,
+    #[persist = "synth"]
+    synth: Arc<Mutex<Synth>>,
 }
 
 impl Default for MyPlugin {
@@ -173,7 +179,7 @@ impl Default for MyPluginParams {
             .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
             .with_string_to_value(formatters::s2v_f32_gain_to_db()),
 
-            synth: Mutex::new(Synth::new()),
+            synth: Arc::new(Mutex::new(Synth::new())),
         }
     }
 }
@@ -220,11 +226,23 @@ impl Plugin for MyPlugin {
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         create_egui_editor(
             self.params.editor_state.clone(),
-            (),
+            self.params.synth.clone(),
             |_, _| {},
-            move |egui_ctx, setter, _state| {
+            move |egui_ctx, _setter, state| {
                 egui::CentralPanel::default().show(egui_ctx, |ui| {
-                    ui.label("Some random integer");
+                    let mut synth = state.lock().unwrap();
+                    ui.horizontal(|ui| {
+                        if ui
+                            .add(
+                                egui::widgets::DragValue::new(&mut synth.sound_speed)
+                                    .clamp_range(1..=6),
+                            )
+                            .changed()
+                        {
+                            synth.benihora = None;
+                        }
+                        ui.label("sound speed");
+                    });
                 });
             },
         )
@@ -257,7 +275,7 @@ impl Plugin for MyPlugin {
 
         let sample_rate = context.transport().sample_rate as f64;
         if synth.benihora.is_none() {
-            synth.benihora = Some(BenihoraManaged::new(SOUND_SPEED, sample_rate));
+            synth.benihora = Some(BenihoraManaged::new(synth.sound_speed, sample_rate));
             synth.benihora.as_mut().unwrap().frequency.wobble_amount = 0.1;
         }
 

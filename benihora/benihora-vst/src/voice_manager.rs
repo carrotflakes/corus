@@ -1,3 +1,4 @@
+#[derive(Default)]
 pub struct VoiceManager {
     voices: Vec<u8>,
 }

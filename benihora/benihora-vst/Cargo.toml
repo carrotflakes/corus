@@ -14,6 +14,7 @@ crate-type = ["cdylib"]
 # thread in debug builds.
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", features = ["assert_process_allocs"] }
 nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug.git" }
+serde = "1.0"
 
 benihora = { path = ".." }
 
