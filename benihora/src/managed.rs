@@ -53,7 +53,7 @@ impl BenihoraManaged {
 pub struct Frequency {
     old_frequency: F,
     new_frequency: F,
-    target_frequency: F,
+    pub target_frequency: F,
     smooth_frequency: F,
 
     pub vibrato_amount: F,
@@ -78,7 +78,7 @@ impl Frequency {
         self.target_frequency = frequency;
     }
 
-    fn update(&mut self, time: F) {
+    pub fn update(&mut self, time: F) {
         let mut vibrato = self.vibrato_amount * (TAU * time * self.vibrato_frequency).sin();
         vibrato +=
             self.wobble_amount * (0.02 * simplex1(time * 4.07) + 0.04 * simplex1(time * 2.15));
@@ -97,7 +97,7 @@ impl Frequency {
 pub struct Tenseness {
     old_tenseness: F,
     new_tenseness: F,
-    target_tenseness: F,
+    pub target_tenseness: F,
 }
 
 impl Tenseness {
@@ -109,7 +109,7 @@ impl Tenseness {
         }
     }
 
-    fn update(&mut self, time: F) {
+    pub fn update(&mut self, time: F) {
         self.old_tenseness = self.new_tenseness;
         self.new_tenseness =
             self.target_tenseness + 0.1 * simplex1(time * 0.46) + 0.05 * simplex1(time * 0.36);
@@ -138,7 +138,7 @@ impl Intensity {
         }
     }
 
-    fn update(&mut self, sound: bool, interval: f64) {
+    pub fn update(&mut self, sound: bool, interval: f64) {
         self.old_intensity = self.new_intensity;
         if sound {
             self.new_intensity += interval * self.up_velocity;
@@ -155,7 +155,7 @@ impl Intensity {
 
 pub struct Loudness {
     old_loudness: F,
-    new_loudness: F,
+    pub new_loudness: F,
 }
 
 impl Loudness {
@@ -166,7 +166,7 @@ impl Loudness {
         }
     }
 
-    fn update(&mut self) {
+    pub fn update(&mut self) {
         self.old_loudness = self.new_loudness;
     }
 

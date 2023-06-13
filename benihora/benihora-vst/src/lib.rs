@@ -1,6 +1,7 @@
+mod benhora_managed;
 mod voice_manager;
 
-use benihora::BenihoraManaged;
+use benhora_managed::BenihoraManaged;
 use nih_plug::prelude::*;
 use nih_plug_egui::{create_egui_editor, egui, EguiState};
 use std::sync::{Arc, Mutex};
@@ -26,11 +27,10 @@ impl Synth {
     pub fn handle_event(&mut self, time: f64, event: &NoteEvent<()>) {
         match event {
             NoteEvent::NoteOn {
-                timing,
-                voice_id,
                 channel,
                 note,
                 velocity,
+                ..
             } => {
                 if (24..24 + 5).contains(note) {
                     let (index, diameter) = [
@@ -72,11 +72,10 @@ impl Synth {
                 }
             }
             NoteEvent::NoteOff {
-                timing,
-                voice_id,
                 channel,
                 note,
                 velocity,
+                ..
             } => {
                 let benihora = self.benihora.as_mut().unwrap();
                 if (24 + 5..24 + 5 + 3).contains(note) {
@@ -98,11 +97,10 @@ impl Synth {
                 }
             }
             NoteEvent::PolyPressure {
-                timing,
-                voice_id,
                 channel,
                 note,
                 pressure,
+                ..
             } => {} // = aftertouch
             NoteEvent::MidiChannelPressure {
                 timing,
@@ -113,7 +111,10 @@ impl Synth {
                 timing,
                 channel,
                 value,
-            } => {}
+            } => {
+                let pitchbend = 2.0f64.powf((*value as f64 * 2.0 - 1.0) / 12.0);
+                self.benihora.as_mut().unwrap().frequency.pitchbend = pitchbend;
+            }
             NoteEvent::MidiCC {
                 timing,
                 channel,
