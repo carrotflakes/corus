@@ -192,3 +192,23 @@ impl Signal for f64 {
         x
     }
 }
+
+impl Signal for f32 {
+    type Float = f32;
+    const CHANNEL: usize = 1;
+
+    #[inline]
+    fn map(self, f: impl Fn(Self::Float) -> Self::Float) -> Self {
+        f(self)
+    }
+
+    #[inline]
+    fn zip_map(self, other: Self, f: impl Fn(Self::Float, Self::Float) -> Self::Float) -> Self {
+        f(self, other)
+    }
+
+    #[inline]
+    fn float_from_f64(x: f64) -> Self::Float {
+        x as f32
+    }
+}
