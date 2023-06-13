@@ -30,6 +30,7 @@ impl ProcessContext {
         self.sample_rate
     }
 
+    /// = 1.0 / sample_rate
     pub fn dtime(&self) -> f64 {
         self.dtime
     }
