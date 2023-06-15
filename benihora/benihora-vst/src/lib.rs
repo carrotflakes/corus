@@ -10,8 +10,10 @@ use voice_manager::VoiceManager;
 
 #[derive(Serialize, Deserialize)]
 struct Synth {
-    sound_speed: usize,
+    // Don't forget to add serde default to new fields
+    sound_speed: f64,
     seed: u32,
+
     #[serde(skip)]
     time: f64,
     #[serde(skip)]
@@ -23,7 +25,7 @@ struct Synth {
 impl Synth {
     pub fn new() -> Self {
         Synth {
-            sound_speed: 3,
+            sound_speed: 3.0,
             seed: 0,
             time: 0.0,
             benihora: None,
@@ -33,6 +35,7 @@ impl Synth {
 
     pub fn handle_event(&mut self, time: f64, event: &NoteEvent<()>) {
         let base = 0;
+        #[allow(unused_variables)]
         match event {
             NoteEvent::NoteOn {
                 channel,
@@ -238,15 +241,13 @@ impl Plugin for MyPlugin {
                         if ui
                             .add(
                                 egui::widgets::DragValue::new(&mut synth.sound_speed)
-                                    .clamp_range(1..=6),
+                                    .clamp_range(1.0..=6.0),
                             )
                             .changed()
                         {
                             synth.benihora = None;
                         }
                         ui.label("sound speed");
-                    });
-                    ui.horizontal(|ui| {
                         if ui
                             .add(
                                 egui::widgets::DragValue::new(&mut synth.seed).clamp_range(0..=100),
@@ -257,6 +258,32 @@ impl Plugin for MyPlugin {
                         }
                         ui.label("seed");
                     });
+                    if synth.benihora.is_some() {
+                        ui.add(egui::Slider::new(
+                            &mut synth.benihora.as_mut().unwrap().frequency.pid.kp,
+                            0.0..=1000.0,
+                        ));
+                        ui.add(egui::Slider::new(
+                            &mut synth.benihora.as_mut().unwrap().frequency.pid.ki,
+                            0.0..=1000.0,
+                        ));
+                        ui.add(egui::Slider::new(
+                            &mut synth.benihora.as_mut().unwrap().frequency.pid.kd,
+                            -0.9..=0.9,
+                        ));
+                        ui.add(egui::Slider::new(
+                            &mut synth.benihora.as_mut().unwrap().intensity.pid.kp,
+                            0.0..=1000.0,
+                        ));
+                        ui.add(egui::Slider::new(
+                            &mut synth.benihora.as_mut().unwrap().intensity.pid.ki,
+                            0.0..=1000.0,
+                        ));
+                        ui.add(egui::Slider::new(
+                            &mut synth.benihora.as_mut().unwrap().intensity.pid.kd,
+                            -0.9..=0.9,
+                        ));
+                    }
                 });
             },
         )
@@ -290,7 +317,7 @@ impl Plugin for MyPlugin {
         let sample_rate = context.transport().sample_rate as f64;
         if synth.benihora.is_none() {
             synth.benihora = Some(BenihoraManaged::new(
-                synth.sound_speed,
+                48000.0 * synth.sound_speed,
                 sample_rate,
                 synth.seed,
             ));

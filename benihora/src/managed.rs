@@ -19,7 +19,7 @@ impl BenihoraManaged {
             tenseness: Tenseness::new(0.6),
             intensity: Intensity::new(0.0),
             loudness: Loudness::new(0.6f64.powf(0.25)),
-            benihora: Benihora::new(sound_speed, sample_rate, seed),
+            benihora: Benihora::new(48000.0 * sound_speed as F, sample_rate, seed),
         }
     }
 

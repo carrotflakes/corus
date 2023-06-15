@@ -1,25 +1,31 @@
+use crate::resample::Resample;
+
 use super::glottis::Glottis;
 use super::noise::Noise;
 use super::tract::Tract;
 use super::F;
 
 pub struct Benihora {
+    inner_sample_rate: F,
+    pub sample_rate: F,
     pub(crate) aspiration_noise: Noise,
     pub(crate) fricative_noise: Noise,
-    pub(crate) sample_rate: F,
     pub glottis: Glottis,
     pub tract: Tract,
+    resample: Resample,
 }
 
 impl Benihora {
-    pub fn new(sound_speed: usize, sample_rate: F, seed: u32) -> Self {
+    pub fn new(inner_sample_rate: F, sample_rate: F, seed: u32) -> Self {
         assert!(seed < u32::MAX - 2);
         Self {
+            inner_sample_rate,
+            sample_rate,
             aspiration_noise: Noise::new(seed + 1, sample_rate, 500.0),
             fricative_noise: Noise::new(seed + 2, sample_rate, 1000.0),
-            sample_rate,
             glottis: Glottis::new(),
-            tract: Tract::new(sound_speed, sample_rate),
+            tract: Tract::new(1, inner_sample_rate),
+            resample: Resample::new(inner_sample_rate, sample_rate),
         }
     }
 
@@ -39,20 +45,22 @@ impl Benihora {
         let aspiration_noise = self.aspiration_noise.process();
         let fricative_noise = self.fricative_noise.process();
 
-        let glottal_output = self.glottis.process(
-            current_time,
-            1.0 / self.sample_rate as f64,
-            aspiration_noise,
-            frequency,
-            tenseness,
-            intensity,
-            loudness,
-        );
+        self.resample.process(|| {
+            let glottal_output = self.glottis.process(
+                current_time,
+                1.0 / self.inner_sample_rate as f64,
+                aspiration_noise,
+                frequency,
+                tenseness,
+                intensity,
+                loudness,
+            );
 
-        // Add a bit of noise to avoid subnormal
-        let glottal_output = glottal_output + aspiration_noise * 1.0e-16;
+            // Add a bit of noise to avoid subnormal
+            let glottal_output = glottal_output + aspiration_noise * 1.0e-16;
 
-        self.tract
-            .process(current_time, fricative_noise, glottal_output)
+            self.tract
+                .process(current_time, fricative_noise, glottal_output)
+        })
     }
 }

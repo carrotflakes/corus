@@ -3,6 +3,7 @@ mod glottis;
 mod interval_timer;
 pub mod managed;
 mod noise;
+mod resample;
 mod tract;
 
 pub use self::benihora::Benihora;

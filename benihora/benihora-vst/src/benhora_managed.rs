@@ -2,7 +2,7 @@ use std::f64::consts::TAU;
 
 use benihora::{
     lerp,
-    managed::{Intensity, Loudness, Tenseness},
+    managed::{Loudness, Tenseness},
     simplex1, Benihora,
 };
 
@@ -17,20 +17,18 @@ pub struct BenihoraManaged {
 }
 
 impl BenihoraManaged {
-    pub fn new(sound_speed: usize, sample_rate: f64, seed: u32) -> Self {
+    pub fn new(inner_sample_rate: f64, sample_rate: f64, seed: u32) -> Self {
         Self {
             sound: false,
-            frequency: Frequency::new(140.0, 0.005, 6.0),
+            frequency: Frequency::new(140.0, 0.005, 6.0, sample_rate),
             tenseness: Tenseness::new(0.6),
-            intensity: Intensity::new(0.0),
+            intensity: Intensity::new(sample_rate),
             loudness: Loudness::new(0.6f64.powf(0.25)),
-            benihora: Benihora::new(sound_speed, sample_rate, seed),
+            benihora: Benihora::new(inner_sample_rate, sample_rate, seed),
             time_offset: seed as f64 * 8.0,
         }
     }
 
-    /// let v = v.clamp(0.0, 1.0);
-    /// set_tenseness(1.0 - (v * std::f64::consts::PI * 0.5).cos());
     pub fn set_tenseness(&mut self, tenseness: f64) {
         let tenseness = tenseness.clamp(0.0, 1.0);
         self.tenseness.target_tenseness = tenseness;
@@ -39,15 +37,13 @@ impl BenihoraManaged {
 
     pub fn process(&mut self, current_time: f64) -> f64 {
         if self.benihora.tract.update_timer.overflowed() {
-            self.intensity
-                .update(self.sound, self.benihora.tract.update_timer.interval);
             self.frequency.update(current_time + self.time_offset);
             self.tenseness.update(current_time + self.time_offset);
             self.loudness.update();
         }
 
         let lambda = self.benihora.tract.update_timer.progress();
-        let intensity = self.intensity.get(lambda);
+        let intensity = self.intensity.process(if self.sound { 1.0 } else { 0.0 });
         let frequency = self.frequency.get(lambda);
         let tenseness = self.tenseness.get(lambda);
         let loudness = self.loudness.get(lambda);
@@ -57,10 +53,11 @@ impl BenihoraManaged {
 }
 
 pub struct Frequency {
-    old_frequency: f64,
-    new_frequency: f64,
+    value: f64,
+    pub pid: PIDController,
+    old_vibrate: f64,
+    new_vibrate: f64,
     target_frequency: f64,
-    smooth_frequency: f64,
     pub pitchbend: f64,
 
     pub vibrato_amount: f64,
@@ -69,12 +66,18 @@ pub struct Frequency {
 }
 
 impl Frequency {
-    pub fn new(frequency: f64, vibrato_amount: f64, vibrato_frequency: f64) -> Self {
+    pub fn new(
+        frequency: f64,
+        vibrato_amount: f64,
+        vibrato_frequency: f64,
+        sample_rate: f64,
+    ) -> Self {
         Self {
-            old_frequency: frequency,
-            new_frequency: frequency,
+            value: frequency,
+            pid: PIDController::new(50.0, 20.0, 0.3, sample_rate),
+            old_vibrate: 1.0,
+            new_vibrate: 1.0,
             target_frequency: frequency,
-            smooth_frequency: frequency,
             pitchbend: 1.0,
             vibrato_amount,
             vibrato_frequency,
@@ -91,14 +94,68 @@ impl Frequency {
         vibrato +=
             self.wobble_amount * (0.02 * simplex1(time * 4.07) + 0.04 * simplex1(time * 2.15));
 
-        self.smooth_frequency +=
-            (self.target_frequency * self.pitchbend - self.smooth_frequency) * 0.9;
-
-        self.old_frequency = self.new_frequency;
-        self.new_frequency = self.smooth_frequency * (1.0 + vibrato);
+        self.old_vibrate = self.new_vibrate;
+        self.new_vibrate = 1.0 + vibrato;
     }
 
-    pub fn get(&self, lambda: f64) -> f64 {
-        lerp(self.old_frequency, self.new_frequency, lambda)
+    pub fn get(&mut self, lambda: f64) -> f64 {
+        let vibrate = lerp(self.old_vibrate, self.new_vibrate, lambda);
+        let target_frequency = self.target_frequency * vibrate * self.pitchbend;
+        // self.value *= self.pid.process(target_frequency / self.value - 1.0) * self.pid.dtime + 1.0;
+        self.value += self.pid.process(target_frequency - self.value) * self.pid.dtime;
+        self.value = self.value.clamp(10.0, 10000.0);
+        self.value
+    }
+}
+
+pub struct Intensity {
+    value: f64,
+    pub pid: PIDController,
+}
+
+impl Intensity {
+    pub fn new(sample_rate: f64) -> Self {
+        Self {
+            value: 0.0,
+            pid: PIDController::new(10.0, 100.0, 0.0, sample_rate), // recomend kd = 0.0
+        }
+    }
+
+    pub fn process(&mut self, target: f64) -> f64 {
+        self.value += (self.pid.process(target - self.value) - 1.0) * self.pid.dtime;
+        self.value = self.value.max(0.0);
+        self.value
+    }
+}
+
+pub struct PIDController {
+    sample_rate: f64,
+    dtime: f64,
+    pub kp: f64,
+    pub ki: f64,
+    pub kd: f64,
+    pub integral: f64,
+    pub last: f64,
+}
+
+impl PIDController {
+    pub fn new(kp: f64, ki: f64, kd: f64, sample_rate: f64) -> Self {
+        Self {
+            sample_rate,
+            dtime: 1.0 / sample_rate,
+            kp,
+            ki,
+            kd,
+            integral: 0.0,
+            last: 0.0,
+        }
+    }
+
+    pub fn process(&mut self, x: f64) -> f64 {
+        let d = (x - self.last) * self.sample_rate;
+        self.integral = self.integral + x * self.dtime;
+        let y = x * self.kp + self.integral * self.ki + d * self.kd;
+        self.last = x;
+        y
     }
 }
