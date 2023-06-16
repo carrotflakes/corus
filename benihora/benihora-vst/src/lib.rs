@@ -43,6 +43,7 @@ impl Synth {
                 velocity,
                 ..
             } => {
+                let benihora = self.benihora.as_mut().unwrap();
                 if (base..base + 5).contains(note) {
                     let (index, diameter) = [
                         (27.2, 2.20), // i
@@ -51,7 +52,6 @@ impl Synth {
                         (14.0, 2.09), // o
                         (22.8, 2.05), // u
                     ][*note as usize - base as usize];
-                    let benihora = self.benihora.as_mut().unwrap();
                     benihora.benihora.tract.mouth.tongue =
                         benihora.benihora.tract.mouth.tongue_clamp(index, diameter);
                     benihora.benihora.tract.calculate_diameter();
@@ -60,7 +60,6 @@ impl Synth {
                 if (base + 5..base + 5 + 3).contains(note) {
                     let (index, diameter) = [(25.0, 0.2), (30.0, 0.2), (41.0, 0.7)]
                         [*note as usize - (base as usize + 5)];
-                    let benihora = self.benihora.as_mut().unwrap();
                     benihora.benihora.tract.mouth.other_constrictions =
                         vec![benihora::Constriction {
                             index,
@@ -72,12 +71,12 @@ impl Synth {
                     return;
                 }
 
+                let muted = benihora.intensity.get() < 0.01;
                 self.voice_manager.noteon(*note);
                 if let Some(note) = self.voice_manager.get_voice() {
-                    let benihora = self.benihora.as_mut().unwrap();
                     benihora
                         .frequency
-                        .set(440.0 * 2.0f64.powf((note as f64 - 69.0) / 12.0));
+                        .set(440.0 * 2.0f64.powf((note as f64 - 69.0) / 12.0), muted);
                     benihora.set_tenseness(*velocity as f64);
                     benihora.sound = true;
                 }
@@ -101,7 +100,7 @@ impl Synth {
                 if let Some(note) = self.voice_manager.get_voice() {
                     benihora
                         .frequency
-                        .set(440.0 * 2.0f64.powf((note as f64 - 69.0) / 12.0));
+                        .set(440.0 * 2.0f64.powf((note as f64 - 69.0) / 12.0), false);
                     benihora.sound = true;
                 } else {
                     benihora.sound = false;
@@ -205,9 +204,6 @@ impl Plugin for MyPlugin {
         aux_input_ports: &[],
         aux_output_ports: &[],
 
-        // Individual ports and the layout as a whole can be named here. By default these names
-        // are generated as needed. This layout will be called 'Stereo', while a layout with
-        // only one input and output channel would be called 'Mono'.
         names: PortNames::const_default(),
     }];
 
@@ -216,13 +212,7 @@ impl Plugin for MyPlugin {
 
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
 
-    // If the plugin can send or receive SysEx messages, it can define a type to wrap around those
-    // messages here. The type implements the `SysExMessage` trait, which allows conversion to and
-    // from plain byte buffers.
     type SysExMessage = ();
-    // More advanced plugins can use this to run expensive background tasks. See the field's
-    // documentation for more information. `()` means that the plugin does not have any background
-    // tasks.
     type BackgroundTask = ();
 
     fn params(&self) -> Arc<dyn Params> {

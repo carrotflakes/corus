@@ -85,8 +85,11 @@ impl Frequency {
         }
     }
 
-    pub fn set(&mut self, frequency: f64) {
+    pub fn set(&mut self, frequency: f64, reset: bool) {
         self.target_frequency = frequency;
+        if reset {
+            self.value = frequency;
+        }
     }
 
     fn update(&mut self, time: f64) {
@@ -119,6 +122,10 @@ impl Intensity {
             value: 0.0,
             pid: PIDController::new(10.0, 100.0, 0.0, sample_rate), // recomend kd = 0.0
         }
+    }
+
+    pub fn get(&self) -> f64 {
+        self.value
     }
 
     pub fn process(&mut self, target: f64) -> f64 {
