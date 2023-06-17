@@ -98,9 +98,10 @@ pub fn editor_updator(
             });
 
             if ui
-                .add(crate::widgets::knob::knob(
-                    0.0..1.0,
+                .add(crate::widgets::knob::knob_log(
+                    0.001..1.0,
                     &mut synth.voice.level.value,
+                    "level",
                 ))
                 .clicked()
             {
@@ -116,14 +117,18 @@ pub fn editor_updator(
                     ui.label("voices");
                     ui.checkbox(&mut synth.voice.unison_settings.phase_reset, "phase reset");
                 });
-                ui.add(egui::widgets::Slider::new(
-                    &mut synth.voice.unison_settings.detune,
-                    0.0..=1.0,
-                ));
-                ui.add(egui::widgets::Slider::new(
-                    &mut synth.voice.unison_settings.stereo_width,
-                    0.0..=1.0,
-                ));
+                ui.horizontal(|ui| {
+                    ui.add(crate::widgets::knob::knob_log(
+                        0.001..1.0,
+                        &mut synth.voice.unison_settings.detune,
+                        "detune",
+                    ));
+                    ui.add(crate::widgets::knob::knob_named(
+                        0.0..1.0,
+                        &mut synth.voice.unison_settings.stereo_width,
+                        "stereo width",
+                    ));
+                });
             });
         });
 
@@ -317,7 +322,7 @@ fn envelope(ui: &mut egui::Ui, envelope: &mut corus_v2::nodes::envelope::Envelop
 
 fn lfo(ui: &mut egui::Ui, lfo: &mut crate::synth::param_f64::Lfo) {
     ui.horizontal(|ui| {
-        ui.add(crate::widgets::knob::knob_named(
+        ui.add(crate::widgets::knob::knob_log(
             0.001..100.0,
             &mut lfo.frequency,
             "freq",

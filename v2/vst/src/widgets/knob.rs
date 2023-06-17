@@ -5,6 +5,7 @@ pub fn knob_ui(
     range: std::ops::Range<f64>,
     value: &mut f64,
     name: Option<&str>,
+    printer: impl Fn(f64) -> String,
 ) -> egui::Response {
     let desired_size = egui::vec2(ui.spacing().interact_size.y, ui.spacing().interact_size.y);
 
@@ -48,9 +49,9 @@ pub fn knob_ui(
                 &response.rect,
                 |ui| {
                     ui.add(Label::new(if let Some(name) = name {
-                        format!("{} {:?}", name, *value)
+                        format!("{} {}", name, printer(*value))
                     } else {
-                        format!("{:?}", *value)
+                        format!("{}", printer(*value))
                     }))
                 },
             );
@@ -61,7 +62,7 @@ pub fn knob_ui(
 }
 
 pub fn knob(range: std::ops::Range<f64>, value: &mut f64) -> impl egui::Widget + '_ {
-    move |ui: &mut egui::Ui| knob_ui(ui, range, value, None)
+    move |ui: &mut egui::Ui| knob_ui(ui, range, value, None, |v| format!("{:.2}", v))
 }
 
 pub fn knob_named<'a>(
@@ -69,5 +70,21 @@ pub fn knob_named<'a>(
     value: &'a mut f64,
     name: &'a str,
 ) -> impl egui::Widget + 'a {
-    move |ui: &mut egui::Ui| knob_ui(ui, range, value, Some(name))
+    move |ui: &mut egui::Ui| knob_ui(ui, range, value, Some(name), |v| format!("{:.2}", v))
+}
+
+pub fn knob_log<'a>(
+    range: std::ops::Range<f64>,
+    value: &'a mut f64,
+    name: &'a str,
+) -> impl egui::Widget + 'a {
+    move |ui: &mut egui::Ui| {
+        let mut v = value.log10();
+        let range = range.start.log10()..range.end.log10();
+        let res = knob_ui(ui, range, &mut v, Some(name), |v| {
+            format!("{:.2}", 10.0f64.powf(v))
+        });
+        *value = 10.0f64.powf(v);
+        res
+    }
 }

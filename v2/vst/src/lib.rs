@@ -141,7 +141,7 @@ impl Plugin for MyPlugin {
         // allocate. You can remove this function if you do not need it.
     }
 
-    fn editor(&self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+    fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         // let peak_meter = self.peak_meter.clone();
         create_egui_editor(
             self.params.editor_state.clone(),
@@ -278,8 +278,8 @@ impl Plugin for MyPlugin {
         synth.ensure_state(&mut synth_state);
 
         // apply params
-        synth.frequency = self.params.frequency.value() as f64;
-        synth.q = self.params.resonance.value() as f64;
+        // synth.frequency = self.params.frequency.value() as f64;
+        // synth.q = self.params.resonance.value() as f64;
 
         for mut channel_samples in buffer.iter_samples() {
             self.event_queue

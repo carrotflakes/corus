@@ -32,8 +32,6 @@ pub struct MySynth {
     gain: f64,
     pan: f64,
     pub pitch: f64,
-    pub frequency: f64,
-    pub q: f64,
     pub voice: Voice,
     pub effectors: Vec<(bool, Effector)>,
     pub lfos: Vec<Lfo>,
@@ -97,8 +95,6 @@ impl MySynth {
             gain: 1.0,
             pan: 0.0,
             pitch: 1.0,
-            frequency: 1000.0,
-            q: 1.0,
             voice: Voice {
                 wavetable_settings: WavetableSettings::new(1),
                 bender: bender::Bender::None,
@@ -114,32 +110,16 @@ impl MySynth {
                 effectors: vec![
                     (
                         false,
-                        Effector::Filter {
-                            frequency: ParamF64::new(5000.0),
-                            // frequency: ParamF64 {
-                            //     value: 50.0,
-                            //     envelope: Some((
-                            //         true,
-                            //         5000.0,
-                            //         Envelope::new(&[(0.01, 1.0, -1.0), (0.4, 0.3, 1.0)], 0.3, 1.0),
-                            //     )),
-                            //     lfo: Some((
-                            //         true,
-                            //         Lfo {
-                            //             frequency: 1.0,
-                            //             amp: 1000.0,
-                            //         },
-                            //     )),
-                            //     consumer: Consumer::new(),
-                            // },
-                            q: ParamF64::new(1.0),
+                        Effector::Shaper {
+                            pre_gain: ParamF64::new(1.0),
+                            r#type: ShaperType::Tanh,
                         },
                     ),
                     (
                         false,
-                        Effector::Shaper {
-                            pre_gain: ParamF64::new(1.0),
-                            r#type: ShaperType::Tanh,
+                        Effector::Filter {
+                            frequency: ParamF64::new(5000.0),
+                            q: ParamF64::new(1.0),
                         },
                     ),
                 ],
