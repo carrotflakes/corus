@@ -2,14 +2,15 @@ use std::f64::consts::TAU;
 
 use corus_v2::{
     nodes::{
-        biquad_filter::BiquadFilter,
+        biquad_filter::{BiquadFilter, FilterType},
         effects::{DelayFx, EarlyReflections, SchroederReverb},
         envelope::{self, Envelope},
         mix::mix,
         param::Param,
         phase::Phase,
+        sine::Sine,
         unison::Unison,
-        voice_manager::VoiceManager, sine::Sine,
+        voice_manager::VoiceManager,
     },
     signal::{IntoStereo, StereoF64},
     unsafe_wrapper::UnsafeWrapper,
@@ -142,7 +143,9 @@ impl Synth {
         let gain = self.env.1.process(&self.env.0, ctx) * 0.2;
         let x = (phase * TAU).sin();
         let filter_freq = self.filter_sin.process(ctx, 5.0) * 500.0 + 1000.0;
-        let x = self.filter.process(ctx, filter_freq, 3.0, x);
+        self.filter
+            .update_coefficients(ctx, FilterType::LowPass, filter_freq, 3.0);
+        let x = self.filter.process(x);
         x * gain
     }
 }
@@ -161,7 +164,9 @@ impl Voice {
             .process(ctx, self.frequency, 0.04, 0.9, |phase| phase * 2.0 - 1.0);
         let gain = self.envs[0].1.process(&self.envs[0].0, ctx) * 0.4;
         let filter_freq = self.envs[1].1.process(&self.envs[1].0, ctx) * 4000.0 + 4500.0;
-        let x = self.filter.process(ctx, filter_freq, 1.5, x);
+        self.filter
+            .update_coefficients(ctx, FilterType::LowPass, filter_freq, 1.5);
+        let x = self.filter.process(x);
         x * gain.into_stereo()
     }
 

@@ -5,7 +5,9 @@ use crate::{
     ProcessContext,
 };
 
-pub struct BiquadFilter<const N: usize, S: Signal> {
+pub type FilterType = Type<f64>;
+
+pub struct BiquadFilter<const N: usize, S: Signal<Float = f64>> {
     biquad: [DirectForm1<S::Float>; N],
 }
 
@@ -15,7 +17,7 @@ impl<const N: usize, S: Signal<Float = f64>> BiquadFilter<N, S> {
 
         let coeffs = Coefficients::<f64>::from_params(
             Type::LowPass,
-            44100.0.hz(),
+            48000.0.hz(),
             1.0.khz(),
             Q_BUTTERWORTH_F64,
         )
@@ -24,25 +26,30 @@ impl<const N: usize, S: Signal<Float = f64>> BiquadFilter<N, S> {
             biquad: [DirectForm1::<f64>::new(coeffs); N],
         }
     }
+
+    pub fn update_coefficients(
+        &mut self,
+        ctx: &ProcessContext,
+        r#type: Type<f64>,
+        freq: f64,
+        q: f64,
+    ) {
+        let coeffs =
+            Coefficients::<f64>::from_params(r#type, ctx.sample_rate().hz(), freq.hz(), q).unwrap();
+        for biquad in self.biquad.iter_mut() {
+            biquad.update_coefficients(coeffs.clone());
+        }
+    }
 }
 
 impl<S: Signal<Float = f64> + Mono> BiquadFilter<1, S> {
-    pub fn process(&mut self, ctx: &ProcessContext, freq: f64, q: f64, x: S) -> S {
-        let coeff =
-            Coefficients::<f64>::from_params(Type::LowPass, ctx.sample_rate().hz(), freq.hz(), q)
-                .unwrap();
-        self.biquad[0].update_coefficients(coeff);
+    pub fn process(&mut self, x: S) -> S {
         S::from(self.biquad[0].run(x.get_m()))
     }
 }
 
 impl<S: Signal<Float = f64> + Stereo> BiquadFilter<2, S> {
-    pub fn process(&mut self, ctx: &ProcessContext, freq: f64, q: f64, x: S) -> S {
-        let coeff =
-            Coefficients::<f64>::from_params(Type::LowPass, ctx.sample_rate().hz(), freq.hz(), q)
-                .unwrap();
-        self.biquad[0].update_coefficients(coeff.clone());
-        self.biquad[1].update_coefficients(coeff);
+    pub fn process(&mut self, x: S) -> S {
         let l = self.biquad[0].run(x.get_l());
         let r = self.biquad[1].run(x.get_r());
         S::from_lr(l, r)

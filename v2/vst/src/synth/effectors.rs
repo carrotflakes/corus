@@ -45,11 +45,25 @@ pub enum ShaperType {
     Triangle,
 }
 
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Serialize, Deserialize)]
+pub enum FilterType {
+    LowPass,
+    HighPass,
+    BandPass,
+    LowShelf,
+    HighShelf,
+    Peaking,
+    Notch,
+    AllPass,
+}
+
 #[derive(Serialize, Deserialize)]
 pub enum Effector {
     Filter {
+        filter_type: FilterType,
         frequency: param_f64::ParamF64,
         q: param_f64::ParamF64,
+        gain: param_f64::ParamF64,
     },
     Phaser,
     Chorus,
@@ -129,7 +143,12 @@ impl Effector {
 
     pub fn param_muts<'a>(&'a mut self) -> Vec<&'a mut param_f64::ParamF64> {
         match self {
-            Effector::Filter { frequency, q } => vec![frequency, q],
+            Effector::Filter {
+                filter_type: _,
+                frequency,
+                q,
+                gain,
+            } => vec![frequency, q, gain],
             Effector::Phaser { .. } => vec![],
             Effector::Chorus { .. } => vec![],
             Effector::Delay { .. } => vec![],
@@ -155,12 +174,39 @@ impl Effector {
         x: StereoF64,
     ) -> StereoF64 {
         match (self, state) {
-            (Effector::Filter { frequency, q }, State::Filter { filter }) => filter.process(
-                ctx,
-                frequency.compute(param_pools).clamp(20.0, 20000.0),
-                q.compute(param_pools),
-                x,
-            ),
+            (
+                Effector::Filter {
+                    filter_type,
+                    frequency,
+                    q,
+                    gain,
+                },
+                State::Filter { filter },
+            ) => {
+                let t = match filter_type {
+                    FilterType::LowPass => corus_v2::nodes::biquad_filter::FilterType::LowPass,
+                    FilterType::HighPass => corus_v2::nodes::biquad_filter::FilterType::HighPass,
+                    FilterType::BandPass => corus_v2::nodes::biquad_filter::FilterType::BandPass,
+                    FilterType::LowShelf => corus_v2::nodes::biquad_filter::FilterType::LowShelf(
+                        gain.compute(param_pools),
+                    ),
+                    FilterType::HighShelf => corus_v2::nodes::biquad_filter::FilterType::HighShelf(
+                        gain.compute(param_pools),
+                    ),
+                    FilterType::Peaking => corus_v2::nodes::biquad_filter::FilterType::PeakingEQ(
+                        gain.compute(param_pools),
+                    ),
+                    FilterType::Notch => corus_v2::nodes::biquad_filter::FilterType::Notch,
+                    FilterType::AllPass => corus_v2::nodes::biquad_filter::FilterType::AllPass,
+                };
+                filter.update_coefficients(
+                    ctx,
+                    t,
+                    frequency.compute(param_pools).clamp(20.0, 20000.0),
+                    q.compute(param_pools),
+                );
+                filter.process(x)
+            }
             (Effector::Phaser, State::Phaser { phaser }) => phaser.process(ctx, x),
             (Effector::Chorus, State::Chorus { chorus }) => chorus.process(ctx, 0.001, 0.001, x),
             (Effector::Delay, State::Delay { delay }) => delay.process(ctx, x, 0.5, 0.3, 0.2),
@@ -289,6 +335,32 @@ impl ShaperType {
             ShaperType::Sin => "Sin",
             ShaperType::Wrap => "Wrap",
             ShaperType::Triangle => "Triangle",
+        }
+    }
+}
+
+impl FilterType {
+    pub const ALL: [FilterType; 8] = [
+        FilterType::LowPass,
+        FilterType::HighPass,
+        FilterType::BandPass,
+        FilterType::LowShelf,
+        FilterType::HighShelf,
+        FilterType::Peaking,
+        FilterType::Notch,
+        FilterType::AllPass,
+    ];
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            FilterType::LowPass => "LowPass",
+            FilterType::HighPass => "HighPass",
+            FilterType::BandPass => "BandPass",
+            FilterType::LowShelf => "LowShelf",
+            FilterType::HighShelf => "HighShelf",
+            FilterType::Peaking => "Peaking",
+            FilterType::Notch => "Notch",
+            FilterType::AllPass => "AllPass",
         }
     }
 }

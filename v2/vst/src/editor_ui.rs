@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
 use crate::{
-    synth::{bender::Bender, effectors::ShaperType, param_pool::ProducerId},
+    synth::{
+        bender::Bender,
+        effectors::{FilterType, ShaperType},
+        param_pool::ProducerId,
+    },
     MyPluginParams,
 };
 use nih_plug::prelude::*;
@@ -342,48 +346,63 @@ fn effectors(
     setter: impl Fn(usize, usize),
 ) {
     for (i, (enabled, effector)) in effectors.iter_mut().enumerate() {
-        ui.horizontal(|ui| {
-            ui.add(egui::widgets::Checkbox::new(enabled, effector.name()));
-            use crate::synth::effectors::Effector;
+        ui.push_id(("fx", i), |ui| {
+            ui.horizontal(|ui| {
+                ui.add(egui::widgets::Checkbox::new(enabled, effector.name()));
+                use crate::synth::effectors::Effector;
 
-            match effector {
-                Effector::Filter { frequency, q } => {
-                    add_knob(ui, frequency, 20.0..10000.0, is_voice, || setter(i, 0));
-                    add_knob(ui, q, 0.7..10.0, is_voice, || setter(i, 1));
+                match effector {
+                    Effector::Filter {
+                        filter_type,
+                        frequency,
+                        q,
+                        gain,
+                    } => {
+                        egui::ComboBox::from_label("type")
+                            .selected_text(filter_type.name())
+                            .show_ui(ui, |ui| {
+                                for ft in &FilterType::ALL {
+                                    ui.selectable_value(filter_type, *ft, ft.name());
+                                }
+                            });
+                        add_knob(ui, frequency, 20.0..10000.0, is_voice, || setter(i, 0));
+                        add_knob(ui, q, 0.7..10.0, is_voice, || setter(i, 1));
+                        add_knob(ui, gain, -20.0..20.0, is_voice, || setter(i, 2));
+                    }
+                    Effector::Phaser => {}
+                    Effector::Chorus => {}
+                    Effector::Delay => {}
+                    Effector::Reverb => {}
+                    Effector::Gain { gain } => {
+                        // ui.add(egui::widgets::Slider::new(gain, 0.0..=1.5));
+                        add_knob(ui, gain, 0.0..1.5, is_voice, || setter(i, 0));
+                    }
+                    Effector::Compressor {
+                        threshold,
+                        ratio,
+                        attack,
+                        release,
+                        gain,
+                    } => {
+                        add_knob(ui, threshold, 0.0..1.0, is_voice, || setter(i, 0));
+                        add_knob(ui, ratio, 0.0..1.0, is_voice, || setter(i, 1));
+                        add_knob(ui, attack, 0.001..1.0, is_voice, || setter(i, 2));
+                        add_knob(ui, release, 0.001..1.0, is_voice, || setter(i, 3));
+                        add_knob(ui, gain, 0.0..1.5, is_voice, || setter(i, 4));
+                    }
+                    Effector::Tanh {} => {}
+                    Effector::Shaper { pre_gain, r#type } => {
+                        add_knob(ui, pre_gain, 0.0..32.0, is_voice, || setter(i, 0));
+                        egui::ComboBox::from_label("type")
+                            .selected_text(r#type.name())
+                            .show_ui(ui, |ui| {
+                                for st in &ShaperType::ALL {
+                                    ui.selectable_value(r#type, *st, st.name());
+                                }
+                            });
+                    }
                 }
-                Effector::Phaser => {}
-                Effector::Chorus => {}
-                Effector::Delay => {}
-                Effector::Reverb => {}
-                Effector::Gain { gain } => {
-                    // ui.add(egui::widgets::Slider::new(gain, 0.0..=1.5));
-                    add_knob(ui, gain, 0.0..1.5, is_voice, || setter(i, 0));
-                }
-                Effector::Compressor {
-                    threshold,
-                    ratio,
-                    attack,
-                    release,
-                    gain,
-                } => {
-                    add_knob(ui, threshold, 0.0..1.0, is_voice, || setter(i, 0));
-                    add_knob(ui, ratio, 0.0..1.0, is_voice, || setter(i, 1));
-                    add_knob(ui, attack, 0.001..1.0, is_voice, || setter(i, 2));
-                    add_knob(ui, release, 0.001..1.0, is_voice, || setter(i, 3));
-                    add_knob(ui, gain, 0.0..1.5, is_voice, || setter(i, 4));
-                }
-                Effector::Tanh {} => {}
-                Effector::Shaper { pre_gain, r#type } => {
-                    add_knob(ui, pre_gain, 0.0..32.0, is_voice, || setter(i, 0));
-                    egui::ComboBox::from_label("type")
-                        .selected_text(r#type.name())
-                        .show_ui(ui, |ui| {
-                            for st in &ShaperType::ALL {
-                                ui.selectable_value(r#type, *st, st.name());
-                            }
-                        });
-                }
-            }
+            });
         });
     }
 }

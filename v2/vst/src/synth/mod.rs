@@ -118,8 +118,10 @@ impl MySynth {
                     (
                         false,
                         Effector::Filter {
+                            filter_type: effectors::FilterType::LowPass,
                             frequency: ParamF64::new(5000.0),
                             q: ParamF64::new(1.0),
+                            gain: ParamF64::new(1.0),
                         },
                     ),
                 ],
@@ -132,8 +134,10 @@ impl MySynth {
                 (
                     false,
                     Effector::Filter {
+                        filter_type: effectors::FilterType::LowPass,
                         frequency: ParamF64::new(10000.0),
                         q: ParamF64::new(1.0),
+                        gain: ParamF64::new(1.0),
                     },
                 ),
                 (
