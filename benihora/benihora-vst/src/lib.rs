@@ -52,22 +52,22 @@ impl Synth {
                         (14.0, 2.09), // o
                         (22.8, 2.05), // u
                     ][*note as usize - base as usize];
-                    benihora.benihora.tract.mouth.tongue =
-                        benihora.benihora.tract.mouth.tongue_clamp(index, diameter);
-                    benihora.benihora.tract.calculate_diameter();
+                    benihora.benihora.tract.source.tongue =
+                        benihora.benihora.tract.source.tongue_clamp(index, diameter);
+                    benihora.benihora.tract.update_diameter();
                     return;
                 }
                 if (base + 5..base + 5 + 3).contains(note) {
                     let (index, diameter) = [(25.0, 0.2), (30.0, 0.2), (41.0, 0.7)]
                         [*note as usize - (base as usize + 5)];
-                    benihora.benihora.tract.mouth.other_constrictions =
+                    benihora.benihora.tract.source.other_constrictions =
                         vec![benihora::Constriction {
                             index,
                             diameter,
                             start_time: time,
                             end_time: None,
                         }];
-                    benihora.benihora.tract.calculate_diameter();
+                    benihora.benihora.tract.update_diameter();
                     return;
                 }
 
@@ -89,10 +89,16 @@ impl Synth {
             } => {
                 let benihora = self.benihora.as_mut().unwrap();
                 if (base + 5..base + 5 + 3).contains(note) {
-                    if let Some(c) = benihora.benihora.tract.mouth.other_constrictions.get_mut(0) {
+                    if let Some(c) = benihora
+                        .benihora
+                        .tract
+                        .source
+                        .other_constrictions
+                        .get_mut(0)
+                    {
                         c.end_time = Some(time);
                     }
-                    benihora.benihora.tract.calculate_diameter();
+                    benihora.benihora.tract.update_diameter();
                     return;
                 }
 

@@ -10,7 +10,7 @@ pub use self::benihora::Benihora;
 pub use glottis::Glottis;
 pub use interval_timer::IntervalTimer;
 pub use managed::BenihoraManaged;
-pub use tract::{Constriction, Mouth, Nose};
+pub use tract::Constriction;
 
 type F = f64;
 

@@ -44,16 +44,16 @@ impl crate::EventListener<BenihoraEvent> for Benihora {
     fn apply_event(&mut self, time: f64, event: &BenihoraEvent) {
         match event {
             BenihoraEvent::MoveTongue(index, diameter) => {
-                self.benihora.benihora.tract.mouth.tongue = self
+                self.benihora.benihora.tract.source.tongue = self
                     .benihora
                     .benihora
                     .tract
-                    .mouth
+                    .source
                     .tongue_clamp(*index, *diameter);
-                self.benihora.benihora.tract.calculate_diameter();
+                self.benihora.benihora.tract.update_diameter();
             }
             BenihoraEvent::SetOtherConstrictions(new_ocs) => {
-                let ocs = &mut self.benihora.benihora.tract.mouth.other_constrictions;
+                let ocs = &mut self.benihora.benihora.tract.source.other_constrictions;
                 for c in new_ocs.iter() {
                     if !ocs
                         .iter()
@@ -77,10 +77,10 @@ impl crate::EventListener<BenihoraEvent> for Benihora {
                         c.end_time = Some(time);
                     }
                 }
-                self.benihora.benihora.tract.calculate_diameter();
+                self.benihora.benihora.tract.update_diameter();
             }
             BenihoraEvent::SetVelum(velum) => {
-                self.benihora.benihora.tract.nose.velum_target = *velum;
+                self.benihora.benihora.tract.set_velum_target(*velum);
             }
             BenihoraEvent::SetFrequency(frequency) => {
                 self.benihora.frequency.set(*frequency);
