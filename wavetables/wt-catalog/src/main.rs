@@ -81,17 +81,18 @@ impl Application for App {
 
     fn view(&self) -> Element<'_, Self::Message, iced::Renderer<Self::Theme>> {
         fn make_canvas<'a>(f: impl Fn(f64) -> f64 + 'static) -> Element<'a, Message, Renderer> {
-            Container::new(
-                widget::button(
-                    Canvas::new(MyCanvas::new(Box::new(f)))
-                        .width(64.0)
-                        .height(64.0),
-                ),
-            )
+            Container::new(widget::button(
+                Canvas::new(MyCanvas::new(Box::new(f)))
+                    .width(64.0)
+                    .height(64.0),
+            ))
             .padding(8.0)
             .into()
         }
-        fn make_canvas_b<'a>(f: impl Fn(f64) -> f64 + 'static, mes: Message) -> Element<'a, Message, Renderer> {
+        fn make_canvas_b<'a>(
+            f: impl Fn(f64) -> f64 + 'static,
+            mes: Message,
+        ) -> Element<'a, Message, Renderer> {
             Container::new(
                 widget::button(
                     Canvas::new(MyCanvas::new(Box::new(f)))
@@ -104,10 +105,15 @@ impl Application for App {
             .into()
         }
         let mut column = widget::Column::new();
-        column = column.push(widget::Row::new().push(widget::button(text("catalog")).on_press(Message::SetMode(Mode::Catalog))).push(widget::button(text("composite")).on_press(Message::SetMode(Mode::Composite))));
+        column = column.push(
+            widget::Row::new()
+                .push(widget::button(text("catalog")).on_press(Message::SetMode(Mode::Catalog)))
+                .push(
+                    widget::button(text("composite")).on_press(Message::SetMode(Mode::Composite)),
+                ),
+        );
         match self.mode {
             Mode::Catalog => {
-
                 column = column.push({
                     let mut row = widget::Row::new().push(text("primitive"));
 
@@ -119,7 +125,7 @@ impl Application for App {
                         Box::new(wavetables::primitives::shifted_triangle),
                         Box::new(wavetables::primitives::square),
                         Box::new(wavetables::primitives::quadratic),
-                        Box::new(|t|wavetables::primitives::steps(3.0, t)),
+                        Box::new(|t| wavetables::primitives::steps(3.0, t)),
                         Box::new(|t| wavetables::contrib::unipolar_sin_pulse(0.25, t)),
                     ] {
                         row = row.push(make_canvas(f));
@@ -199,24 +205,23 @@ impl Application for App {
                         row
                     });
                 }
-            },
+            }
             Mode::Composite => {
                 column = column.push({
                     let mut row = widget::Row::new().push(text("my WT"));
 
-                    for f in
-                        self.wts.iter()
-                    {
-                        row = row.push(make_canvas_b(f.build(), Message::SetSlot(self.current_slot, f.clone())));
+                    for f in self.wts.iter() {
+                        row = row.push(make_canvas_b(
+                            f.build(),
+                            Message::SetSlot(self.current_slot, f.clone()),
+                        ));
                     }
                     row
                 });
                 column = column.push({
                     let mut row = widget::Row::new().push(text("slots"));
 
-                    for (i, f) in
-                        self.slots.iter().enumerate()
-                    {
+                    for (i, f) in self.slots.iter().enumerate() {
                         row = row.push(make_canvas_b(f.build(), Message::SelectSlot(i)));
                     }
                     row
@@ -227,21 +232,51 @@ impl Application for App {
                     for f in &[
                         wavetables::tree::Tree::Negative(Box::new(self.slots[0].clone())),
                         wavetables::tree::Tree::Reversed(Box::new(self.slots[0].clone())),
-                        wavetables::tree::Tree::Join(Box::new(self.slots[0].clone()), Box::new(self.slots[1].clone())),
-                        wavetables::tree::Tree::Shift(wavetables::tree::Value::Constant(0.5), Box::new(self.slots[0].clone())),
-                        wavetables::tree::Tree::Scale(wavetables::tree::Value::Constant(0.5), Box::new(self.slots[0].clone())),
-                        wavetables::tree::Tree::Scale(wavetables::tree::Value::Constant(2.0), Box::new(self.slots[0].clone())),
-                        wavetables::tree::Tree::Blend(wavetables::tree::Value::Constant(0.5), Box::new(self.slots[0].clone()), Box::new(self.slots[1].clone())),
-                        wavetables::tree::Tree::DynamicBlend(Box::new(self.slots[0].clone()), Box::new(self.slots[1].clone()), Box::new(self.slots[2].clone())),
-                        wavetables::tree::Tree::Product(Box::new(self.slots[0].clone()), Box::new(self.slots[1].clone())),
-                        wavetables::tree::Tree::Mul(Box::new(self.slots[0].clone()), Box::new(self.slots[1].clone())),
+                        wavetables::tree::Tree::Join(
+                            Box::new(self.slots[0].clone()),
+                            Box::new(self.slots[1].clone()),
+                        ),
+                        wavetables::tree::Tree::Shift(
+                            wavetables::tree::Value::Constant(0.5),
+                            Box::new(self.slots[0].clone()),
+                        ),
+                        wavetables::tree::Tree::Scale(
+                            wavetables::tree::Value::Constant(0.5),
+                            Box::new(self.slots[0].clone()),
+                        ),
+                        wavetables::tree::Tree::Scale(
+                            wavetables::tree::Value::Constant(2.0),
+                            Box::new(self.slots[0].clone()),
+                        ),
+                        wavetables::tree::Tree::Blend(
+                            wavetables::tree::Value::Constant(0.5),
+                            Box::new(self.slots[0].clone()),
+                            Box::new(self.slots[1].clone()),
+                        ),
+                        wavetables::tree::Tree::DynamicBlend(
+                            Box::new(self.slots[0].clone()),
+                            Box::new(self.slots[1].clone()),
+                            Box::new(self.slots[2].clone()),
+                        ),
+                        wavetables::tree::Tree::Product(
+                            Box::new(self.slots[0].clone()),
+                            Box::new(self.slots[1].clone()),
+                        ),
+                        wavetables::tree::Tree::Mul(
+                            Box::new(self.slots[0].clone()),
+                            Box::new(self.slots[1].clone()),
+                        ),
                         wavetables::tree::Tree::Mirror(Box::new(self.slots[0].clone())),
+                        wavetables::tree::Tree::JoinNegative(Box::new(self.slots[0].clone())),
+                        wavetables::tree::Tree::JoinNegativeReverse(Box::new(
+                            self.slots[0].clone(),
+                        )),
                     ] {
                         row = row.push(make_canvas(f.build()));
                     }
                     row
                 });
-            },
+            }
         }
         Scrollable::new(column)
             // .horizontal_scroll(Default::default())

@@ -51,6 +51,14 @@ pub fn mirror(f: impl Fn(f64) -> f64) -> impl Fn(f64) -> f64 {
     move |t| join(&f, reversed(&f))(t)
 }
 
+pub fn join_negative(f: impl Fn(f64) -> f64) -> impl Fn(f64) -> f64 {
+    move |t| join(&f, negative(&f))(t)
+}
+
+pub fn join_negative_reverse(f: impl Fn(f64) -> f64) -> impl Fn(f64) -> f64 {
+    move |t| join(&f, negative(reversed(&f)))(t)
+}
+
 pub fn fractal(f: impl Fn(f64) -> f64) -> impl Fn(f64) -> f64 {
     move |t| (f(t) + scale(2.0, &f)(t)) * 0.5
 }

@@ -7,7 +7,7 @@ pub struct WavetableLab {
     pallet: Vec<Tree>,
     selected_pallet: usize,
     param: f64,
-    suggest: Vec<Tree>,
+    suggest: Vec<(String, Tree)>,
 }
 
 impl WavetableLab {
@@ -34,31 +34,61 @@ impl WavetableLab {
 
     pub fn compute_sugget(&mut self) {
         let current = Box::new(self.pallet[self.selected_pallet].clone());
+
+        // unary operations
         let mut suggest = vec![
-            Tree::Negative(current.clone()),
-            Tree::Reversed(current.clone()),
-            Tree::Shift(Value::Variable(0), current.clone()),
-            Tree::Scale(Value::Variable(0), current.clone()),
-            Tree::Mirror(current.clone()),
+            ("neg".to_owned(), Tree::Negative(current.clone())),
+            ("rev".to_owned(), Tree::Reversed(current.clone())),
+            (
+                "shift".to_owned(),
+                Tree::Shift(Value::Variable(0), current.clone()),
+            ),
+            (
+                "scale".to_owned(),
+                Tree::Scale(Value::Variable(0), current.clone()),
+            ),
+            ("mirror".to_owned(), Tree::Mirror(current.clone())),
+            ("jnNeg".to_owned(), Tree::JoinNegative(current.clone())),
+            (
+                "jnNegRev".to_owned(),
+                Tree::JoinNegativeReverse(current.clone()),
+            ),
         ];
 
+        // binary operations
         for wt in &self.pallet {
-            suggest.push(Tree::Join(current.clone(), Box::new(wt.clone())));
-            suggest.push(Tree::Join(Box::new(wt.clone()), current.clone()));
-            suggest.push(Tree::Blend(
-                Value::Variable(0),
-                current.clone(),
-                Box::new(wt.clone()),
+            suggest.push((
+                "join".to_owned(),
+                Tree::Join(current.clone(), Box::new(wt.clone())),
             ));
-            suggest.push(Tree::Product(current.clone(), Box::new(wt.clone())));
-            suggest.push(Tree::Mul(current.clone(), Box::new(wt.clone())));
+            suggest.push((
+                "join".to_owned(),
+                Tree::Join(Box::new(wt.clone()), current.clone()),
+            ));
+            suggest.push((
+                "blend".to_owned(),
+                Tree::Blend(Value::Variable(0), current.clone(), Box::new(wt.clone())),
+            ));
+            suggest.push((
+                "prod".to_owned(),
+                Tree::Product(current.clone(), Box::new(wt.clone())),
+            ));
+            suggest.push((
+                "mul".to_owned(),
+                Tree::Mul(current.clone(), Box::new(wt.clone())),
+            ));
             // dynamic blend
         }
 
         self.suggest.clear();
+        // remove duplicates
         'outer: for wt in suggest {
-            let wt_built = wt.build_parameterized();
-            for other in self.pallet.iter().chain(self.suggest.iter()) {
+            let wt_built = wt.1.build_parameterized();
+            for other in self
+                .pallet
+                .iter()
+                .chain(self.suggest.iter().map(|(_, wt)| wt))
+            {
                 let other = other.build_parameterized();
                 if (0..16 * 16)
                     .map(|i| {
@@ -101,6 +131,16 @@ impl WavetableLab {
                             }
                         }
                     });
+                    if res.hovered() {
+                        egui::containers::show_tooltip_for(
+                            &res.ctx,
+                            res.id.with("__tooltip"),
+                            &res.rect,
+                            |ui| {
+                                ui.label(format!("{:?}", wt));
+                            },
+                        );
+                    }
                     if res.clicked() {
                         self.selected_pallet = i;
                         update = true;
@@ -134,15 +174,25 @@ impl WavetableLab {
             .id_source("suggest")
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    for wt in &self.suggest {
-                        if wavetable_view(
+                    for (name, wt) in &self.suggest {
+                        let res = &wavetable_view(
                             ui,
                             egui::vec2(32.0, 32.0),
                             wt.instant_params(&[self.param]).build(),
                             false,
-                        )
-                        .double_clicked()
-                        {
+                        );
+                        if res.hovered() {
+                            egui::containers::show_tooltip_for(
+                                &res.ctx,
+                                res.id.with("__tooltip"),
+                                &res.rect,
+                                |ui| {
+                                    ui.label(name);
+                                    ui.label(format!("{:?}", wt));
+                                },
+                            );
+                        }
+                        if res.double_clicked() {
                             self.pallet.push(wt.instant_params(&[self.param]).clone());
                             self.selected_pallet = self.pallet.len() - 1;
                             update = true;

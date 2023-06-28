@@ -26,6 +26,8 @@ pub enum Tree {
     Product(Box<Tree>, Box<Tree>),
     Mul(Box<Tree>, Box<Tree>),
     Mirror(Box<Tree>),
+    JoinNegative(Box<Tree>),
+    JoinNegativeReverse(Box<Tree>),
 }
 
 #[derive(Debug, Clone)]
@@ -103,6 +105,10 @@ impl Tree {
                 Box::new(f2.instant_params(params)),
             ),
             Tree::Mirror(f) => Tree::Mirror(Box::new(f.instant_params(params))),
+            Tree::JoinNegative(f) => Tree::JoinNegative(Box::new(f.instant_params(params))),
+            Tree::JoinNegativeReverse(f) => {
+                Tree::JoinNegativeReverse(Box::new(f.instant_params(params)))
+            }
         }
     }
 
@@ -137,6 +143,8 @@ impl Tree {
             Tree::Product(f1, f2) => Box::new(functions::product(f1.build(), f2.build())),
             Tree::Mul(f1, f2) => Box::new(functions::mul(f1.build(), f2.build())),
             Tree::Mirror(f) => Box::new(functions::mirror(f.build())),
+            Tree::JoinNegative(f) => Box::new(functions::join_negative(f.build())),
+            Tree::JoinNegativeReverse(f) => Box::new(functions::join_negative_reverse(f.build())),
         }
     }
 
@@ -214,6 +222,14 @@ impl Tree {
                 let f = f.build_parameterized();
                 Box::new(move |params, t| functions::mirror(|t| f(params, t))(t))
             }
+            Tree::JoinNegative(f) => {
+                let f = f.build_parameterized();
+                Box::new(move |params, t| functions::join_negative(|t| f(params, t))(t))
+            }
+            Tree::JoinNegativeReverse(f) => {
+                let f = f.build_parameterized();
+                Box::new(move |params, t| functions::join_negative_reverse(|t| f(params, t))(t))
+            }
         }
     }
 
@@ -244,6 +260,8 @@ impl Tree {
             Tree::Product(f1, f2) => f1.variable_num().max(f2.variable_num()),
             Tree::Mul(f1, f2) => f1.variable_num().max(f2.variable_num()),
             Tree::Mirror(f) => f.variable_num(),
+            Tree::JoinNegative(f) => f.variable_num(),
+            Tree::JoinNegativeReverse(f) => f.variable_num(),
         }
     }
 }
