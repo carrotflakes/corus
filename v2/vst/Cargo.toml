@@ -26,6 +26,7 @@ corus-v2 = { path = "..", features = ["serde"] }
 wavetables = { path = "../../wavetables", features = ["serde"] }
 rand-wt = { path = "../../wavetables/rand-wt" }
 rand = "0.8"
+rustfft = "6.1"
 
 serde = "1.0"
 

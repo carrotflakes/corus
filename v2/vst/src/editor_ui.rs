@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{cell::RefCell, sync::Arc};
 
 use crate::{
     synth::{
@@ -10,6 +10,11 @@ use crate::{
 };
 use nih_plug::prelude::*;
 use nih_plug_egui::egui::{self, emath};
+use rustfft::num_complex::Complex64;
+
+thread_local! {
+    pub static FFT_PLANNER: RefCell<rustfft::FftPlanner<f64>> = RefCell::new(rustfft::FftPlanner::new());
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum EffectorsLocation {
@@ -28,27 +33,65 @@ pub fn editor_updator(
         ui.collapsing("Generator", |ui| {
             ui.horizontal(|ui| {
                 let wt = { synth.voice.wavetable_settings.wavetable() };
-                egui::Frame::canvas(ui.style()).show(ui, |ui| {
+                let main_wt_id = ui.id().with("main_wt");
+                let res = egui::Frame::canvas(ui.style()).show(ui, |ui| {
                     let (_id, rect) = ui.allocate_space(egui::vec2(80.0, 80.0));
                     let to_screen = emath::RectTransform::from_to(
                         egui::Rect::from_x_y_ranges(0.0..=1.0, -1.0..=1.0),
                         rect,
                     );
                     let mut shapes = vec![];
-
-                    let w = rect.width() as usize;
                     let mut points = vec![];
-                    for i in 0..=w {
-                        let p = i as f64 / w as f64;
-                        let v = wt(p % 1.0) as f32;
-                        points.push(to_screen * egui::pos2(p as f32, -v));
+
+                    let fft = ui
+                        .data()
+                        .get_persisted::<bool>(main_wt_id)
+                        .unwrap_or_default();
+                    if !fft {
+                        let w = rect.width() as usize;
+                        for i in 0..=w {
+                            let p = i as f64 / w as f64;
+                            let v = wt(p % 1.0) as f32;
+                            points.push(to_screen * egui::pos2(p as f32, -v));
+                        }
+
+                        shapes.push(egui::Shape::line(
+                            points,
+                            egui::Stroke::new(1.0, egui::Color32::LIGHT_BLUE),
+                        ));
+                    } else {
+                        let res = 256;
+                        let mut b = (0..res)
+                            .map(|i| wt(i as f64 / res as f64))
+                            .map(Complex64::from)
+                            .collect::<Vec<_>>();
+                        FFT_PLANNER.with(|planner| {
+                            let mut planner = planner.borrow_mut();
+                            let fft = planner.plan_fft_forward(res);
+                            fft.process(&mut b);
+                        });
+                        points.push(to_screen * egui::pos2(0.0, 1.0));
+                        for i in 0..res / 2 {
+                            let x = i as f64 / (res / 2) as f64;
+                            let v = (b[i].norm() as f32 / res as f32).sqrt() * 2.0 - 1.0;
+                            points.push(to_screen * egui::pos2(x as f32, -v));
+                        }
+
+                        shapes.push(egui::Shape::line(
+                            points,
+                            egui::Stroke::new(1.0, egui::Color32::LIGHT_BLUE),
+                        ));
                     }
-                    shapes.push(egui::Shape::line(
-                        points,
-                        egui::Stroke::new(1.0, egui::Color32::LIGHT_BLUE),
-                    ));
+
                     ui.painter().extend(shapes);
                 });
+
+                if ui
+                    .allocate_rect(res.response.rect, egui::Sense::click())
+                    .clicked()
+                {
+                    *ui.data().get_persisted_mut_or_default::<bool>(main_wt_id) ^= true;
+                }
 
                 ui.vertical(|ui| {
                     wavetable_seed(&mut synth, ui);
