@@ -315,6 +315,7 @@ impl Plugin for MyPlugin {
             synth.benihora = Some(BenihoraManaged::new(
                 synth.sound_speed,
                 sample_rate,
+                1.0,
                 synth.seed,
             ));
             synth.benihora.as_mut().unwrap().frequency.wobble_amount = 0.1;

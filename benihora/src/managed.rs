@@ -21,7 +21,7 @@ impl BenihoraManaged {
             tenseness: Tenseness::new(0.6),
             intensity: Intensity::new(0.0),
             loudness: Loudness::new(0.6f64.powf(0.25)),
-            benihora: Benihora::new(sound_speed, sample_rate, seed),
+            benihora: Benihora::new(sound_speed, sample_rate, 1.0, seed),
             update_timer: IntervalTimer::new_overflowed(0.04),
             dtime: 1.0 / sample_rate,
         }

@@ -12,13 +12,12 @@ pub struct Benihora {
 }
 
 impl Benihora {
-    pub fn new(sound_speed: F, sample_rate: F, seed: u32) -> Self {
-        // TODO: oversampling
+    pub fn new(sound_speed: F, sample_rate: F, over_sample: F, seed: u32) -> Self {
         assert!(seed < u32::MAX - 2);
 
         let tract_steps = 48000.0 * sound_speed;
         let tract_steps_per_process = ((tract_steps / sample_rate) as usize).max(1);
-        let inner_sample_rate = tract_steps / tract_steps_per_process as F;
+        let inner_sample_rate = tract_steps / tract_steps_per_process as F * over_sample;
 
         Self {
             sample_rate,

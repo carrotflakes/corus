@@ -19,14 +19,14 @@ pub struct BenihoraManaged {
 }
 
 impl BenihoraManaged {
-    pub fn new(sound_speed: f64, sample_rate: f64, seed: u32) -> Self {
+    pub fn new(sound_speed: f64, sample_rate: f64, over_sample: f64, seed: u32) -> Self {
         Self {
             sound: false,
             frequency: Frequency::new(140.0, 0.005, 6.0, sample_rate),
             tenseness: Tenseness::new(0.6),
             intensity: Intensity::new(sample_rate),
             loudness: Loudness::new(0.6f64.powf(0.25)),
-            benihora: Benihora::new(sound_speed, sample_rate, seed),
+            benihora: Benihora::new(sound_speed, sample_rate, over_sample, seed),
             time_offset: seed as f64 * 8.0,
             update_timer: IntervalTimer::new_overflowed(0.04),
             dtime: 1.0 / sample_rate,
