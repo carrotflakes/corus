@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use crate::IntervalTimer;
+use crate::{noise::Noise, IntervalTimer};
 
 use super::{lerp, F};
 
@@ -15,12 +15,13 @@ pub struct Tract {
     pub movement_speed: F, // CM per second
     pub sample_rate: F,
     pub update_timer: IntervalTimer,
-    sound_speed: usize,
+    pub(crate) fricative_noise: Noise,
+    steps_per_process: usize,
     dtime: F,
 }
 
 impl Tract {
-    pub fn new(sound_speed: usize, sample_rate: F) -> Self {
+    pub fn new(steps_per_process: usize, sample_rate: F, seed: u32) -> Self {
         let mouth_length = 44;
         let nose_length = 28;
         let nose_start = mouth_length - nose_length + 1;
@@ -41,21 +42,24 @@ impl Tract {
             movement_speed: 15.0,
             sample_rate,
             update_timer: IntervalTimer::new_overflowed(0.04),
-            sound_speed,
-            dtime: 1.0 / (sample_rate * sound_speed as f64),
+            fricative_noise: Noise::new(seed + 1, sample_rate, 1000.0),
+            steps_per_process,
+            dtime: 1.0 / (sample_rate * steps_per_process as f64),
         }
     }
 
-    pub fn process(&mut self, current_time: F, fricative_noise: F, x: F) -> F {
+    pub fn process(&mut self, current_time: F, x: F) -> F {
         if self.update_timer.overflowed() {
             self.update_block(self.update_timer.interval);
         }
         let lambda = self.update_timer.progress();
         self.update_timer.update(1.0 / self.sample_rate as f64);
 
+        let fricative_noise = self.fricative_noise.process();
+
         let mut vocal_out = 0.0;
         let mut time = current_time;
-        for _ in 0..self.sound_speed {
+        for _ in 0..self.steps_per_process {
             let (mouth, nose) = self.run_step(time, x, fricative_noise, lambda);
             vocal_out += mouth + nose;
             time += self.dtime;
@@ -63,7 +67,7 @@ impl Tract {
 
         self.source.remove_dead_constrictions(time);
 
-        (vocal_out / self.sound_speed as f64).into()
+        (vocal_out / self.steps_per_process as f64).into()
     }
 
     pub fn run_step(

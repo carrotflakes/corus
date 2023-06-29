@@ -1,35 +1,39 @@
 use std::f64::consts::PI;
 
-use crate::lerp;
+use crate::{lerp, noise::Noise};
 
 use super::{simplex1, F};
 
 pub struct Glottis {
+    pub(crate) aspiration_noise: Noise,
     waveform_length: F,
     time_in_waveform: F,
     waveform: Waveform,
+    dtime: F,
 }
 
 impl Glottis {
-    pub fn new() -> Self {
+    pub fn new(sample_rate: F, seed: u32) -> Self {
         Self {
+            aspiration_noise: Noise::new(seed + 1, sample_rate, 500.0),
             waveform_length: 1.0 / 140.0,
             time_in_waveform: 0.0,
             waveform: Waveform::new(0.6),
+            dtime: 1.0 / sample_rate,
         }
     }
 
     pub fn process(
         &mut self,
         time: f64,
-        dtime: f64,
-        noise: F,
         frequency: F,
         tenseness: F,
         intensity: F,
         loudness: F,
     ) -> F {
-        self.time_in_waveform += dtime;
+        let noise = self.aspiration_noise.process();
+
+        self.time_in_waveform += self.dtime;
         if self.waveform_length < self.time_in_waveform {
             self.time_in_waveform -= self.waveform_length;
             self.waveform_length = 1.0 / frequency;
@@ -43,7 +47,11 @@ impl Glottis {
         let noise = self.get_noise_modulator(tenseness * intensity) * noise;
         let aspiration =
             intensity * (1.0 - tenseness.sqrt()) * noise * (0.2 + 0.02 * simplex1(time * 1.99));
-        out + aspiration
+
+        // Add a bit of noise to avoid subnormal
+        let leak_noise = noise * 1.0e-16;
+
+        out + aspiration + leak_noise
     }
 
     fn get_noise_modulator(&mut self, rate: F) -> F {

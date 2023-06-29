@@ -1,6 +1,6 @@
 use std::f64::consts::TAU;
 
-use crate::{lerp, simplex1, Benihora, F};
+use crate::{lerp, simplex1, Benihora, IntervalTimer, F};
 
 pub struct BenihoraManaged {
     pub sound: bool,
@@ -9,17 +9,21 @@ pub struct BenihoraManaged {
     pub intensity: Intensity,
     loudness: Loudness,
     pub benihora: Benihora,
+    update_timer: IntervalTimer,
+    dtime: F,
 }
 
 impl BenihoraManaged {
-    pub fn new(sound_speed: usize, sample_rate: F, seed: u32) -> Self {
+    pub fn new(sound_speed: F, sample_rate: F, seed: u32) -> Self {
         Self {
             sound: false,
             frequency: Frequency::new(140.0, 0.005, 6.0),
             tenseness: Tenseness::new(0.6),
             intensity: Intensity::new(0.0),
             loudness: Loudness::new(0.6f64.powf(0.25)),
-            benihora: Benihora::new(48000.0 * sound_speed as F, sample_rate, seed),
+            benihora: Benihora::new(sound_speed, sample_rate, seed),
+            update_timer: IntervalTimer::new_overflowed(0.04),
+            dtime: 1.0 / sample_rate,
         }
     }
 
@@ -32,15 +36,16 @@ impl BenihoraManaged {
     }
 
     pub fn process(&mut self, current_time: F) -> F {
-        if self.benihora.tract.update_timer.overflowed() {
+        if self.update_timer.overflowed() {
             self.intensity
-                .update(self.sound, self.benihora.tract.update_timer.interval);
+                .update(self.sound, self.update_timer.interval);
             self.frequency.update(current_time);
             self.tenseness.update(current_time);
             self.loudness.update();
         }
+        let lambda = self.update_timer.progress();
+        self.update_timer.update(self.dtime);
 
-        let lambda = self.benihora.tract.update_timer.progress();
         let intensity = self.intensity.get(lambda);
         let frequency = self.frequency.get(lambda);
         let tenseness = self.tenseness.get(lambda);

@@ -313,7 +313,7 @@ impl Plugin for MyPlugin {
         let sample_rate = context.transport().sample_rate as f64;
         if synth.benihora.is_none() {
             synth.benihora = Some(BenihoraManaged::new(
-                48000.0 * synth.sound_speed,
+                synth.sound_speed,
                 sample_rate,
                 synth.seed,
             ));

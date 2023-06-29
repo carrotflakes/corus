@@ -9,9 +9,9 @@ pub struct Benihora {
 }
 
 impl Benihora {
-    pub fn new(proc_num: usize, sample_rate: f64) -> Self {
+    pub fn new(sound_speed: f64, sample_rate: f64) -> Self {
         Self {
-            benihora: benihora::BenihoraManaged::new(proc_num, sample_rate, 0),
+            benihora: benihora::BenihoraManaged::new(sound_speed, sample_rate, 0),
         }
     }
 }

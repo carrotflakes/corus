@@ -9,6 +9,7 @@ pub struct Noise {
 
 impl Noise {
     pub fn new(seed: u32, sample_rate: F, frequency: F) -> Self {
+        assert!(seed != 0);
         Self {
             rand: seed,
             filter: DirectForm2Transposed::<F>::new(
