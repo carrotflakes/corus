@@ -5,17 +5,33 @@ use benihora::{
     managed::{Loudness, Tenseness},
     simplex1, Benihora, IntervalTimer,
 };
+use serde::{Deserialize, Serialize};
 
 pub struct BenihoraManaged {
     pub sound: bool,
     pub frequency: Frequency,
-    tenseness: Tenseness,
+    pub tenseness: Tenseness,
     pub intensity: Intensity,
-    loudness: Loudness,
+    pub loudness: Loudness,
     pub benihora: Benihora,
     time_offset: f64,
     update_timer: IntervalTimer,
     dtime: f64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Params {
+    pub frequency_pid: PIDParam,
+    pub intensity_pid: PIDParam,
+}
+
+impl Params {
+    pub fn new() -> Self {
+        Self {
+            frequency_pid: PIDParam::new(50.0, 20.0, 0.3),
+            intensity_pid: PIDParam::new(10.0, 100.0, 0.0),
+        }
+    }
 }
 
 impl BenihoraManaged {
@@ -39,7 +55,7 @@ impl BenihoraManaged {
         self.loudness.new_loudness = tenseness.powf(0.25);
     }
 
-    pub fn process(&mut self, current_time: f64) -> f64 {
+    pub fn process(&mut self, params: &Params, current_time: f64) -> f64 {
         if self.update_timer.overflowed() {
             self.frequency.update(current_time + self.time_offset);
             self.tenseness.update(current_time + self.time_offset);
@@ -48,8 +64,10 @@ impl BenihoraManaged {
         let lambda = self.update_timer.progress();
         self.update_timer.update(self.dtime);
 
-        let intensity = self.intensity.process(if self.sound { 1.0 } else { 0.0 });
-        let frequency = self.frequency.get(lambda);
+        let intensity = self
+            .intensity
+            .process(&params.intensity_pid, if self.sound { 1.0 } else { 0.0 });
+        let frequency = self.frequency.get(&params.frequency_pid, lambda);
         let tenseness = self.tenseness.get(lambda);
         let loudness = self.loudness.get(lambda);
         self.benihora
@@ -79,7 +97,7 @@ impl Frequency {
     ) -> Self {
         Self {
             value: frequency,
-            pid: PIDController::new(50.0, 20.0, 0.3, sample_rate),
+            pid: PIDController::new(sample_rate),
             old_vibrate: 1.0,
             new_vibrate: 1.0,
             target_frequency: frequency,
@@ -106,11 +124,11 @@ impl Frequency {
         self.new_vibrate = 1.0 + vibrato;
     }
 
-    pub fn get(&mut self, lambda: f64) -> f64 {
+    pub fn get(&mut self, pid: &PIDParam, lambda: f64) -> f64 {
         let vibrate = lerp(self.old_vibrate, self.new_vibrate, lambda);
         let target_frequency = self.target_frequency * vibrate * self.pitchbend;
         // self.value *= self.pid.process(target_frequency / self.value - 1.0) * self.pid.dtime + 1.0;
-        self.value += self.pid.process(target_frequency - self.value) * self.pid.dtime;
+        self.value += self.pid.process(pid, target_frequency - self.value) * self.pid.dtime;
         self.value = self.value.clamp(10.0, 10000.0);
         self.value
     }
@@ -125,7 +143,7 @@ impl Intensity {
     pub fn new(sample_rate: f64) -> Self {
         Self {
             value: 0.0,
-            pid: PIDController::new(10.0, 100.0, 0.0, sample_rate), // recomend kd = 0.0
+            pid: PIDController::new(sample_rate), // recomend kd = 0.0
         }
     }
 
@@ -133,8 +151,8 @@ impl Intensity {
         self.value
     }
 
-    pub fn process(&mut self, target: f64) -> f64 {
-        self.value += (self.pid.process(target - self.value) - 1.0) * self.pid.dtime;
+    pub fn process(&mut self, pid: &PIDParam, target: f64) -> f64 {
+        self.value += (self.pid.process(pid, target - self.value) - 1.0) * self.pid.dtime;
         self.value = self.value.max(0.0);
         self.value
     }
@@ -143,30 +161,37 @@ impl Intensity {
 pub struct PIDController {
     sample_rate: f64,
     dtime: f64,
-    pub kp: f64,
-    pub ki: f64,
-    pub kd: f64,
     pub integral: f64,
     pub last: f64,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct PIDParam {
+    pub kp: f64,
+    pub ki: f64,
+    pub kd: f64,
+}
+
+impl PIDParam {
+    pub fn new(kp: f64, ki: f64, kd: f64) -> Self {
+        Self { kp, ki, kd }
+    }
+}
+
 impl PIDController {
-    pub fn new(kp: f64, ki: f64, kd: f64, sample_rate: f64) -> Self {
+    pub fn new(sample_rate: f64) -> Self {
         Self {
             sample_rate,
             dtime: 1.0 / sample_rate,
-            kp,
-            ki,
-            kd,
             integral: 0.0,
             last: 0.0,
         }
     }
 
-    pub fn process(&mut self, x: f64) -> f64 {
+    pub fn process(&mut self, pid: &PIDParam, x: f64) -> f64 {
         let d = (x - self.last) * self.sample_rate;
         self.integral = self.integral + x * self.dtime;
-        let y = x * self.kp + self.integral * self.ki + d * self.kd;
+        let y = x * pid.kp + self.integral * pid.ki + d * pid.kd;
         self.last = x;
         y
     }

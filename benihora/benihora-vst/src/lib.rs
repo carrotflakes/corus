@@ -1,7 +1,7 @@
-mod benhora_managed;
+mod benihora_managed;
 mod voice_manager;
 
-use benhora_managed::BenihoraManaged;
+use benihora_managed::{BenihoraManaged, Params as BenihoraParams};
 use nih_plug::prelude::*;
 use nih_plug_egui::{create_egui_editor, egui, EguiState};
 use serde::{Deserialize, Serialize};
@@ -13,6 +13,7 @@ struct Synth {
     // Don't forget to add serde default to new fields
     sound_speed: f64,
     seed: u32,
+    benihora_params: BenihoraParams,
 
     #[serde(skip)]
     time: f64,
@@ -27,10 +28,16 @@ impl Synth {
         Synth {
             sound_speed: 3.0,
             seed: 0,
+            benihora_params: BenihoraParams::new(),
             time: 0.0,
             benihora: None,
             voice_manager: VoiceManager::new(),
         }
+    }
+
+    pub fn process(&mut self) -> f64 {
+        let benihora = self.benihora.as_mut().unwrap();
+        benihora.process(&self.benihora_params, self.time)
     }
 
     pub fn handle_event(&mut self, time: f64, event: &NoteEvent<()>) {
@@ -256,27 +263,27 @@ impl Plugin for MyPlugin {
                     });
                     if synth.benihora.is_some() {
                         ui.add(egui::Slider::new(
-                            &mut synth.benihora.as_mut().unwrap().frequency.pid.kp,
+                            &mut synth.benihora_params.frequency_pid.kp,
                             0.0..=1000.0,
                         ));
                         ui.add(egui::Slider::new(
-                            &mut synth.benihora.as_mut().unwrap().frequency.pid.ki,
+                            &mut synth.benihora_params.frequency_pid.ki,
                             0.0..=1000.0,
                         ));
                         ui.add(egui::Slider::new(
-                            &mut synth.benihora.as_mut().unwrap().frequency.pid.kd,
+                            &mut synth.benihora_params.frequency_pid.kd,
                             -0.9..=0.9,
                         ));
                         ui.add(egui::Slider::new(
-                            &mut synth.benihora.as_mut().unwrap().intensity.pid.kp,
+                            &mut synth.benihora_params.intensity_pid.kp,
                             0.0..=1000.0,
                         ));
                         ui.add(egui::Slider::new(
-                            &mut synth.benihora.as_mut().unwrap().intensity.pid.ki,
+                            &mut synth.benihora_params.intensity_pid.ki,
                             0.0..=1000.0,
                         ));
                         ui.add(egui::Slider::new(
-                            &mut synth.benihora.as_mut().unwrap().intensity.pid.kd,
+                            &mut synth.benihora_params.intensity_pid.kd,
                             -0.9..=0.9,
                         ));
                     }
@@ -337,8 +344,7 @@ impl Plugin for MyPlugin {
             }
             count += 1;
 
-            let benihora = synth.benihora.as_mut().unwrap();
-            *channel_samples.get_mut(0).unwrap() = benihora.process(current_time) as f32;
+            *channel_samples.get_mut(0).unwrap() = synth.process() as f32;
             synth.time += 1.0 / sample_rate;
         }
 
