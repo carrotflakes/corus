@@ -16,7 +16,10 @@ pub struct BenihoraManaged {
     pub benihora: Benihora,
     time_offset: f64,
     update_timer: IntervalTimer,
+    sample_rate: f64,
     dtime: f64,
+    pub history: Vec<[f32; 4]>,
+    pub history_count: usize,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -45,7 +48,10 @@ impl BenihoraManaged {
             benihora: Benihora::new(sound_speed, sample_rate, over_sample, seed),
             time_offset: seed as f64 * 8.0,
             update_timer: IntervalTimer::new_overflowed(0.04),
+            sample_rate,
             dtime: 1.0 / sample_rate,
+            history: Vec::new(),
+            history_count: 0,
         }
     }
 
@@ -70,6 +76,21 @@ impl BenihoraManaged {
         let frequency = self.frequency.get(&params.frequency_pid, lambda);
         let tenseness = self.tenseness.get(lambda);
         let loudness = self.loudness.get(lambda);
+
+        if self.history_count == 0 {
+            self.history_count = self.sample_rate as usize / 50;
+            self.history.push([
+                frequency as f32,
+                intensity as f32,
+                tenseness as f32,
+                loudness as f32,
+            ]);
+            if self.history.len() > 1000 {
+                self.history.remove(0);
+            }
+        }
+        self.history_count -= 1;
+
         self.benihora
             .process(current_time, frequency, tenseness, intensity, loudness)
     }

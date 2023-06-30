@@ -1,15 +1,16 @@
 mod benihora_managed;
+mod editor_ui;
 mod voice_manager;
 
 use benihora_managed::{BenihoraManaged, Params as BenihoraParams};
 use nih_plug::prelude::*;
-use nih_plug_egui::{create_egui_editor, egui, EguiState};
+use nih_plug_egui::{create_egui_editor, EguiState};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use voice_manager::VoiceManager;
 
 #[derive(Serialize, Deserialize)]
-struct Synth {
+pub struct Synth {
     // Don't forget to add serde default to new fields
     sound_speed: f64,
     seed: u32,
@@ -237,58 +238,7 @@ impl Plugin for MyPlugin {
             self.params.editor_state.clone(),
             self.params.synth.clone(),
             |_, _| {},
-            move |egui_ctx, _setter, state| {
-                egui::CentralPanel::default().show(egui_ctx, |ui| {
-                    let mut synth = state.lock().unwrap();
-                    ui.horizontal(|ui| {
-                        if ui
-                            .add(
-                                egui::widgets::DragValue::new(&mut synth.sound_speed)
-                                    .clamp_range(1.0..=6.0),
-                            )
-                            .changed()
-                        {
-                            synth.benihora = None;
-                        }
-                        ui.label("sound speed");
-                        if ui
-                            .add(
-                                egui::widgets::DragValue::new(&mut synth.seed).clamp_range(0..=100),
-                            )
-                            .changed()
-                        {
-                            synth.benihora = None;
-                        }
-                        ui.label("seed");
-                    });
-                    if synth.benihora.is_some() {
-                        ui.add(egui::Slider::new(
-                            &mut synth.benihora_params.frequency_pid.kp,
-                            0.0..=1000.0,
-                        ));
-                        ui.add(egui::Slider::new(
-                            &mut synth.benihora_params.frequency_pid.ki,
-                            0.0..=1000.0,
-                        ));
-                        ui.add(egui::Slider::new(
-                            &mut synth.benihora_params.frequency_pid.kd,
-                            -0.9..=0.9,
-                        ));
-                        ui.add(egui::Slider::new(
-                            &mut synth.benihora_params.intensity_pid.kp,
-                            0.0..=1000.0,
-                        ));
-                        ui.add(egui::Slider::new(
-                            &mut synth.benihora_params.intensity_pid.ki,
-                            0.0..=1000.0,
-                        ));
-                        ui.add(egui::Slider::new(
-                            &mut synth.benihora_params.intensity_pid.kd,
-                            -0.9..=0.9,
-                        ));
-                    }
-                });
-            },
+            editor_ui::editor_ui,
         )
     }
 
