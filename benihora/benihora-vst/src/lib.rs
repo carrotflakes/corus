@@ -275,7 +275,6 @@ impl Plugin for MyPlugin {
                 1.0,
                 synth.seed,
             ));
-            synth.benihora.as_mut().unwrap().frequency.wobble_amount = 0.1;
         }
 
         let mut count = 0;

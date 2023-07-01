@@ -26,13 +26,15 @@ pub struct BenihoraManaged {
 pub struct Params {
     pub frequency_pid: PIDParam,
     pub intensity_pid: PIDParam,
+    pub wobble_amount: f64,
 }
 
 impl Params {
     pub fn new() -> Self {
         Self {
             frequency_pid: PIDParam::new(50.0, 20.0, 0.3),
-            intensity_pid: PIDParam::new(10.0, 100.0, 0.0),
+            intensity_pid: PIDParam::new(10.0, 100.0, 0.0), // recomend kd = 0.0
+            wobble_amount: 0.1,
         }
     }
 }
@@ -63,7 +65,8 @@ impl BenihoraManaged {
 
     pub fn process(&mut self, params: &Params, current_time: f64) -> f64 {
         if self.update_timer.overflowed() {
-            self.frequency.update(current_time + self.time_offset);
+            self.frequency
+                .update(current_time + self.time_offset, params.wobble_amount);
             self.tenseness.update(current_time + self.time_offset);
             self.loudness.update();
         }
@@ -106,7 +109,6 @@ pub struct Frequency {
 
     pub vibrato_amount: f64,
     pub vibrato_frequency: f64,
-    pub wobble_amount: f64,
 }
 
 impl Frequency {
@@ -125,7 +127,6 @@ impl Frequency {
             pitchbend: 1.0,
             vibrato_amount,
             vibrato_frequency,
-            wobble_amount: 1.0,
         }
     }
 
@@ -136,10 +137,9 @@ impl Frequency {
         }
     }
 
-    fn update(&mut self, time: f64) {
+    fn update(&mut self, time: f64, wobble_amount: f64) {
         let mut vibrato = self.vibrato_amount * (TAU * time * self.vibrato_frequency).sin();
-        vibrato +=
-            self.wobble_amount * (0.02 * simplex1(time * 4.07) + 0.04 * simplex1(time * 2.15));
+        vibrato += wobble_amount * (0.02 * simplex1(time * 4.07) + 0.04 * simplex1(time * 2.15));
 
         self.old_vibrate = self.new_vibrate;
         self.new_vibrate = 1.0 + vibrato;
@@ -148,8 +148,8 @@ impl Frequency {
     pub fn get(&mut self, pid: &PIDParam, lambda: f64) -> f64 {
         let vibrate = lerp(self.old_vibrate, self.new_vibrate, lambda);
         let target_frequency = self.target_frequency * vibrate * self.pitchbend;
-        // self.value *= self.pid.process(target_frequency / self.value - 1.0) * self.pid.dtime + 1.0;
-        self.value += self.pid.process(pid, target_frequency - self.value) * self.pid.dtime;
+        // self.value *= self.pid.process(target_frequency / self.value - 1.0) + 1.0;
+        self.value += self.pid.process(pid, target_frequency - self.value);
         self.value = self.value.clamp(10.0, 10000.0);
         self.value
     }
@@ -157,6 +157,7 @@ impl Frequency {
 
 pub struct Intensity {
     value: f64,
+    bias: f64,
     pub pid: PIDController,
 }
 
@@ -164,7 +165,8 @@ impl Intensity {
     pub fn new(sample_rate: f64) -> Self {
         Self {
             value: 0.0,
-            pid: PIDController::new(sample_rate), // recomend kd = 0.0
+            bias: -1.0,
+            pid: PIDController::new(sample_rate),
         }
     }
 
@@ -173,17 +175,16 @@ impl Intensity {
     }
 
     pub fn process(&mut self, pid: &PIDParam, target: f64) -> f64 {
-        self.value += (self.pid.process(pid, target - self.value) - 1.0) * self.pid.dtime;
+        self.value += self.pid.process(pid, target - self.value) + self.bias * self.pid.dtime;
         self.value = self.value.max(0.0);
         self.value
     }
 }
 
 pub struct PIDController {
-    sample_rate: f64,
     dtime: f64,
-    pub integral: f64,
-    pub last: f64,
+    integral: f64,
+    last: f64,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -202,7 +203,6 @@ impl PIDParam {
 impl PIDController {
     pub fn new(sample_rate: f64) -> Self {
         Self {
-            sample_rate,
             dtime: 1.0 / sample_rate,
             integral: 0.0,
             last: 0.0,
@@ -210,9 +210,9 @@ impl PIDController {
     }
 
     pub fn process(&mut self, pid: &PIDParam, x: f64) -> f64 {
-        let d = (x - self.last) * self.sample_rate;
+        let d = x - self.last;
         self.integral = self.integral + x * self.dtime;
-        let y = x * pid.kp + self.integral * pid.ki + d * pid.kd;
+        let y = (x * pid.kp + self.integral * pid.ki) * self.dtime + d * pid.kd;
         self.last = x;
         y
     }
