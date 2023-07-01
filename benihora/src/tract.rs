@@ -13,9 +13,10 @@ pub struct Tract {
     pub new_reflections: Reflections,
     pub state: State,
     pub movement_speed: F, // CM per second
-    pub sample_rate: F,
-    pub update_timer: IntervalTimer,
-    pub(crate) fricative_noise: Noise,
+    sample_rate: F,
+    update_timer: IntervalTimer,
+    fricative_noise: Noise,
+    last_obstruction: usize,
     steps_per_process: usize,
     dtime: F,
 }
@@ -32,7 +33,7 @@ impl Tract {
         diameter.compute_reflections(&mut reflections);
 
         Tract {
-            params: OtherParams::new(nose_start),
+            params: OtherParams::new(nose_start, sample_rate * steps_per_process as f64),
             source,
             current_diameter: diameter.clone(),
             target_diameter: diameter.clone(),
@@ -43,6 +44,7 @@ impl Tract {
             sample_rate,
             update_timer: IntervalTimer::new_overflowed(0.04),
             fricative_noise: Noise::new(seed + 1, sample_rate, 1000.0),
+            last_obstruction: usize::MAX,
             steps_per_process,
             dtime: 1.0 / (sample_rate * steps_per_process as f64),
         }
@@ -56,6 +58,9 @@ impl Tract {
         self.update_timer.update(1.0 / self.sample_rate as f64);
 
         let fricative_noise = self.fricative_noise.process();
+
+        // Add a bit of noise to avoid subnormal
+        let x = x + fricative_noise * 1.0e-16;
 
         let mut vocal_out = 0.0;
         let mut time = current_time;
@@ -91,7 +96,15 @@ impl Tract {
             lambda,
             glottal_output,
         );
-        let nose_out = self.state.process_nose(&self.params, &self.new_reflections);
+        let nose_out = self.state.process_nose(
+            &self.params,
+            &self.new_reflections,
+            lerp(
+                self.reflections.nose[0],
+                self.new_reflections.nose[0],
+                lambda,
+            ),
+        );
 
         (lip_output, nose_out)
     }
@@ -106,18 +119,18 @@ impl Tract {
                     new_last_obstruction = i;
                 }
             }
-            if self.state.last_obstruction != usize::MAX
+            if self.last_obstruction != usize::MAX
                 && new_last_obstruction == usize::MAX
                 && self.current_diameter.nose[0].powi(2) < 0.05
             {
                 self.state.transients.push(Transient {
-                    position: self.state.last_obstruction,
+                    position: self.last_obstruction,
                     delay: 0.02, // The original code had this as the same as the block time
                     time_alive: 0.0,
                     strength: 0.3,
                 });
             }
-            self.state.last_obstruction = new_last_obstruction;
+            self.last_obstruction = new_last_obstruction;
         }
 
         std::mem::swap(&mut self.reflections, &mut self.new_reflections);
@@ -324,18 +337,18 @@ impl Diameter {
 
     pub fn compute_reflections(&mut self, reflections: &mut Reflections) {
         let area: Vec<_> = self.mouth.iter().map(|d| d * d).collect();
-        for i in 1..self.mouth.len() {
-            reflections.mouth[i] = if area[i] == 0.0 {
+        for i in 0..self.mouth.len() - 1 {
+            reflections.mouth[i] = if area[i + 1] == 0.0 {
                 0.999
             } else {
-                (area[i - 1] - area[i]) / (area[i - 1] + area[i])
+                (area[i] - area[i + 1]) / (area[i] + area[i + 1])
             };
         }
 
         let nose_area: Vec<_> = self.nose.iter().map(|d| d * d).collect();
-        for i in 1..self.nose.len() {
+        for i in 0..self.nose.len() - 1 {
             reflections.nose[i] =
-                (nose_area[i - 1] - nose_area[i]) / (nose_area[i - 1] + nose_area[i]);
+                (nose_area[i] - nose_area[i + 1]) / (nose_area[i] + nose_area[i + 1]);
         }
 
         let sum = area[self.nose_start] + area[self.nose_start + 1] + nose_area[0];
@@ -358,8 +371,8 @@ pub struct Reflections {
 impl Reflections {
     pub fn new(length: usize, nose_length: usize) -> Self {
         Reflections {
-            mouth: vec![0.0; length],
-            nose: vec![0.0; nose_length],
+            mouth: vec![0.0; length - 1],
+            nose: vec![0.0; nose_length - 1],
 
             junction_left: 0.0,
             junction_right: 0.0,
@@ -379,7 +392,6 @@ pub struct State {
     nose_r_: Vec<F>,
     nose_l_: Vec<F>,
 
-    last_obstruction: usize,
     transients: Vec<Transient>,
 }
 
@@ -396,7 +408,6 @@ impl State {
             nose_r_: vec![0.0; nose_length],
             nose_l_: vec![0.0; nose_length],
 
-            last_obstruction: usize::MAX,
             transients: Vec::new(),
         }
     }
@@ -425,20 +436,19 @@ impl State {
     ) {
         let len = self.r.len();
         for constriction in constrictions {
-            if !(2.0..len as F).contains(&constriction.index) || constriction.diameter <= 0.0 {
+            if !(1.0..len as F).contains(&constriction.index) || constriction.diameter <= 0.0 {
                 continue;
             }
             let intensity = constriction.fricative_intensity(time);
-            if intensity == 0.0 {
+            let thinness = (8.0 * (0.7 - constriction.diameter)).clamp(0.0, 1.0);
+            let openness = (30.0 * (constriction.diameter - 0.3)).clamp(0.0, 1.0);
+            let amplitude = 0.66 * intensity * thinness * openness;
+            if amplitude == 0.0 {
                 continue;
             }
-            add_turbulence_noise_at_index(
-                &mut self.r,
-                &mut self.l,
-                0.66 * turbulence_noise * intensity,
-                constriction.index,
-                constriction.diameter,
-            );
+
+            // The original adds one to the index, but why?
+            self.add_noise_at_index(constriction.index, turbulence_noise * amplitude);
         }
     }
 
@@ -456,11 +466,11 @@ impl State {
         self.r_[0] = self.l[0] * params.glottal_reflection + glottal_output;
         self.l_[length - 1] = self.r[length - 1] * params.lip_reflection;
 
-        for i in 1..length {
+        for i in 0..length - 1 {
             let r = lerp(reflections.mouth[i], new_reflections.mouth[i], lambda);
-            let w = r * (self.r[i - 1] + self.l[i]);
-            self.r_[i] = self.r[i - 1] - w;
-            self.l_[i - 1] = self.l[i] + w;
+            let w = r * (self.r[i] + self.l[i + 1]);
+            self.r_[i + 1] = self.r[i] - w;
+            self.l_[i] = self.l[i + 1] + w;
         }
 
         // junction with nose
@@ -492,14 +502,18 @@ impl State {
         self.r[length - 1]
     }
 
-    fn process_nose(&mut self, params: &OtherParams, reflections: &Reflections) -> F {
+    fn process_nose(&mut self, params: &OtherParams, reflections: &Reflections, first: F) -> F {
         let length: usize = self.nose_r.len();
         self.nose_l_[length - 1] = self.nose_r[length - 1] * params.lip_reflection;
 
-        for i in 1..length {
-            let w = reflections.nose[i] * (self.nose_r[i - 1] + self.nose_l[i]);
-            self.nose_r_[i] = self.nose_r[i - 1] - w;
-            self.nose_l_[i - 1] = self.nose_l[i] + w;
+        let w = first * (self.nose_r[0] + self.nose_l[1]);
+        self.nose_r_[1] = self.nose_r[0] - w;
+        self.nose_l_[0] = self.nose_l[1] + w;
+
+        for i in 1..length - 1 {
+            let w = reflections.nose[i] * (self.nose_r[i] + self.nose_l[i + 1]);
+            self.nose_r_[i + 1] = self.nose_r[i] - w;
+            self.nose_l_[i] = self.nose_l[i + 1] + w;
         }
 
         for i in 0..length {
@@ -508,6 +522,18 @@ impl State {
         }
 
         self.nose_r[length - 1]
+    }
+
+    fn add_noise_at_index(&mut self, index: F, noise: F) {
+        let i = index.floor() as usize;
+        let delta = index - i as F;
+
+        let noise0 = noise * (1.0 - delta);
+        let noise1 = noise * delta;
+        self.r[i] += noise0 * 0.5;
+        self.l[i] += noise0 * 0.5;
+        self.r[i + 1] += noise1 * 0.5;
+        self.l[i + 1] += noise1 * 0.5;
     }
 }
 
@@ -519,34 +545,14 @@ pub struct OtherParams {
 }
 
 impl OtherParams {
-    pub fn new(nose_start: usize) -> Self {
+    pub fn new(nose_start: usize, sample_rate: F) -> Self {
         OtherParams {
             nose_start,
             glottal_reflection: 0.75,
             lip_reflection: -0.85,
-            fade: 0.999,
+            fade: 0.999f64.powf(96000.0 / sample_rate),
         }
     }
-}
-
-fn add_turbulence_noise_at_index(
-    r: &mut [F],
-    l: &mut [F],
-    turbulence_noise: F,
-    index: F,
-    diameter: F,
-) {
-    let i = index.floor() as usize;
-    let delta = index - i as F;
-
-    let thinness = (8.0 * (0.7 - diameter)).clamp(0.0, 1.0);
-    let openness = (30.0 * (diameter - 0.3)).clamp(0.0, 1.0);
-    let noise0 = turbulence_noise * (1.0 - delta) * thinness * openness;
-    let noise1 = turbulence_noise * delta * thinness * openness;
-    r[i + 1] += noise0 * 0.5;
-    l[i + 1] += noise0 * 0.5;
-    r[i + 2] += noise1 * 0.5;
-    l[i + 2] += noise1 * 0.5;
 }
 
 fn move_towards(current: F, target: F, up: F, down: F) -> F {

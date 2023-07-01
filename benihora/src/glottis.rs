@@ -48,10 +48,7 @@ impl Glottis {
         let aspiration =
             intensity * (1.0 - tenseness.sqrt()) * noise * (0.2 + 0.02 * simplex1(time * 1.99));
 
-        // Add a bit of noise to avoid subnormal
-        let leak_noise = noise * 1.0e-16;
-
-        out + aspiration + leak_noise
+        out + aspiration
     }
 
     fn get_noise_modulator(&mut self, rate: F) -> F {
