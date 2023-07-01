@@ -65,9 +65,16 @@ impl Synth {
                     benihora.benihora.tract.update_diameter();
                     return;
                 }
-                if (base + 5..base + 5 + 3).contains(note) {
-                    let (index, diameter) = [(25.0, 0.2), (30.0, 0.2), (41.0, 0.7)]
-                        [*note as usize - (base as usize + 5)];
+                if *note == base + 5 {
+                    benihora.benihora.tract.set_velum_target(0.4);
+                    return;
+                }
+                if (base + 6..base + 6 + 3).contains(note) {
+                    let (index, mut diameter) = [(25.0, 0.2), (30.0, 0.2), (41.0, 0.7)]
+                        [*note as usize - (base as usize + 6)];
+                    if *velocity == 1.0 {
+                        diameter = 0.0;
+                    }
                     benihora.benihora.tract.source.other_constrictions =
                         vec![benihora::Constriction {
                             index,
@@ -96,7 +103,11 @@ impl Synth {
                 ..
             } => {
                 let benihora = self.benihora.as_mut().unwrap();
-                if (base + 5..base + 5 + 3).contains(note) {
+                if *note == base + 5 {
+                    benihora.benihora.tract.set_velum_target(0.01);
+                    return;
+                }
+                if (base + 6..base + 6 + 3).contains(note) {
                     if let Some(c) = benihora
                         .benihora
                         .tract
