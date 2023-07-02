@@ -6,7 +6,6 @@ use super::rand::Rand;
 
 pub struct Wiggle<F: Float> {
     frequency: f64,
-    frequency_randomness: f64,
     rand: Rand,
     current_value: F,
     next_value: F,
@@ -16,34 +15,28 @@ pub struct Wiggle<F: Float> {
 }
 
 impl<F: Float> Wiggle<F> {
-    const MIN_FREQUENCY: f64 = f64::EPSILON;
-
-    pub fn new(frequency: f64, frequency_randomness: f64, seed: u32) -> Self {
+    pub fn new(frequency: f64, seed: u32) -> Self {
         let mut rand = Rand::new(seed);
-        let current_frequency = (frequency + (rand.next_f64() * 2.0 - 1.0) * frequency_randomness)
-            .max(Self::MIN_FREQUENCY);
+        let current_frequency = frequency * (rand.next_f64() + 0.5);
         Wiggle {
             frequency,
-            frequency_randomness,
             current_value: F::from(rand.next_f64() * 2.0 - 1.0).unwrap(),
             next_value: F::from(rand.next_f64() * 2.0 - 1.0).unwrap(),
             dvalue: F::from(0.0).unwrap(),
             current_frequency,
-            time: 1.0 / frequency,
+            time: 1.0 / current_frequency,
             rand,
         }
     }
 
     pub fn process(&mut self, ctx: &ProcessContext) -> F {
-        self.dvalue = self.dvalue
-            + (self.next_value - self.current_value)
-                * F::from(ctx.dtime() * ctx.dtime() * self.current_frequency).unwrap();
+        let factor = F::from(ctx.dtime() * self.current_frequency).unwrap();
+        self.dvalue = self.dvalue * (F::one() - factor)
+            + (self.next_value - self.current_value) * factor * factor;
         self.current_value = self.current_value + self.dvalue;
         self.time -= ctx.dtime();
         if self.time < 0.0 {
-            self.current_frequency = (self.frequency
-                + (self.rand.next_f64() * 2.0 - 1.0) * self.frequency_randomness)
-                .max(Self::MIN_FREQUENCY);
+            self.current_frequency = self.frequency * (self.rand.next_f64() + 0.5);
             self.time = 1.0 / self.current_frequency;
             self.next_value = F::from(self.rand.next_f64() * 2.0 - 1.0).unwrap();
         }
