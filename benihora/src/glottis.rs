@@ -1,8 +1,8 @@
 use std::f64::consts::PI;
 
-use crate::{lerp, noise::Noise};
+use crate::{lerp, noise::Noise, wiggle::Wiggle};
 
-use super::{simplex1, F};
+use super::F;
 
 pub struct Glottis {
     pub(crate) aspiration_noise: Noise,
@@ -10,6 +10,7 @@ pub struct Glottis {
     time_in_waveform: F,
     waveform: Waveform,
     dtime: F,
+    wiggle: Wiggle,
 }
 
 impl Glottis {
@@ -20,17 +21,11 @@ impl Glottis {
             time_in_waveform: 0.0,
             waveform: Waveform::new(0.6),
             dtime: 1.0 / sample_rate,
+            wiggle: Wiggle::new(1.0 / sample_rate, 10.0, seed + 2),
         }
     }
 
-    pub fn process(
-        &mut self,
-        time: f64,
-        frequency: F,
-        tenseness: F,
-        intensity: F,
-        loudness: F,
-    ) -> F {
+    pub fn process(&mut self, frequency: F, tenseness: F, intensity: F, loudness: F) -> F {
         let noise = self.aspiration_noise.process();
 
         self.time_in_waveform += self.dtime;
@@ -46,7 +41,7 @@ impl Glottis {
                 .normalized_lf_waveform(self.time_in_waveform / self.waveform_length);
         let noise = self.get_noise_modulator(tenseness * intensity) * noise;
         let aspiration =
-            intensity * (1.0 - tenseness.sqrt()) * noise * (0.2 + 0.02 * simplex1(time * 1.99));
+            intensity * (1.0 - tenseness.sqrt()) * noise * (0.2 + 0.01 * self.wiggle.process());
 
         out + aspiration
     }

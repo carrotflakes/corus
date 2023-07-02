@@ -3,7 +3,8 @@ use std::f64::consts::TAU;
 use benihora::{
     lerp,
     managed::{Loudness, Tenseness},
-    simplex1, Benihora, IntervalTimer,
+    wiggle::Wiggle,
+    Benihora, IntervalTimer,
 };
 use serde::{Deserialize, Serialize};
 
@@ -41,15 +42,16 @@ impl Params {
 
 impl BenihoraManaged {
     pub fn new(sound_speed: f64, sample_rate: f64, over_sample: f64, seed: u32) -> Self {
+        let interval = 0.04;
         Self {
             sound: false,
-            frequency: Frequency::new(140.0, 0.005, 6.0, sample_rate),
-            tenseness: Tenseness::new(0.6),
+            frequency: Frequency::new(interval, seed, 140.0, 0.005, 6.0, sample_rate),
+            tenseness: Tenseness::new(interval, seed, 0.6),
             intensity: Intensity::new(sample_rate),
             loudness: Loudness::new(0.6f64.powf(0.25)),
             benihora: Benihora::new(sound_speed, sample_rate, over_sample, seed),
             time_offset: seed as f64 * 8.0,
-            update_timer: IntervalTimer::new_overflowed(0.04),
+            update_timer: IntervalTimer::new_overflowed(interval),
             sample_rate,
             dtime: 1.0 / sample_rate,
             history: Vec::new(),
@@ -67,7 +69,7 @@ impl BenihoraManaged {
         if self.update_timer.overflowed() {
             self.frequency
                 .update(current_time + self.time_offset, params.wobble_amount);
-            self.tenseness.update(current_time + self.time_offset);
+            self.tenseness.update();
             self.loudness.update();
         }
         let lambda = self.update_timer.progress();
@@ -109,10 +111,13 @@ pub struct Frequency {
 
     pub vibrato_amount: f64,
     pub vibrato_frequency: f64,
+    wiggles: [Wiggle; 2],
 }
 
 impl Frequency {
     pub fn new(
+        dtime: f64,
+        seed: u32,
         frequency: f64,
         vibrato_amount: f64,
         vibrato_frequency: f64,
@@ -127,6 +132,10 @@ impl Frequency {
             pitchbend: 1.0,
             vibrato_amount,
             vibrato_frequency,
+            wiggles: [
+                Wiggle::new(dtime / 4.0, 4.07 * 5.0, seed + 1),
+                Wiggle::new(dtime / 4.0, 2.15 * 5.0, seed + 2),
+            ],
         }
     }
 
@@ -139,7 +148,12 @@ impl Frequency {
 
     fn update(&mut self, time: f64, wobble_amount: f64) {
         let mut vibrato = self.vibrato_amount * (TAU * time * self.vibrato_frequency).sin();
-        vibrato += wobble_amount * (0.02 * simplex1(time * 4.07) + 0.04 * simplex1(time * 2.15));
+        vibrato +=
+            wobble_amount * (0.01 * self.wiggles[0].process() + 0.02 * self.wiggles[1].process());
+        for _ in 0..3 {
+            self.wiggles[0].process();
+            self.wiggles[1].process();
+        }
 
         self.old_vibrate = self.new_vibrate;
         self.new_vibrate = 1.0 + vibrato;

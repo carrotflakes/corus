@@ -41,9 +41,9 @@ impl Benihora {
         debug_assert!((0.0..=1.0).contains(&loudness));
 
         self.resample.process(|| {
-            let glottal_output =
-                self.glottis
-                    .process(current_time, frequency, tenseness, intensity, loudness);
+            let glottal_output = self
+                .glottis
+                .process(frequency, tenseness, intensity, loudness);
 
             self.tract.process(current_time, glottal_output)
         })

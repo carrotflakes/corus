@@ -1,6 +1,6 @@
 use biquad::{Biquad, Coefficients, DirectForm2Transposed, ToHertz};
 
-use crate::F;
+use crate::{rand_f64, F};
 
 pub struct Noise {
     rand: u32,
@@ -25,9 +25,7 @@ impl Noise {
     }
 
     pub fn process(&mut self) -> F {
-        self.rand = self.rand.overflowing_mul(48271).0 % ((1 << 31) - 1);
-        let x = (self.rand << 1) as f64 / std::u32::MAX as f64;
-        let x = x * 2.0 - 1.0;
-        self.filter.run(x)
+        let x = rand_f64(&mut self.rand);
+        self.filter.run(x * 2.0 - 1.0)
     }
 }

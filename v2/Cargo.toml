@@ -17,3 +17,4 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 hound = "3.4"
 ezmid = {git = "https://github.com/carrotflakes/ezmid.git", branch = "main"}
 wavetables = { path = "../wavetables" }
+perlin-noise = { path = "../perlin-noise" }

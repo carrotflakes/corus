@@ -5,6 +5,7 @@ pub mod managed;
 mod noise;
 pub mod resample;
 pub mod tract;
+pub mod wiggle;
 
 pub use self::benihora::Benihora;
 pub use glottis::Glottis;
@@ -14,11 +15,12 @@ pub use tract::Constriction;
 
 type F = f64;
 
-pub fn simplex1(x: F) -> F {
-    perlin_noise::perlin_noise([x * 1.2, -x * 0.7, 0.0])
-}
-
 #[inline]
 pub fn lerp(a: F, b: F, t: F) -> F {
     a + (b - a) * t
+}
+
+pub fn rand_f64(seed: &mut u32) -> f64 {
+    *seed = seed.overflowing_mul(48271).0 % ((1 << 31) - 1);
+    (*seed << 1) as f64 / std::u32::MAX as f64
 }

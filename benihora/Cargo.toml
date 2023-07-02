@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 biquad = "0.4"
-perlin-noise = { path = "../perlin-noise" }
