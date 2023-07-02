@@ -148,12 +148,12 @@ impl Tract {
 }
 
 pub struct ShapeSource {
-    length: usize,
-    nose_length: usize,
-    blade_start: usize,
-    tip_start: usize,
-    lip_start: usize,
-    nose_start: usize,
+    pub length: usize,
+    pub nose_length: usize,
+    pub blade_start: usize,
+    pub tip_start: usize,
+    pub lip_start: usize,
+    pub nose_start: usize,
 
     original_diameter: Vec<F>,
 
@@ -282,8 +282,8 @@ impl ShapeSource {
 pub struct Diameter {
     nose_start: usize,
     tip_start: usize,
-    mouth: Vec<F>,
-    nose: Vec<F>,
+    pub mouth: Vec<F>,
+    pub nose: Vec<F>,
 }
 
 impl Diameter {

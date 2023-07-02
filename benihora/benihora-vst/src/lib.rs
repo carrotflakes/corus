@@ -70,11 +70,9 @@ impl Synth {
                     return;
                 }
                 if (base + 6..base + 6 + 3).contains(note) {
-                    let (index, mut diameter) = [(25.0, 0.2), (30.0, 0.2), (41.0, 0.7)]
+                    let (index, mut diameter) = [(25.0, 1.0), (30.0, 1.0), (41.0, 0.7)]
                         [*note as usize - (base as usize + 6)];
-                    if *velocity == 1.0 {
-                        diameter = 0.0;
-                    }
+                    diameter *= 1.0 - *velocity as f64;
                     benihora.benihora.tract.source.other_constrictions =
                         vec![benihora::Constriction {
                             index,
