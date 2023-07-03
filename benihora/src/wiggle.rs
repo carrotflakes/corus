@@ -18,7 +18,7 @@ impl Wiggle {
         let current_frequency = frequency * (rand_f64(&mut seed) + 0.5);
         Wiggle {
             frequency,
-            current_value: rand_f64(&mut seed) * 2.0 - 1.0,
+            current_value: 0.0,
             next_value: rand_f64(&mut seed) * 2.0 - 1.0,
             dvalue: 0.0,
             current_frequency,

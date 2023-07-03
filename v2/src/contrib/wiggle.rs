@@ -20,7 +20,7 @@ impl<F: Float> Wiggle<F> {
         let current_frequency = frequency * (rand.next_f64() + 0.5);
         Wiggle {
             frequency,
-            current_value: F::from(rand.next_f64() * 2.0 - 1.0).unwrap(),
+            current_value: F::zero(),
             next_value: F::from(rand.next_f64() * 2.0 - 1.0).unwrap(),
             dvalue: F::from(0.0).unwrap(),
             current_frequency,
