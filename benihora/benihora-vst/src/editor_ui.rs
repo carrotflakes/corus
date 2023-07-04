@@ -29,6 +29,7 @@ pub fn editor_ui(
                 synth.benihora = None;
             }
             ui.label("seed");
+            ui.checkbox(&mut synth.benihora_params.always_sound, "always");
         });
         if synth.benihora.is_some() {
             ui.horizontal(|ui| {
@@ -50,7 +51,7 @@ pub fn editor_ui(
                             "frequency kd",
                         ));
                         ui.add(knob(
-                            0.0..1.0,
+                            0.0..5.0,
                             &mut synth.benihora_params.wobble_amount,
                             "wobble amount",
                         ));

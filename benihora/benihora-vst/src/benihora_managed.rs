@@ -24,6 +24,7 @@ pub struct BenihoraManaged {
 
 #[derive(Serialize, Deserialize)]
 pub struct Params {
+    pub always_sound: bool,
     pub frequency_pid: PIDParam,
     pub intensity_pid: PIDParam,
     pub wobble_amount: f64,
@@ -34,6 +35,7 @@ pub struct Params {
 impl Params {
     pub fn new() -> Self {
         Self {
+            always_sound: false,
             frequency_pid: PIDParam::new(50.0, 20.0, 0.3),
             intensity_pid: PIDParam::new(10.0, 100.0, 0.0), // recomend kd = 0.0
             wobble_amount: 0.1,
@@ -80,9 +82,14 @@ impl BenihoraManaged {
         let lambda = self.update_timer.progress();
         self.update_timer.update(self.dtime);
 
-        let intensity = self
-            .intensity
-            .process(&params.intensity_pid, if self.sound { 1.0 } else { 0.0 });
+        let intensity = self.intensity.process(
+            &params.intensity_pid,
+            if self.sound | params.always_sound {
+                1.0
+            } else {
+                0.0
+            },
+        );
         let frequency = self.frequency.get(&params.frequency_pid, lambda);
         let tenseness = self.tenseness.get(lambda);
         let loudness = self.loudness.process(self.dtime);
