@@ -142,6 +142,7 @@ impl Tract {
         self.source.compute_diameter(&mut self.target_diameter);
     }
 
+    /// value: 0.01 - 0.4
     pub fn set_velum_target(&mut self, velum_target: F) {
         self.target_diameter.nose[0] = velum_target;
     }

@@ -1,5 +1,6 @@
 mod benihora_managed;
 mod editor_ui;
+mod knob;
 mod voice_manager;
 
 use benihora_managed::{BenihoraManaged, Params as BenihoraParams};

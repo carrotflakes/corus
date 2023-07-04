@@ -15,7 +15,6 @@ pub struct BenihoraManaged {
     pub intensity: Intensity,
     pub loudness: Loudness,
     pub benihora: Benihora,
-    time_offset: f64,
     update_timer: IntervalTimer,
     sample_rate: f64,
     dtime: f64,
@@ -28,6 +27,8 @@ pub struct Params {
     pub frequency_pid: PIDParam,
     pub intensity_pid: PIDParam,
     pub wobble_amount: f64,
+    pub vibrato_amount: f64,
+    pub vibrato_frequency: f64,
 }
 
 impl Params {
@@ -36,6 +37,8 @@ impl Params {
             frequency_pid: PIDParam::new(50.0, 20.0, 0.3),
             intensity_pid: PIDParam::new(10.0, 100.0, 0.0), // recomend kd = 0.0
             wobble_amount: 0.1,
+            vibrato_amount: 0.005,
+            vibrato_frequency: 6.0,
         }
     }
 }
@@ -45,12 +48,11 @@ impl BenihoraManaged {
         let interval = 0.04;
         Self {
             sound: false,
-            frequency: Frequency::new(interval, seed, 140.0, 0.005, 6.0, sample_rate),
+            frequency: Frequency::new(interval, seed, 140.0, sample_rate),
             tenseness: Tenseness::new(interval, seed, 0.6),
             intensity: Intensity::new(sample_rate),
             loudness: Loudness::new(0.6f64.powf(0.25)),
             benihora: Benihora::new(sound_speed, sample_rate, over_sample, seed),
-            time_offset: seed as f64 * 8.0,
             update_timer: IntervalTimer::new_overflowed(interval),
             sample_rate,
             dtime: 1.0 / sample_rate,
@@ -62,15 +64,18 @@ impl BenihoraManaged {
     pub fn set_tenseness(&mut self, tenseness: f64) {
         let tenseness = tenseness.clamp(0.0, 1.0);
         self.tenseness.target_tenseness = tenseness;
-        self.loudness.new_loudness = tenseness.powf(0.25);
+        self.loudness.target = tenseness.powf(0.25);
     }
 
     pub fn process(&mut self, params: &Params, current_time: f64) -> f64 {
         if self.update_timer.overflowed() {
-            self.frequency
-                .update(current_time + self.time_offset, params.wobble_amount);
+            self.frequency.update(
+                self.update_timer.interval,
+                params.wobble_amount,
+                params.vibrato_amount,
+                params.vibrato_frequency,
+            );
             self.tenseness.update();
-            self.loudness.update();
         }
         let lambda = self.update_timer.progress();
         self.update_timer.update(self.dtime);
@@ -80,7 +85,7 @@ impl BenihoraManaged {
             .process(&params.intensity_pid, if self.sound { 1.0 } else { 0.0 });
         let frequency = self.frequency.get(&params.frequency_pid, lambda);
         let tenseness = self.tenseness.get(lambda);
-        let loudness = self.loudness.get(lambda);
+        let loudness = self.loudness.process(self.dtime);
 
         if self.history_count == 0 {
             self.history_count = self.sample_rate as usize / 50;
@@ -103,26 +108,18 @@ impl BenihoraManaged {
 
 pub struct Frequency {
     value: f64,
-    pub pid: PIDController,
+    pid: PIDController,
     old_vibrate: f64,
     new_vibrate: f64,
     target_frequency: f64,
     pub pitchbend: f64,
+    phase: f64,
 
-    pub vibrato_amount: f64,
-    pub vibrato_frequency: f64,
     wiggles: [Wiggle; 2],
 }
 
 impl Frequency {
-    pub fn new(
-        dtime: f64,
-        seed: u32,
-        frequency: f64,
-        vibrato_amount: f64,
-        vibrato_frequency: f64,
-        sample_rate: f64,
-    ) -> Self {
+    pub fn new(dtime: f64, seed: u32, frequency: f64, sample_rate: f64) -> Self {
         Self {
             value: frequency,
             pid: PIDController::new(sample_rate),
@@ -130,8 +127,7 @@ impl Frequency {
             new_vibrate: 1.0,
             target_frequency: frequency,
             pitchbend: 1.0,
-            vibrato_amount,
-            vibrato_frequency,
+            phase: (seed as f64 / 10.0) % 1.0,
             wiggles: [
                 Wiggle::new(dtime / 4.0, 4.07 * 5.0, seed + 1),
                 Wiggle::new(dtime / 4.0, 2.15 * 5.0, seed + 2),
@@ -146,8 +142,15 @@ impl Frequency {
         }
     }
 
-    fn update(&mut self, time: f64, wobble_amount: f64) {
-        let mut vibrato = self.vibrato_amount * (TAU * time * self.vibrato_frequency).sin();
+    fn update(
+        &mut self,
+        dtime: f64,
+        wobble_amount: f64,
+        vibrato_amount: f64,
+        vibrato_frequency: f64,
+    ) {
+        let mut vibrato = vibrato_amount * (TAU * self.phase).sin();
+        self.phase = (self.phase + dtime * vibrato_frequency) % 1.0;
         vibrato +=
             wobble_amount * (0.01 * self.wiggles[0].process() + 0.02 * self.wiggles[1].process());
         for _ in 0..3 {
@@ -172,7 +175,7 @@ impl Frequency {
 pub struct Intensity {
     value: f64,
     bias: f64,
-    pub pid: PIDController,
+    pid: PIDController,
 }
 
 impl Intensity {

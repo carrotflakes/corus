@@ -2,7 +2,10 @@ use nih_plug::prelude::*;
 use nih_plug_egui::egui;
 use std::sync::{Arc, Mutex};
 
-use crate::Synth;
+use crate::{
+    knob::{knob, knob_log},
+    Synth,
+};
 
 pub fn editor_ui(
     egui_ctx: &egui::Context,
@@ -30,30 +33,55 @@ pub fn editor_ui(
         if synth.benihora.is_some() {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
-                    ui.add(egui::Slider::new(
-                        &mut synth.benihora_params.frequency_pid.kp,
-                        0.0..=1000.0,
-                    ));
-                    ui.add(egui::Slider::new(
-                        &mut synth.benihora_params.frequency_pid.ki,
-                        0.0..=1000.0,
-                    ));
-                    ui.add(egui::Slider::new(
-                        &mut synth.benihora_params.frequency_pid.kd,
-                        -0.9..=0.9,
-                    ));
-                    ui.add(egui::Slider::new(
-                        &mut synth.benihora_params.intensity_pid.kp,
-                        0.0..=1000.0,
-                    ));
-                    ui.add(egui::Slider::new(
-                        &mut synth.benihora_params.intensity_pid.ki,
-                        0.0..=1000.0,
-                    ));
-                    ui.add(egui::Slider::new(
-                        &mut synth.benihora_params.intensity_pid.kd,
-                        -0.9..=0.9,
-                    ));
+                    ui.horizontal(|ui| {
+                        ui.add(knob_log(
+                            0.1..1000.0,
+                            &mut synth.benihora_params.frequency_pid.kp,
+                            "frequency kp",
+                        ));
+                        ui.add(knob_log(
+                            0.1..1000.0,
+                            &mut synth.benihora_params.frequency_pid.ki,
+                            "frequency ki",
+                        ));
+                        ui.add(knob(
+                            -0.9..0.9,
+                            &mut synth.benihora_params.frequency_pid.kd,
+                            "frequency kd",
+                        ));
+                        ui.add(knob(
+                            0.0..1.0,
+                            &mut synth.benihora_params.wobble_amount,
+                            "wobble amount",
+                        ));
+                        ui.add(knob(
+                            0.0..0.1,
+                            &mut synth.benihora_params.vibrato_amount,
+                            "vibrato amount",
+                        ));
+                        ui.add(knob_log(
+                            0.1..20.0,
+                            &mut synth.benihora_params.vibrato_frequency,
+                            "vibrato frequency",
+                        ));
+                    });
+                    ui.horizontal(|ui| {
+                        ui.add(knob_log(
+                            0.1..1000.0,
+                            &mut synth.benihora_params.intensity_pid.kp,
+                            "intensity kp",
+                        ));
+                        ui.add(knob_log(
+                            0.1..1000.0,
+                            &mut synth.benihora_params.intensity_pid.ki,
+                            "intensity ki",
+                        ));
+                        ui.add(knob(
+                            -0.9..0.9,
+                            &mut synth.benihora_params.intensity_pid.kd,
+                            "intensity kd",
+                        ));
+                    });
                 });
 
                 let tract_id = ui.id().with("tract");

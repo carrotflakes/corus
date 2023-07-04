@@ -34,7 +34,7 @@ impl BenihoraManaged {
     pub fn set_tenseness(&mut self, tenseness: F) {
         let tenseness = tenseness.clamp(0.0, 1.0);
         self.tenseness.target_tenseness = tenseness;
-        self.loudness.new_loudness = tenseness.powf(0.25);
+        self.loudness.target = tenseness.powf(0.25);
     }
 
     pub fn process(&mut self, current_time: F) -> F {
@@ -43,7 +43,6 @@ impl BenihoraManaged {
                 .update(self.sound, self.update_timer.interval);
             self.frequency.update(current_time);
             self.tenseness.update();
-            self.loudness.update();
         }
         let lambda = self.update_timer.progress();
         self.update_timer.update(self.dtime);
@@ -51,7 +50,7 @@ impl BenihoraManaged {
         let intensity = self.intensity.get(lambda);
         let frequency = self.frequency.get(lambda);
         let tenseness = self.tenseness.get(lambda);
-        let loudness = self.loudness.get(lambda);
+        let loudness = self.loudness.process(self.dtime);
         self.benihora
             .process(current_time, frequency, tenseness, intensity, loudness)
     }
@@ -176,23 +175,24 @@ impl Intensity {
 }
 
 pub struct Loudness {
-    old_loudness: F,
-    pub new_loudness: F,
+    current: F,
+    pub target: F,
 }
 
 impl Loudness {
     pub fn new(loudness: F) -> Self {
         Self {
-            old_loudness: loudness,
-            new_loudness: loudness,
+            current: loudness,
+            target: loudness,
         }
     }
 
-    pub fn update(&mut self) {
-        self.old_loudness = self.new_loudness;
-    }
-
-    pub fn get(&self, lambda: F) -> F {
-        lerp(self.old_loudness, self.new_loudness, lambda)
+    pub fn process(&mut self, dtime: f64) -> F {
+        self.current = if self.current < self.target {
+            self.target.min(self.current + 10.0 * dtime)
+        } else {
+            self.target.max(self.current - 10.0 * dtime)
+        };
+        self.current
     }
 }
