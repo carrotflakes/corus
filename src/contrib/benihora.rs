@@ -1,7 +1,5 @@
 use crate::{core::Node, signal::C1f64, ProcContext};
 
-use benihora::Constriction;
-
 type F = f64;
 
 pub struct Benihora {
@@ -41,7 +39,7 @@ pub enum BenihoraEvent {
 
 impl crate::EventListener<BenihoraEvent> for Benihora {
     #[inline]
-    fn apply_event(&mut self, time: f64, event: &BenihoraEvent) {
+    fn apply_event(&mut self, _: f64, event: &BenihoraEvent) {
         match event {
             BenihoraEvent::MoveTongue(index, diameter) => {
                 self.benihora.benihora.tract.source.tongue = self
@@ -53,30 +51,7 @@ impl crate::EventListener<BenihoraEvent> for Benihora {
                 self.benihora.benihora.tract.update_diameter();
             }
             BenihoraEvent::SetOtherConstrictions(new_ocs) => {
-                let ocs = &mut self.benihora.benihora.tract.source.other_constrictions;
-                for c in new_ocs.iter() {
-                    if !ocs
-                        .iter()
-                        .any(|x| x.index == c.0 && x.diameter == c.1 && x.end_time.is_none())
-                    {
-                        ocs.push(Constriction {
-                            index: c.0,
-                            diameter: c.1,
-                            start_time: time,
-                            end_time: None,
-                        });
-                    }
-                }
-                for c in ocs.iter_mut() {
-                    if c.end_time.is_none()
-                        && new_ocs
-                            .iter()
-                            .find(|x| c.index == x.0 && c.diameter == x.1)
-                            .is_none()
-                    {
-                        c.end_time = Some(time);
-                    }
-                }
+                self.benihora.benihora.tract.source.other_constrictions = new_ocs.clone();
                 self.benihora.benihora.tract.update_diameter();
             }
             BenihoraEvent::SetVelum(velum) => {

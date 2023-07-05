@@ -51,11 +51,6 @@ pub fn editor_ui(
                             "frequency kd",
                         ));
                         ui.add(knob(
-                            0.0..5.0,
-                            &mut synth.benihora_params.wobble_amount,
-                            "wobble amount",
-                        ));
-                        ui.add(knob(
                             0.0..0.1,
                             &mut synth.benihora_params.vibrato_amount,
                             "vibrato amount",
@@ -64,6 +59,11 @@ pub fn editor_ui(
                             0.1..20.0,
                             &mut synth.benihora_params.vibrato_frequency,
                             "vibrato frequency",
+                        ));
+                        ui.add(knob(
+                            0.0..5.0,
+                            &mut synth.benihora_params.wobble_amount,
+                            "wobble amount",
                         ));
                     });
                     ui.horizontal(|ui| {
@@ -88,42 +88,46 @@ pub fn editor_ui(
                         &mut synth.benihora_params.aspiration_level,
                         "aspiration level",
                     ));
+                    if ui.button("reset freq").clicked() {
+                        synth.benihora.as_mut().unwrap().frequency.set(440.0, true);
+                    }
                 });
 
-                let view_id = ui.id().with("view");
-                let view_mode = ui
-                    .data()
-                    .get_persisted::<usize>(view_id)
-                    .unwrap_or_default();
-                if match view_mode {
-                    0 => show_tract(ui, &synth.benihora.as_ref().unwrap().benihora.tract),
-                    1 => {
-                        let history = &synth.benihora.as_ref().unwrap().history;
-                        show_history(ui, history)
+                ui.vertical(|ui| {
+                    let view_id = ui.id().with("view");
+                    let view_mode = ui
+                        .data()
+                        .get_persisted::<usize>(view_id)
+                        .unwrap_or_default();
+                    match view_mode {
+                        0 => show_tract(ui, &mut synth.benihora.as_mut().unwrap().benihora.tract),
+                        1 => {
+                            let history = &synth.benihora.as_ref().unwrap().history;
+                            show_history(ui, history)
+                        }
+                        2 => show_waveform(
+                            ui,
+                            synth
+                                .benihora
+                                .as_ref()
+                                .unwrap()
+                                .waveform_recorder
+                                .get_waveform(),
+                        ),
+                        _ => unreachable!(),
+                    };
+                    if ui.button("view").clicked() {
+                        let data = &mut ui.data();
+                        let view = data.get_persisted_mut_or_default::<usize>(view_id);
+                        *view = (*view + 1) % 3;
                     }
-                    2 => show_waveform(
-                        ui,
-                        synth
-                            .benihora
-                            .as_ref()
-                            .unwrap()
-                            .waveform_recorder
-                            .get_waveform(),
-                    ),
-                    _ => unreachable!(),
-                }
-                .clicked()
-                {
-                    let data = &mut ui.data();
-                    let view = data.get_persisted_mut_or_default::<usize>(view_id);
-                    *view = (*view + 1) % 3;
-                }
+                });
             });
         }
     });
 }
 
-fn show_tract(ui: &mut egui::Ui, tract: &benihora::tract::Tract) -> egui::Response {
+fn show_tract(ui: &mut egui::Ui, tract: &mut benihora::tract::Tract) -> egui::Response {
     let res = egui::Frame::canvas(ui.style()).show(ui, |ui| {
         let (_id, rect) = ui.allocate_space(egui::vec2(100.0, 100.0));
         let to_screen = egui::emath::RectTransform::from_to(
@@ -161,8 +165,33 @@ fn show_tract(ui: &mut egui::Ui, tract: &benihora::tract::Tract) -> egui::Respon
             ],
             stroke,
         );
+
+        ui.painter().circle_filled(
+            to_screen
+                * egui::pos2(
+                    tract.source.tongue.0 as f32,
+                    (tract.source.tongue.1 as f32) + 4.0,
+                ),
+            2.0,
+            egui::Color32::RED,
+        );
     });
-    ui.allocate_rect(res.response.rect, egui::Sense::click())
+
+    let res = ui.allocate_rect(res.response.rect, egui::Sense::click_and_drag());
+    if res.dragged() {
+        if let Some(pos) = res.interact_pointer_pos() {
+            let from_screen = egui::emath::RectTransform::from_to(
+                res.rect,
+                egui::Rect::from_x_y_ranges(0.0..=45.0, 0.0..=10.0),
+            );
+            let pos = from_screen * pos;
+            tract.source.tongue = tract
+                .source
+                .tongue_clamp(pos.x as f64, (pos.y - 4.0) as f64);
+            tract.update_diameter();
+        }
+    }
+    res
 }
 
 fn show_history(ui: &mut egui::Ui, history: &Vec<[f32; 4]>) -> egui::Response {

@@ -40,10 +40,10 @@ impl Synth {
 
     pub fn process(&mut self) -> f64 {
         let benihora = self.benihora.as_mut().unwrap();
-        benihora.process(&self.benihora_params, self.time)
+        benihora.process(&self.benihora_params)
     }
 
-    pub fn handle_event(&mut self, time: f64, event: &NoteEvent<()>) {
+    pub fn handle_event(&mut self, _time: f64, event: &NoteEvent<()>) {
         let base = 0;
         #[allow(unused_variables)]
         match event {
@@ -75,13 +75,7 @@ impl Synth {
                     let (index, mut diameter) = [(25.0, 1.0), (30.0, 1.0), (41.0, 0.7)]
                         [*note as usize - (base as usize + 6)];
                     diameter *= 1.0 - *velocity as f64;
-                    benihora.benihora.tract.source.other_constrictions =
-                        vec![benihora::Constriction {
-                            index,
-                            diameter,
-                            start_time: time,
-                            end_time: None,
-                        }];
+                    benihora.benihora.tract.source.other_constrictions = vec![(index, diameter)];
                     benihora.benihora.tract.update_diameter();
                     return;
                 }
@@ -108,15 +102,7 @@ impl Synth {
                     return;
                 }
                 if (base + 6..base + 6 + 3).contains(note) {
-                    if let Some(c) = benihora
-                        .benihora
-                        .tract
-                        .source
-                        .other_constrictions
-                        .get_mut(0)
-                    {
-                        c.end_time = Some(time);
-                    }
+                    benihora.benihora.tract.source.other_constrictions.clear();
                     benihora.benihora.tract.update_diameter();
                     return;
                 }

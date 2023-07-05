@@ -75,7 +75,7 @@ impl BenihoraManaged {
         self.loudness.target = tenseness.powf(0.25);
     }
 
-    pub fn process(&mut self, params: &Params, current_time: f64) -> f64 {
+    pub fn process(&mut self, params: &Params) -> f64 {
         if self.update_timer.overflowed() {
             self.frequency.update(
                 self.update_timer.interval,
@@ -115,7 +115,6 @@ impl BenihoraManaged {
         self.history_count -= 1;
 
         let y = self.benihora.process(
-            current_time,
             frequency,
             tenseness,
             intensity,

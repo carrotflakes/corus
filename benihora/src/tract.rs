@@ -5,12 +5,12 @@ use crate::{noise::Noise, IntervalTimer};
 use super::{lerp, F};
 
 pub struct Tract {
-    pub params: OtherParams,
+    params: OtherParams,
     pub source: ShapeSource,
     pub current_diameter: Diameter,
     pub target_diameter: Diameter,
-    pub reflections: Reflections,
-    pub new_reflections: Reflections,
+    reflections: Reflections,
+    new_reflections: Reflections,
     pub state: State,
     pub movement_speed: F, // CM per second
     sample_rate: F,
@@ -50,7 +50,7 @@ impl Tract {
         }
     }
 
-    pub fn process(&mut self, current_time: F, x: F) -> F {
+    pub fn process(&mut self, x: F) -> F {
         if self.update_timer.overflowed() {
             self.update_block(self.update_timer.interval);
         }
@@ -63,31 +63,18 @@ impl Tract {
         let x = x + fricative_noise * 1.0e-16;
 
         let mut vocal_out = 0.0;
-        let mut time = current_time;
         for _ in 0..self.steps_per_process {
-            let (mouth, nose) = self.run_step(time, x, fricative_noise, lambda);
+            let (mouth, nose) = self.run_step(x, fricative_noise, lambda);
             vocal_out += mouth + nose;
-            time += self.dtime;
         }
-
-        self.source.remove_dead_constrictions(time);
 
         (vocal_out / self.steps_per_process as f64).into()
     }
 
-    pub fn run_step(
-        &mut self,
-        time: f64,
-        glottal_output: F,
-        turbulence_noise: F,
-        lambda: F,
-    ) -> (F, F) {
+    pub fn run_step(&mut self, glottal_output: F, turbulence_noise: F, lambda: F) -> (F, F) {
         self.state.process_transients(self.dtime);
-        self.state.process_turbulence_noise(
-            time,
-            turbulence_noise,
-            &self.source.other_constrictions,
-        );
+        self.state
+            .process_turbulence_noise(self.dtime, turbulence_noise);
 
         let lip_output = self.state.process_mouth(
             &self.params,
@@ -140,6 +127,25 @@ impl Tract {
 
     pub fn update_diameter(&mut self) {
         self.source.compute_diameter(&mut self.target_diameter);
+
+        self.state.turbulences.iter_mut().for_each(|t| t.on = false);
+        for constriction in &self.source.other_constrictions {
+            if let Some(t) = self
+                .state
+                .turbulences
+                .iter_mut()
+                .find(|t| t.index == constriction.0 && t.diameter == constriction.1)
+            {
+                t.on = true;
+            } else {
+                self.state.turbulences.push(Turbulence {
+                    index: constriction.0,
+                    diameter: constriction.1,
+                    intensity: 0.0,
+                    on: true,
+                });
+            }
+        }
     }
 
     /// value: 0.01 - 0.4
@@ -159,7 +165,7 @@ pub struct ShapeSource {
     original_diameter: Vec<F>,
 
     pub tongue: (F, F), // (index, diameter) // TODO index -> rate, should this be here?
-    pub other_constrictions: Vec<Constriction>,
+    pub other_constrictions: Vec<(F, F)>,
 }
 
 impl ShapeSource {
@@ -209,11 +215,8 @@ impl ShapeSource {
         }
 
         for constriction in self.other_constrictions.iter() {
-            let index = constriction.index;
-            let mut d = constriction.diameter;
-            if constriction.end_time.is_some() {
-                continue;
-            }
+            let index = constriction.0;
+            let mut d = constriction.1;
             d = (d - 0.3).max(0.0);
 
             let width = if index < 25.0 {
@@ -248,16 +251,6 @@ impl ShapeSource {
                 }
             }
         }
-    }
-
-    pub fn remove_dead_constrictions(&mut self, time: F) {
-        self.other_constrictions.retain(|c| {
-            if let Some(end_time) = c.end_time {
-                time < end_time + 1.0
-            } else {
-                true
-            }
-        });
     }
 
     pub fn tongue_clamp(&self, index: F, diameter: F) -> (F, F) {
@@ -394,6 +387,7 @@ pub struct State {
     nose_l_: Vec<F>,
 
     transients: Vec<Transient>,
+    turbulences: Vec<Turbulence>,
 }
 
 impl State {
@@ -410,6 +404,7 @@ impl State {
             nose_l_: vec![0.0; nose_length],
 
             transients: Vec::new(),
+            turbulences: Vec::new(),
         }
     }
 
@@ -429,28 +424,27 @@ impl State {
         self.transients.retain(|t| t.time_alive <= LIFE_TIME)
     }
 
-    pub fn process_turbulence_noise(
-        &mut self,
-        time: f64,
-        turbulence_noise: F,
-        constrictions: &[Constriction],
-    ) {
+    pub fn process_turbulence_noise(&mut self, dtime: f64, turbulence_noise: F) {
         let len = self.r.len();
-        for constriction in constrictions {
-            if !(1.0..len as F).contains(&constriction.index) || constriction.diameter <= 0.0 {
+        let mut turbulences = Vec::new();
+        std::mem::swap(&mut turbulences, &mut self.turbulences);
+        for turbulence in &mut turbulences {
+            turbulence.update_intensity(dtime);
+            if !(1.0..(len - 1) as F).contains(&turbulence.index) || turbulence.diameter <= 0.0 {
                 continue;
             }
-            let intensity = constriction.fricative_intensity(time);
-            let thinness = (8.0 * (0.7 - constriction.diameter)).clamp(0.0, 1.0);
-            let openness = (30.0 * (constriction.diameter - 0.3)).clamp(0.0, 1.0);
-            let amplitude = 0.66 * intensity * thinness * openness;
+            let thinness = (8.0 * (0.7 - turbulence.diameter)).clamp(0.0, 1.0);
+            let openness = (30.0 * (turbulence.diameter - 0.3)).clamp(0.0, 1.0);
+            let amplitude = 0.66 * turbulence.intensity * thinness * openness;
             if amplitude == 0.0 {
                 continue;
             }
 
-            // The original adds one to the index, but why?
-            self.add_noise_at_index(constriction.index, turbulence_noise * amplitude);
+            // turbulence noise appears a little ahead
+            self.add_noise_at_index(turbulence.index + 1.0, turbulence_noise * amplitude);
         }
+        turbulences.retain(|t| t.on || t.intensity > 0.0);
+        std::mem::swap(&mut turbulences, &mut self.turbulences);
     }
 
     pub fn process_mouth(
@@ -576,22 +570,20 @@ impl Transient {
 }
 
 #[derive(Clone)]
-pub struct Constriction {
-    pub index: F,
-    pub diameter: F,
-    pub start_time: f64,
-    pub end_time: Option<f64>,
+struct Turbulence {
+    index: F,
+    diameter: F,
+    intensity: F,
+    on: bool,
 }
 
-impl Constriction {
-    fn fricative_intensity(&self, time: f64) -> F {
-        let fricative_attack_time = 0.1;
-        // TODO: make smooth
-        if let Some(end_time) = self.end_time {
-            1.0 - (time - end_time) / fricative_attack_time
+impl Turbulence {
+    fn update_intensity(&mut self, dtime: f64) {
+        let attack_time = 0.1;
+        if self.on {
+            self.intensity = (self.intensity + dtime / attack_time).min(1.0);
         } else {
-            (time - self.start_time) / fricative_attack_time
+            self.intensity = (self.intensity - dtime / attack_time).max(0.0);
         }
-        .clamp(0.0, 1.0)
     }
 }

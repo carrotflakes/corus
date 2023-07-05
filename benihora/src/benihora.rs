@@ -35,7 +35,6 @@ impl Benihora {
 
     pub fn process(
         &mut self,
-        current_time: F,
         frequency: F,
         tenseness: F,
         intensity: F,
@@ -52,7 +51,7 @@ impl Benihora {
                 self.glottis
                     .process(frequency, tenseness, intensity, loudness, aspiration_level);
 
-            self.tract.process(current_time, self.glottal_output)
+            self.tract.process(self.glottal_output)
         })
     }
 }
