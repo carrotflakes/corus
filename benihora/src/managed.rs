@@ -52,7 +52,7 @@ impl BenihoraManaged {
         let tenseness = self.tenseness.get(lambda);
         let loudness = self.loudness.process(self.dtime);
         self.benihora
-            .process(current_time, frequency, tenseness, intensity, loudness)
+            .process(current_time, frequency, tenseness, intensity, loudness, 1.0)
     }
 }
 

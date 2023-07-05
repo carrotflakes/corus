@@ -8,6 +8,8 @@ use benihora::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::waveform_recorder::WaveformRecorder;
+
 pub struct BenihoraManaged {
     pub sound: bool,
     pub frequency: Frequency,
@@ -20,6 +22,7 @@ pub struct BenihoraManaged {
     dtime: f64,
     pub history: Vec<[f32; 4]>,
     pub history_count: usize,
+    pub waveform_recorder: WaveformRecorder,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -30,6 +33,7 @@ pub struct Params {
     pub wobble_amount: f64,
     pub vibrato_amount: f64,
     pub vibrato_frequency: f64,
+    pub aspiration_level: f64,
 }
 
 impl Params {
@@ -41,6 +45,7 @@ impl Params {
             wobble_amount: 0.1,
             vibrato_amount: 0.005,
             vibrato_frequency: 6.0,
+            aspiration_level: 1.0,
         }
     }
 }
@@ -60,6 +65,7 @@ impl BenihoraManaged {
             dtime: 1.0 / sample_rate,
             history: Vec::new(),
             history_count: 0,
+            waveform_recorder: WaveformRecorder::new(),
         }
     }
 
@@ -108,8 +114,21 @@ impl BenihoraManaged {
         }
         self.history_count -= 1;
 
-        self.benihora
-            .process(current_time, frequency, tenseness, intensity, loudness)
+        let y = self.benihora.process(
+            current_time,
+            frequency,
+            tenseness,
+            intensity,
+            loudness,
+            params.aspiration_level,
+        );
+
+        self.waveform_recorder.record(
+            self.benihora.glottis.get_phase(),
+            self.benihora.get_glottal_output(),
+        );
+
+        y
     }
 }
 

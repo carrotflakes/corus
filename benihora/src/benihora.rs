@@ -9,6 +9,7 @@ pub struct Benihora {
     pub glottis: Glottis,
     pub tract: Tract,
     resample: Resample,
+    glottal_output: F,
 }
 
 impl Benihora {
@@ -24,7 +25,12 @@ impl Benihora {
             glottis: Glottis::new(inner_sample_rate, seed),
             tract: Tract::new(tract_steps_per_process, inner_sample_rate, seed + 1),
             resample: Resample::new(inner_sample_rate, sample_rate),
+            glottal_output: 0.0,
         }
+    }
+
+    pub fn get_glottal_output(&self) -> F {
+        self.glottal_output
     }
 
     pub fn process(
@@ -34,6 +40,7 @@ impl Benihora {
         tenseness: F,
         intensity: F,
         loudness: F,
+        aspiration_level: F,
     ) -> F {
         debug_assert!((1.0..=10000.0).contains(&frequency));
         debug_assert!((0.0..=1.0).contains(&tenseness));
@@ -41,11 +48,11 @@ impl Benihora {
         debug_assert!((0.0..=1.0).contains(&loudness));
 
         self.resample.process(|| {
-            let glottal_output = self
-                .glottis
-                .process(frequency, tenseness, intensity, loudness);
+            self.glottal_output =
+                self.glottis
+                    .process(frequency, tenseness, intensity, loudness, aspiration_level);
 
-            self.tract.process(current_time, glottal_output)
+            self.tract.process(current_time, self.glottal_output)
         })
     }
 }

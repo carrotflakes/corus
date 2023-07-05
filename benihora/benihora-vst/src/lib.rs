@@ -2,6 +2,7 @@ mod benihora_managed;
 mod editor_ui;
 mod knob;
 mod voice_manager;
+mod waveform_recorder;
 
 use benihora_managed::{BenihoraManaged, Params as BenihoraParams};
 use nih_plug::prelude::*;

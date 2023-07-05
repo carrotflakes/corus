@@ -83,18 +83,40 @@ pub fn editor_ui(
                             "intensity kd",
                         ));
                     });
+                    ui.add(knob(
+                        0.0..10.0,
+                        &mut synth.benihora_params.aspiration_level,
+                        "aspiration level",
+                    ));
                 });
 
-                let tract_id = ui.id().with("tract");
-                if if ui.data().get_persisted(tract_id).unwrap_or_default() {
-                    show_tract(ui, &synth.benihora.as_ref().unwrap().benihora.tract)
-                } else {
-                    let history = &synth.benihora.as_ref().unwrap().history;
-                    show_history(ui, history)
+                let view_id = ui.id().with("view");
+                let view_mode = ui
+                    .data()
+                    .get_persisted::<usize>(view_id)
+                    .unwrap_or_default();
+                if match view_mode {
+                    0 => show_tract(ui, &synth.benihora.as_ref().unwrap().benihora.tract),
+                    1 => {
+                        let history = &synth.benihora.as_ref().unwrap().history;
+                        show_history(ui, history)
+                    }
+                    2 => show_waveform(
+                        ui,
+                        synth
+                            .benihora
+                            .as_ref()
+                            .unwrap()
+                            .waveform_recorder
+                            .get_waveform(),
+                    ),
+                    _ => unreachable!(),
                 }
                 .clicked()
                 {
-                    *ui.data().get_persisted_mut_or_default::<bool>(tract_id) ^= true;
+                    let data = &mut ui.data();
+                    let view = data.get_persisted_mut_or_default::<usize>(view_id);
+                    *view = (*view + 1) % 3;
                 }
             });
         }
@@ -193,6 +215,25 @@ fn show_history(ui: &mut egui::Ui, history: &Vec<[f32; 4]>) -> egui::Response {
             ui.painter()
                 .add(egui::Shape::line(points, egui::Stroke::new(1.0, color)));
         }
+    });
+    ui.allocate_rect(res.response.rect, egui::Sense::click())
+}
+
+fn show_waveform(ui: &mut egui::Ui, waveform: &[f32]) -> egui::Response {
+    let res = egui::Frame::canvas(ui.style()).show(ui, |ui| {
+        let (_id, rect) = ui.allocate_space(egui::vec2(100.0, 100.0));
+        let to_screen = egui::emath::RectTransform::from_to(
+            egui::Rect::from_x_y_ranges(0.0..=1.0, -1.0..=1.0),
+            rect,
+        );
+
+        let points: Vec<_> = waveform
+            .iter()
+            .enumerate()
+            .map(|(i, v)| to_screen * egui::pos2(i as f32 / waveform.len() as f32, -v))
+            .collect();
+        let stroke = egui::Stroke::new(1.0, egui::Color32::GRAY);
+        ui.painter().add(egui::Shape::line(points, stroke));
     });
     ui.allocate_rect(res.response.rect, egui::Sense::click())
 }

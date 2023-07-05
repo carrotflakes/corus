@@ -6,10 +6,9 @@ use super::F;
 
 pub struct Glottis {
     pub(crate) aspiration_noise: Noise,
-    waveform_length: F,
-    time_in_waveform: F,
+    phase: F,
     waveform: Waveform,
-    dtime: F,
+    sample_rate: F,
     wiggle: Wiggle,
 }
 
@@ -17,38 +16,45 @@ impl Glottis {
     pub fn new(sample_rate: F, seed: u32) -> Self {
         Self {
             aspiration_noise: Noise::new(seed + 1, sample_rate, 500.0),
-            waveform_length: 1.0 / 140.0,
-            time_in_waveform: 0.0,
+            phase: 0.0,
             waveform: Waveform::new(0.6),
-            dtime: 1.0 / sample_rate,
+            sample_rate,
             wiggle: Wiggle::new(1.0 / sample_rate, 10.0, seed + 2),
         }
     }
 
-    pub fn process(&mut self, frequency: F, tenseness: F, intensity: F, loudness: F) -> F {
+    pub fn get_phase(&self) -> F {
+        self.phase
+    }
+
+    pub fn process(
+        &mut self,
+        frequency: F,
+        tenseness: F,
+        intensity: F,
+        loudness: F,
+        aspiration_level: F,
+    ) -> F {
         let noise = self.aspiration_noise.process();
 
-        self.time_in_waveform += self.dtime;
-        if self.waveform_length < self.time_in_waveform {
-            self.time_in_waveform -= self.waveform_length;
-            self.waveform_length = 1.0 / frequency;
+        self.phase += frequency / self.sample_rate;
+        if 1.0 < self.phase {
+            self.phase -= 1.0;
             self.waveform = Waveform::new(tenseness)
         }
-        let out = intensity
-            * loudness
-            * self
-                .waveform
-                .normalized_lf_waveform(self.time_in_waveform / self.waveform_length);
+        let out = intensity * loudness * self.waveform.normalized_lf_waveform(self.phase);
         let noise = self.get_noise_modulator(tenseness * intensity) * noise;
-        let aspiration =
-            intensity * (1.0 - tenseness.sqrt()) * noise * (0.2 + 0.01 * self.wiggle.process());
+        let aspiration = intensity
+            * (1.0 - tenseness.sqrt())
+            * noise
+            * (0.2 + 0.01 * self.wiggle.process())
+            * aspiration_level;
 
         out + aspiration
     }
 
     fn get_noise_modulator(&mut self, rate: F) -> F {
-        let voiced =
-            0.1 + 0.2 * 0.0f64.max((PI * 2.0 * self.time_in_waveform / self.waveform_length).sin());
+        let voiced = 0.1 + 0.2 * 0.0f64.max((PI * 2.0 * self.phase).sin());
         lerp(0.3, voiced, rate)
     }
 }
