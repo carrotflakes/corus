@@ -1,11 +1,10 @@
+mod knob;
+
+use self::knob::{knob, knob_log};
+use crate::{benihora_managed::BenihoraManaged, Synth, TONGUE_POSES};
 use nih_plug::prelude::*;
 use nih_plug_egui::egui;
 use std::sync::{Arc, Mutex};
-
-use crate::{
-    knob::{knob, knob_log},
-    Synth,
-};
 
 pub fn editor_ui(
     egui_ctx: &egui::Context,
@@ -83,14 +82,26 @@ pub fn editor_ui(
                             "intensity kd",
                         ));
                     });
-                    ui.add(knob(
-                        0.0..10.0,
-                        &mut synth.benihora_params.aspiration_level,
-                        "aspiration level",
-                    ));
-                    if ui.button("reset freq").clicked() {
-                        synth.benihora.as_mut().unwrap().frequency.set(440.0, true);
-                    }
+                    ui.horizontal(|ui| {
+                        ui.add(knob(
+                            0.0..10.0,
+                            &mut synth.benihora_params.aspiration_level,
+                            "aspiration level",
+                        ));
+                        ui.add(knob(
+                            0.0..1.0,
+                            &mut synth.benihora.as_mut().unwrap().tenseness.target_tenseness,
+                            "tensness",
+                        ));
+                        ui.add(knob(
+                            0.0..1.0,
+                            &mut synth.benihora.as_mut().unwrap().loudness.target,
+                            "loudness",
+                        ));
+                        if ui.button("reset freq").clicked() {
+                            synth.benihora.as_mut().unwrap().frequency.set(440.0, true);
+                        }
+                    });
                 });
 
                 ui.vertical(|ui| {
@@ -100,7 +111,7 @@ pub fn editor_ui(
                         .get_persisted::<usize>(view_id)
                         .unwrap_or_default();
                     match view_mode {
-                        0 => show_tract(ui, &mut synth.benihora.as_mut().unwrap().benihora.tract),
+                        0 => show_tract(ui, synth.benihora.as_mut().unwrap()),
                         1 => {
                             let history = &synth.benihora.as_ref().unwrap().history;
                             show_history(ui, history)
@@ -116,7 +127,13 @@ pub fn editor_ui(
                         ),
                         _ => unreachable!(),
                     };
-                    if ui.button("view").clicked() {
+                    let view_mode_name = match view_mode {
+                        0 => "tract",
+                        1 => "glottis graph",
+                        2 => "glottis waveform",
+                        _ => unreachable!(),
+                    };
+                    if ui.button(view_mode_name).clicked() {
                         let data = &mut ui.data();
                         let view = data.get_persisted_mut_or_default::<usize>(view_id);
                         *view = (*view + 1) % 3;
@@ -127,8 +144,9 @@ pub fn editor_ui(
     });
 }
 
-fn show_tract(ui: &mut egui::Ui, tract: &mut benihora::tract::Tract) -> egui::Response {
+fn show_tract(ui: &mut egui::Ui, benihora: &mut BenihoraManaged) -> egui::Response {
     let res = egui::Frame::canvas(ui.style()).show(ui, |ui| {
+        let tract = &benihora.benihora.tract;
         let (_id, rect) = ui.allocate_space(egui::vec2(100.0, 100.0));
         let to_screen = egui::emath::RectTransform::from_to(
             egui::Rect::from_x_y_ranges(0.0..=45.0, 0.0..=10.0),
@@ -166,6 +184,13 @@ fn show_tract(ui: &mut egui::Ui, tract: &mut benihora::tract::Tract) -> egui::Re
             stroke,
         );
 
+        for pos in TONGUE_POSES {
+            ui.painter().circle_filled(
+                to_screen * egui::pos2(pos.0 as f32, (pos.1 as f32) + 4.0),
+                2.0,
+                egui::Color32::RED.linear_multiply(0.25),
+            );
+        }
         ui.painter().circle_filled(
             to_screen
                 * egui::pos2(
@@ -185,10 +210,11 @@ fn show_tract(ui: &mut egui::Ui, tract: &mut benihora::tract::Tract) -> egui::Re
                 egui::Rect::from_x_y_ranges(0.0..=45.0, 0.0..=10.0),
             );
             let pos = from_screen * pos;
-            tract.source.tongue = tract
+            benihora.tract.tongue_target = benihora
+                .benihora
+                .tract
                 .source
                 .tongue_clamp(pos.x as f64, (pos.y - 4.0) as f64);
-            tract.update_diameter();
         }
     }
     res

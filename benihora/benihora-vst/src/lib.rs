@@ -1,6 +1,5 @@
 mod benihora_managed;
 mod editor_ui;
-mod knob;
 mod voice_manager;
 mod waveform_recorder;
 
@@ -11,6 +10,14 @@ use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use voice_manager::VoiceManager;
 
+pub const TONGUE_POSES: [(f64, f64); 5] = [
+    (27.2, 2.20), // i
+    (19.4, 3.43), // e
+    (12.9, 2.43), // a
+    (14.0, 2.09), // o
+    (22.8, 2.05), // u
+];
+
 #[derive(Serialize, Deserialize)]
 pub struct Synth {
     // Don't forget to add serde default to new fields
@@ -20,6 +27,8 @@ pub struct Synth {
 
     #[serde(skip)]
     time: f64,
+    #[serde(skip)]
+    note_off_time: f64,
     #[serde(skip)]
     benihora: Option<BenihoraManaged>,
     #[serde(skip)]
@@ -33,6 +42,7 @@ impl Synth {
             seed: 0,
             benihora_params: BenihoraParams::new(),
             time: 0.0,
+            note_off_time: 0.0,
             benihora: None,
             voice_manager: VoiceManager::new(),
         }
@@ -43,7 +53,7 @@ impl Synth {
         benihora.process(&self.benihora_params)
     }
 
-    pub fn handle_event(&mut self, _time: f64, event: &NoteEvent<()>) {
+    pub fn handle_event(&mut self, time: f64, event: &NoteEvent<()>) {
         let base = 0;
         #[allow(unused_variables)]
         match event {
@@ -55,16 +65,9 @@ impl Synth {
             } => {
                 let benihora = self.benihora.as_mut().unwrap();
                 if (base..base + 5).contains(note) {
-                    let (index, diameter) = [
-                        (27.2, 2.20), // i
-                        (19.4, 3.43), // e
-                        (12.9, 2.43), // a
-                        (14.0, 2.09), // o
-                        (22.8, 2.05), // u
-                    ][*note as usize - base as usize];
-                    benihora.benihora.tract.source.tongue =
+                    let (index, diameter) = TONGUE_POSES[*note as usize - base as usize];
+                    benihora.tract.tongue_target =
                         benihora.benihora.tract.source.tongue_clamp(index, diameter);
-                    benihora.benihora.tract.update_diameter();
                     return;
                 }
                 if *note == base + 5 {
@@ -72,7 +75,7 @@ impl Synth {
                     return;
                 }
                 if (base + 6..base + 6 + 3).contains(note) {
-                    let (index, mut diameter) = [(25.0, 1.0), (30.0, 1.0), (41.0, 0.7)]
+                    let (index, mut diameter) = [(25.0, 1.0), (30.0, 1.0), (41.0, 2.0)]
                         [*note as usize - (base as usize + 6)];
                     diameter *= 1.0 - *velocity as f64;
                     benihora.benihora.tract.source.other_constrictions = vec![(index, diameter)];
@@ -80,7 +83,9 @@ impl Synth {
                     return;
                 }
 
-                let muted = benihora.intensity.get() < 0.01;
+                let frequency_reset_time = 0.25;
+                let muted = benihora.intensity.get() < 0.01
+                    && self.note_off_time + frequency_reset_time < time;
                 self.voice_manager.noteon(*note);
                 if let Some(note) = self.voice_manager.get_voice() {
                     benihora
@@ -115,6 +120,7 @@ impl Synth {
                     benihora.sound = true;
                 } else {
                     benihora.sound = false;
+                    self.note_off_time = time;
                 }
             }
             NoteEvent::PolyPressure {
