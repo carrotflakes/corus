@@ -10,20 +10,14 @@ use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use voice_manager::VoiceManager;
 
-pub const TONGUE_POSES: [(f64, f64); 5] = [
-    (27.2, 2.20), // i
-    (19.4, 3.43), // e
-    (12.9, 2.43), // a
-    (14.0, 2.09), // o
-    (22.8, 2.05), // u
-];
-
 #[derive(Serialize, Deserialize)]
 pub struct Synth {
     // Don't forget to add serde default to new fields
     sound_speed: f64,
     seed: u32,
     benihora_params: BenihoraParams,
+    tongue_poses: Vec<(f64, f64)>,
+    other_constrictions: Vec<(f64, f64)>,
 
     #[serde(skip)]
     time: f64,
@@ -41,6 +35,14 @@ impl Synth {
             sound_speed: 3.0,
             seed: 0,
             benihora_params: BenihoraParams::new(),
+            tongue_poses: vec![
+                (27.2, 2.20), // i
+                (19.4, 3.43), // e
+                (12.9, 2.43), // a
+                (14.0, 2.09), // o
+                (22.8, 2.05), // u
+            ],
+            other_constrictions: vec![(25.0, 1.0), (30.0, 1.0), (35.0, 1.0), (41.0, 1.6)],
             time: 0.0,
             note_off_time: 0.0,
             benihora: None,
@@ -64,22 +66,36 @@ impl Synth {
                 ..
             } => {
                 let benihora = self.benihora.as_mut().unwrap();
-                if (base..base + 5).contains(note) {
-                    let (index, diameter) = TONGUE_POSES[*note as usize - base as usize];
+                if (base..base + self.tongue_poses.len() as u8).contains(note) {
+                    let (index, diameter) = self.tongue_poses[*note as usize - base as usize];
                     benihora.tract.tongue_target =
                         benihora.benihora.tract.source.tongue_clamp(index, diameter);
                     return;
                 }
-                if *note == base + 5 {
-                    benihora.benihora.tract.set_velum_target(0.4);
+                let base = base + self.tongue_poses.len() as u8;
+                if (base..base + self.other_constrictions.len() as u8).contains(note) {
+                    if benihora
+                        .benihora
+                        .tract
+                        .source
+                        .other_constrictions
+                        .is_empty()
+                    {
+                        benihora.benihora.tract.source.other_constrictions = self
+                            .other_constrictions
+                            .iter()
+                            .map(|x| (x.0, 10.0))
+                            .collect();
+                    }
+                    let i = *note as usize - base as usize;
+                    let diameter = self.other_constrictions[i].1 * (1.0 - *velocity as f64);
+                    benihora.benihora.tract.source.other_constrictions[i].1 = diameter;
+                    benihora.benihora.tract.update_diameter();
                     return;
                 }
-                if (base + 6..base + 6 + 3).contains(note) {
-                    let (index, mut diameter) = [(25.0, 1.0), (30.0, 1.0), (41.0, 2.0)]
-                        [*note as usize - (base as usize + 6)];
-                    diameter *= 1.0 - *velocity as f64;
-                    benihora.benihora.tract.source.other_constrictions = vec![(index, diameter)];
-                    benihora.benihora.tract.update_diameter();
+                let base = base + self.other_constrictions.len() as u8;
+                if *note == base {
+                    benihora.benihora.tract.set_velum_target(0.4);
                     return;
                 }
 
@@ -102,13 +118,16 @@ impl Synth {
                 ..
             } => {
                 let benihora = self.benihora.as_mut().unwrap();
-                if *note == base + 5 {
-                    benihora.benihora.tract.set_velum_target(0.01);
+                let base = base + self.tongue_poses.len() as u8;
+                if (base..base + self.other_constrictions.len() as u8).contains(note) {
+                    let i = *note as usize - base as usize;
+                    benihora.benihora.tract.source.other_constrictions[i].1 = 10.0;
+                    benihora.benihora.tract.update_diameter();
                     return;
                 }
-                if (base + 6..base + 6 + 3).contains(note) {
-                    benihora.benihora.tract.source.other_constrictions.clear();
-                    benihora.benihora.tract.update_diameter();
+                let base = base + self.other_constrictions.len() as u8;
+                if *note == base {
+                    benihora.benihora.tract.set_velum_target(0.01);
                     return;
                 }
 

@@ -4,6 +4,8 @@ use crate::{noise::Noise, IntervalTimer};
 
 use super::{lerp, F};
 
+pub const DEFAULT_TONGUE: (f64, f64) = (12.9, 2.43);
+
 pub struct Tract {
     params: OtherParams,
     pub source: ShapeSource,
@@ -196,7 +198,7 @@ impl ShapeSource {
             lip_start: (39.0 / 44.0 * length as f32).floor() as usize,
             nose_start: length - nose_length + 1,
             original_diameter,
-            tongue: (12.9, 2.43),
+            tongue: DEFAULT_TONGUE,
             other_constrictions: Vec::new(),
         }
     }

@@ -1,7 +1,7 @@
 mod knob;
 
 use self::knob::{knob, knob_log};
-use crate::{benihora_managed::BenihoraManaged, Synth, TONGUE_POSES};
+use crate::Synth;
 use nih_plug::prelude::*;
 use nih_plug_egui::egui;
 use std::sync::{Arc, Mutex};
@@ -111,7 +111,7 @@ pub fn editor_ui(
                         .get_persisted::<usize>(view_id)
                         .unwrap_or_default();
                     match view_mode {
-                        0 => show_tract(ui, synth.benihora.as_mut().unwrap()),
+                        0 => show_tract(ui, &mut synth),
                         1 => {
                             let history = &synth.benihora.as_ref().unwrap().history;
                             show_history(ui, history)
@@ -144,7 +144,15 @@ pub fn editor_ui(
     });
 }
 
-fn show_tract(ui: &mut egui::Ui, benihora: &mut BenihoraManaged) -> egui::Response {
+fn show_tract(ui: &mut egui::Ui, synth: &mut Synth) -> egui::Response {
+    let Synth {
+        benihora,
+        tongue_poses,
+        other_constrictions,
+        ..
+    } = synth;
+    let benihora = benihora.as_mut().unwrap();
+
     let res = egui::Frame::canvas(ui.style()).show(ui, |ui| {
         let tract = &benihora.benihora.tract;
         let (_id, rect) = ui.allocate_space(egui::vec2(100.0, 100.0));
@@ -156,15 +164,14 @@ fn show_tract(ui: &mut egui::Ui, benihora: &mut BenihoraManaged) -> egui::Respon
         let dx = tract.source.nose_start as f32;
         let dy = 3.75;
         let mut points = vec![];
-        points.push(to_screen * egui::pos2(dx, 4.0));
-        for (i, d) in tract.current_diameter.nose.iter().enumerate().skip(1) {
+        for (i, d) in tract.current_diameter.nose.iter().enumerate() {
             points.push(to_screen * egui::pos2(dx + i as f32, dy - *d as f32));
         }
         let stroke = egui::Stroke::new(1.0, egui::Color32::GRAY);
         ui.painter().add(egui::Shape::line(points, stroke));
         ui.painter().line_segment(
             [
-                to_screen * egui::pos2(dx + tract.current_diameter.nose[0] as f32 * 5.0, dy),
+                to_screen * egui::pos2(dx, dy),
                 to_screen * egui::pos2(dx + (tract.current_diameter.nose.len() - 1) as f32, dy),
             ],
             stroke,
@@ -184,11 +191,18 @@ fn show_tract(ui: &mut egui::Ui, benihora: &mut BenihoraManaged) -> egui::Respon
             stroke,
         );
 
-        for pos in TONGUE_POSES {
+        for pos in tongue_poses {
             ui.painter().circle_filled(
                 to_screen * egui::pos2(pos.0 as f32, (pos.1 as f32) + 4.0),
-                2.0,
+                1.6,
                 egui::Color32::RED.linear_multiply(0.25),
+            );
+        }
+        for oc in other_constrictions {
+            ui.painter().circle_filled(
+                to_screen * egui::pos2(oc.0 as f32, (oc.1 as f32) + 4.0),
+                1.6,
+                egui::Color32::YELLOW.linear_multiply(0.25),
             );
         }
         ui.painter().circle_filled(

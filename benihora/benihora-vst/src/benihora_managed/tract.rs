@@ -1,4 +1,4 @@
-use crate::TONGUE_POSES;
+use benihora::tract::DEFAULT_TONGUE;
 
 pub struct Tract {
     pub tongue_target: (f64, f64),
@@ -8,7 +8,7 @@ pub struct Tract {
 impl Tract {
     pub fn new() -> Self {
         Self {
-            tongue_target: TONGUE_POSES[2],
+            tongue_target: DEFAULT_TONGUE,
             speed: 20.0,
         }
     }
