@@ -8,7 +8,7 @@ pub struct Tract {
 impl Tract {
     pub fn new() -> Self {
         Self {
-            tongue_target: TONGUE_POSES[0],
+            tongue_target: TONGUE_POSES[2],
             speed: 20.0,
         }
     }

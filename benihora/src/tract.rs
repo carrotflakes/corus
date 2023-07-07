@@ -130,6 +130,12 @@ impl Tract {
 
         self.state.turbulences.iter_mut().for_each(|t| t.on = false);
         for constriction in &self.source.other_constrictions {
+            let diameter_range = 0.3..0.7;
+            if !(1.0..(self.source.length - 1) as F).contains(&constriction.0)
+                || !diameter_range.contains(&constriction.1)
+            {
+                continue;
+            }
             if let Some(t) = self
                 .state
                 .turbulences
@@ -425,14 +431,10 @@ impl State {
     }
 
     pub fn process_turbulence_noise(&mut self, dtime: f64, turbulence_noise: F) {
-        let len = self.r.len();
         let mut turbulences = Vec::new();
         std::mem::swap(&mut turbulences, &mut self.turbulences);
         for turbulence in &mut turbulences {
             turbulence.update_intensity(dtime);
-            if !(1.0..(len - 1) as F).contains(&turbulence.index) || turbulence.diameter <= 0.0 {
-                continue;
-            }
             let thinness = (8.0 * (0.7 - turbulence.diameter)).clamp(0.0, 1.0);
             let openness = (30.0 * (turbulence.diameter - 0.3)).clamp(0.0, 1.0);
             let amplitude = 0.66 * turbulence.intensity * thinness * openness;
