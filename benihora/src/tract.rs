@@ -146,12 +146,9 @@ impl Tract {
             {
                 t.on = true;
             } else {
-                self.state.turbulences.push(Turbulence {
-                    index: constriction.0,
-                    diameter: constriction.1,
-                    intensity: 0.0,
-                    on: true,
-                });
+                self.state
+                    .turbulences
+                    .push(Turbulence::new(constriction.0, constriction.1));
             }
         }
     }
@@ -437,9 +434,7 @@ impl State {
         std::mem::swap(&mut turbulences, &mut self.turbulences);
         for turbulence in &mut turbulences {
             turbulence.update_intensity(dtime);
-            let thinness = (8.0 * (0.7 - turbulence.diameter)).clamp(0.0, 1.0);
-            let openness = (30.0 * (turbulence.diameter - 0.3)).clamp(0.0, 1.0);
-            let amplitude = 0.66 * turbulence.intensity * thinness * openness;
+            let amplitude = turbulence.strength * turbulence.intensity;
             if amplitude == 0.0 {
                 continue;
             }
@@ -577,11 +572,25 @@ impl Transient {
 struct Turbulence {
     index: F,
     diameter: F,
+    strength: F,
     intensity: F,
     on: bool,
 }
 
 impl Turbulence {
+    fn new(index: F, diameter: F) -> Self {
+        let thinness = (8.0 * (0.7 - diameter)).clamp(0.0, 1.0);
+        let openness = (30.0 * (diameter - 0.3)).clamp(0.0, 1.0);
+        let strength = 0.66 * thinness * openness;
+        Self {
+            index,
+            diameter,
+            strength,
+            intensity: 0.0,
+            on: true,
+        }
+    }
+
     fn update_intensity(&mut self, dtime: f64) {
         let attack_time = 0.1;
         if self.on {
