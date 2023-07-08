@@ -1,11 +1,13 @@
 mod benihora_managed;
 mod editor_ui;
+mod routine;
 mod voice_manager;
 mod waveform_recorder;
 
 use benihora_managed::{BenihoraManaged, Params as BenihoraParams};
 use nih_plug::prelude::*;
 use nih_plug_egui::{create_egui_editor, EguiState};
+use routine::{Routine, Runtime};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use voice_manager::VoiceManager;
@@ -18,6 +20,8 @@ pub struct Synth {
     benihora_params: BenihoraParams,
     tongue_poses: Vec<(f64, f64)>,
     other_constrictions: Vec<(f64, f64)>,
+    routines: Vec<Routine>,
+    default_routine: usize,
 
     #[serde(skip)]
     time: f64,
@@ -27,6 +31,8 @@ pub struct Synth {
     benihora: Option<BenihoraManaged>,
     #[serde(skip)]
     voice_manager: VoiceManager,
+    #[serde(skip)]
+    routine_runtime: Runtime,
 }
 
 impl Synth {
@@ -43,15 +49,82 @@ impl Synth {
                 (22.8, 2.05), // u
             ],
             other_constrictions: vec![(25.0, 1.0), (30.0, 1.0), (35.0, 1.0), (41.0, 1.6)],
+            routines: vec![
+                Routine {
+                    events: vec![
+                        (
+                            0.0,
+                            routine::Event::Tongue {
+                                i: 0,
+                                speed: Some(200.0),
+                            },
+                        ),
+                        (
+                            0.1,
+                            routine::Event::Tongue {
+                                i: 2,
+                                speed: Some(20.0),
+                            },
+                        ),
+                    ],
+                },
+                Routine {
+                    events: vec![
+                        (0.0, routine::Event::Sound { sound: false }),
+                        (
+                            0.0,
+                            routine::Event::Constriction {
+                                i: 1,
+                                strength: 0.7,
+                            },
+                        ),
+                        (
+                            0.08,
+                            routine::Event::Constriction {
+                                i: 1,
+                                strength: -5.0,
+                            },
+                        ),
+                        (0.01, routine::Event::Sound { sound: true }),
+                    ],
+                },
+            ],
+            default_routine: 0,
             time: 0.0,
             note_off_time: 0.0,
             benihora: None,
             voice_manager: VoiceManager::new(),
+            routine_runtime: Runtime::new(),
         }
     }
 
-    pub fn process(&mut self) -> f64 {
+    pub fn process(&mut self, dtime: f64) -> f64 {
         let benihora = self.benihora.as_mut().unwrap();
+        self.routine_runtime.process(dtime, |e| match e {
+            routine::Event::Tongue { i, speed } => {
+                benihora.tract.tongue_target = (self.tongue_poses[i].0, self.tongue_poses[i].1);
+                if let Some(speed) = speed {
+                    benihora.tract.speed = speed;
+                }
+            }
+            routine::Event::Constriction { i, strength } => {
+                let diameter = self.other_constrictions[i].1 * (1.0 - strength);
+                benihora.benihora.tract.source.other_constrictions[i].1 = diameter;
+            }
+            routine::Event::Velum { openness } => {
+                benihora
+                    .benihora
+                    .tract
+                    .set_velum_target(0.01 + (0.4 - 0.01) * openness);
+            }
+            routine::Event::Pitch { value } => {
+                benihora.frequency.pitchbend = value;
+            }
+            routine::Event::Sound { sound } => {
+                benihora.sound = sound;
+            }
+        });
+
         benihora.process(&self.benihora_params)
     }
 
@@ -65,6 +138,7 @@ impl Synth {
                 velocity,
                 ..
             } => {
+                self.ensure_other_constriction();
                 let benihora = self.benihora.as_mut().unwrap();
                 if (base..base + self.tongue_poses.len() as u8).contains(note) {
                     let (index, diameter) = self.tongue_poses[*note as usize - base as usize];
@@ -74,19 +148,6 @@ impl Synth {
                 }
                 let base = base + self.tongue_poses.len() as u8;
                 if (base..base + self.other_constrictions.len() as u8).contains(note) {
-                    if benihora
-                        .benihora
-                        .tract
-                        .source
-                        .other_constrictions
-                        .is_empty()
-                    {
-                        benihora.benihora.tract.source.other_constrictions = self
-                            .other_constrictions
-                            .iter()
-                            .map(|x| (x.0, 10.0))
-                            .collect();
-                    }
                     let i = *note as usize - base as usize;
                     let diameter = self.other_constrictions[i].1 * (1.0 - *velocity as f64);
                     benihora.benihora.tract.source.other_constrictions[i].1 = diameter;
@@ -96,6 +157,12 @@ impl Synth {
                 let base = base + self.other_constrictions.len() as u8;
                 if *note == base {
                     benihora.benihora.tract.set_velum_target(0.4);
+                    return;
+                }
+                let base = base + 1;
+                if *note < base + self.routines.len() as u8 {
+                    self.routine_runtime
+                        .push_routine(&self.routines[(*note - base) as usize]);
                     return;
                 }
 
@@ -109,6 +176,10 @@ impl Synth {
                         .set(440.0 * 2.0f64.powf((note as f64 - 69.0) / 12.0), muted);
                     benihora.set_tenseness(*velocity as f64);
                     benihora.sound = true;
+                    if (1..=self.routines.len()).contains(&self.default_routine) {
+                        self.routine_runtime
+                            .push_routine(&self.routines[self.default_routine - 1]);
+                    }
                 }
             }
             NoteEvent::NoteOff {
@@ -128,6 +199,10 @@ impl Synth {
                 let base = base + self.other_constrictions.len() as u8;
                 if *note == base {
                     benihora.benihora.tract.set_velum_target(0.01);
+                    return;
+                }
+                let base = base + 1;
+                if *note < base + self.routines.len() as u8 {
                     return;
                 }
 
@@ -173,6 +248,23 @@ impl Synth {
                 program,
             } => {}
             _ => {}
+        }
+    }
+
+    pub fn ensure_other_constriction(&mut self) {
+        let benihora = self.benihora.as_mut().unwrap();
+        if benihora
+            .benihora
+            .tract
+            .source
+            .other_constrictions
+            .is_empty()
+        {
+            benihora.benihora.tract.source.other_constrictions = self
+                .other_constrictions
+                .iter()
+                .map(|x| (x.0, 10.0))
+                .collect();
         }
     }
 }
@@ -301,6 +393,7 @@ impl Plugin for MyPlugin {
 
         let mut count = 0;
         let mut event = context.next_event();
+        let dtime = 1.0 / sample_rate;
 
         for mut channel_samples in buffer.iter_samples() {
             let current_time = synth.time;
@@ -315,8 +408,8 @@ impl Plugin for MyPlugin {
             }
             count += 1;
 
-            *channel_samples.get_mut(0).unwrap() = synth.process() as f32;
-            synth.time += 1.0 / sample_rate;
+            *channel_samples.get_mut(0).unwrap() = synth.process(dtime) as f32;
+            synth.time += dtime;
         }
 
         ProcessStatus::Normal

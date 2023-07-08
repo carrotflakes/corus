@@ -44,7 +44,7 @@ impl Tract {
             state: State::new(mouth_length, nose_length),
             movement_speed: 15.0,
             sample_rate,
-            update_timer: IntervalTimer::new_overflowed(0.04),
+            update_timer: IntervalTimer::new_overflowed(0.02),
             fricative_noise: Noise::new(seed + 1, sample_rate, 1000.0),
             last_obstruction: usize::MAX,
             steps_per_process,
@@ -52,7 +52,7 @@ impl Tract {
         }
     }
 
-    pub fn process(&mut self, x: F) -> F {
+    pub fn process(&mut self, intensity: F, x: F) -> F {
         if self.update_timer.overflowed() {
             self.update_block(self.update_timer.interval);
         }
@@ -64,9 +64,10 @@ impl Tract {
         // Add a bit of noise to avoid subnormal
         let x = x + fricative_noise * 1.0e-16;
 
+        let turbulence_noise = fricative_noise * intensity;
         let mut vocal_out = 0.0;
         for _ in 0..self.steps_per_process {
-            let (mouth, nose) = self.run_step(x, fricative_noise, lambda);
+            let (mouth, nose) = self.run_step(x, turbulence_noise, lambda);
             vocal_out += mouth + nose;
         }
 

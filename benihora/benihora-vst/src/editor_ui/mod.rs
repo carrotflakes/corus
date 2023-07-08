@@ -102,6 +102,13 @@ pub fn editor_ui(
                             synth.benihora.as_mut().unwrap().frequency.set(440.0, true);
                         }
                     });
+                    ui.horizontal(|ui| {
+                        ui.add(
+                            egui::widgets::DragValue::new(&mut synth.default_routine)
+                                .clamp_range(0..=10),
+                        );
+                        ui.label("default routine");
+                    });
                 });
 
                 ui.vertical(|ui| {

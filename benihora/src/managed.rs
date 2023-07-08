@@ -16,14 +16,14 @@ pub struct BenihoraManaged {
 impl BenihoraManaged {
     pub fn new(sound_speed: F, sample_rate: F, seed: u32) -> Self {
         assert!(seed < 1 << 16);
-        let interval = 0.04;
+        let interval = 0.02;
         Self {
             sound: false,
             frequency: Frequency::new(interval, seed, 140.0, 0.005, 6.0),
             tenseness: Tenseness::new(interval, seed + 2, 0.6),
             intensity: Intensity::new(0.0),
             loudness: Loudness::new(0.6f64.powf(0.25)),
-            benihora: Benihora::new(sound_speed, sample_rate, 1.0, seed),
+            benihora: Benihora::new(sound_speed, sample_rate, 1.0, seed, true),
             update_timer: IntervalTimer::new_overflowed(interval),
             dtime: 1.0 / sample_rate,
         }

@@ -56,7 +56,7 @@ impl Params {
 
 impl BenihoraManaged {
     pub fn new(sound_speed: f64, sample_rate: f64, over_sample: f64, seed: u32) -> Self {
-        let interval = 0.04;
+        let interval = 0.02;
         Self {
             sound: false,
             frequency: Frequency::new(interval, seed, 140.0, sample_rate),
@@ -64,7 +64,7 @@ impl BenihoraManaged {
             intensity: Intensity::new(sample_rate),
             loudness: Loudness::new(0.6f64.powf(0.25)),
             tract: tract::Tract::new(),
-            benihora: Benihora::new(sound_speed, sample_rate, over_sample, seed),
+            benihora: Benihora::new(sound_speed, sample_rate, over_sample, seed, false),
             update_timer: IntervalTimer::new_overflowed(interval),
             sample_rate,
             dtime: 1.0 / sample_rate,
