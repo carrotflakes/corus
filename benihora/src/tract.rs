@@ -7,12 +7,12 @@ use super::{lerp, F};
 pub const DEFAULT_TONGUE: (f64, f64) = (12.9, 2.43);
 
 pub struct Tract {
-    params: OtherParams,
+    pub(crate) params: OtherParams,
     pub source: ShapeSource,
     pub current_diameter: Diameter,
     pub target_diameter: Diameter,
     reflections: Reflections,
-    new_reflections: Reflections,
+    pub(crate) new_reflections: Reflections,
     pub state: State,
     pub movement_speed: F, // CM per second
     sample_rate: F,
@@ -361,7 +361,7 @@ impl Diameter {
 #[derive(Clone)]
 pub struct Reflections {
     mouth: Vec<F>,
-    nose: Vec<F>,
+    pub(crate) nose: Vec<F>,
 
     junction_left: F,
     junction_right: F,
@@ -497,7 +497,7 @@ impl State {
         self.r[length - 1]
     }
 
-    fn process_nose(&mut self, params: &OtherParams, reflections: &Reflections, first: F) -> F {
+    pub fn process_nose(&mut self, params: &OtherParams, reflections: &Reflections, first: F) -> F {
         let length: usize = self.nose_r.len();
         self.nose_l_[length - 1] = self.nose_r[length - 1] * params.lip_reflection;
 
