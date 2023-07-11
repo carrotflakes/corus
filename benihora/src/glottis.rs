@@ -7,17 +7,20 @@ use super::F;
 pub struct Glottis {
     pub(crate) aspiration_noise: Noise,
     phase: F,
-    waveform: Waveform,
+    waveform: WaveformIntegral,
     sample_rate: F,
     wiggle: Wiggle,
+    last_integral: F,
 }
 
 impl Glottis {
     pub fn new(sample_rate: F, seed: u32) -> Self {
+        let waveform = WaveformIntegral::new(&Waveform::new(0.6));
         Self {
             aspiration_noise: Noise::new(seed + 1, sample_rate, 500.0),
             phase: 0.0,
-            waveform: Waveform::new(0.6),
+            last_integral: waveform.compute(0.0),
+            waveform,
             sample_rate,
             wiggle: Wiggle::new(1.0 / sample_rate, 10.0, seed + 2),
         }
@@ -37,12 +40,19 @@ impl Glottis {
     ) -> F {
         let noise = self.aspiration_noise.process();
 
-        self.phase += frequency / self.sample_rate;
+        let d = frequency / self.sample_rate;
+        self.phase += d;
         if 1.0 < self.phase {
             self.phase -= 1.0;
-            self.waveform = Waveform::new(tenseness)
+            self.waveform = WaveformIntegral::new(&Waveform::new(tenseness));
+            self.last_integral = self.waveform.compute(0.0);
         }
-        let out = intensity * loudness * self.waveform.normalized_lf_waveform(self.phase);
+
+        // let out = intensity * loudness * self.waveform.normalized_lf_waveform(self.phase);
+        let integral = self.waveform.compute(self.phase);
+        let out = intensity * loudness * (integral - self.last_integral) / d;
+        self.last_integral = integral;
+
         let noise = self.get_noise_modulator(tenseness * intensity) * noise;
         let aspiration = intensity
             * (1.0 - tenseness.sqrt())
@@ -117,11 +127,59 @@ impl Waveform {
         }
     }
 
-    fn normalized_lf_waveform(&self, t: F) -> F {
+    #[allow(dead_code)]
+    fn compute(&self, t: F) -> F {
         if self.te < t {
             (-(-self.epsilon * (t - self.te)).exp() + self.shift) / self.delta
         } else {
             self.e0 * (self.alpha * t).exp() * (self.omega * t).sin()
+        }
+    }
+}
+
+pub struct WaveformIntegral {
+    te: F,
+    e0: F,
+    alpha: F,
+    omega: F,
+    a: F,
+    epsilon: F,
+    b: F,
+    shift: F,
+    c: F,
+    d: F,
+}
+
+impl WaveformIntegral {
+    fn new(waveform: &Waveform) -> Self {
+        Self {
+            te: waveform.te,
+            e0: waveform.e0,
+            alpha: waveform.alpha,
+            omega: waveform.omega,
+            a: 1.0 / (waveform.alpha.powi(2) + waveform.omega.powi(2)),
+            epsilon: waveform.epsilon,
+            b: 1.0 / waveform.epsilon,
+            shift: waveform.shift,
+            c: 1.0 / waveform.delta,
+            d: waveform.e0
+                * (waveform.alpha * waveform.te).exp()
+                * (waveform.alpha * (waveform.omega * waveform.te).sin()
+                    - waveform.omega * (waveform.omega * waveform.te).cos())
+                / (waveform.alpha.powi(2) + waveform.omega.powi(2)),
+        }
+    }
+
+    pub fn compute(&self, t: F) -> F {
+        if t <= self.te {
+            self.e0
+                * (self.alpha * t).exp()
+                * (self.alpha * (self.omega * t).sin() - self.omega * (self.omega * t).cos())
+                * self.a
+        } else {
+            (((-self.epsilon * (t - self.te)).exp() - 1.0) * self.b + self.shift * (t - self.te))
+                * self.c
+                + self.d
         }
     }
 }
