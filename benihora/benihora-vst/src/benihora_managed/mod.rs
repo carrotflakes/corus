@@ -24,8 +24,9 @@ pub struct BenihoraManaged {
     update_timer: IntervalTimer,
     sample_rate: f64,
     dtime: f64,
-    pub history: Vec<[f32; 4]>,
+    pub history: Vec<[f32; 5]>,
     pub history_count: usize,
+    pub level: f32,
     pub waveform_recorder: WaveformRecorder,
 }
 
@@ -70,6 +71,7 @@ impl BenihoraManaged {
             dtime: 1.0 / sample_rate,
             history: Vec::new(),
             history_count: 0,
+            level: 0.0,
             waveform_recorder: WaveformRecorder::new(),
         }
     }
@@ -117,12 +119,15 @@ impl BenihoraManaged {
                 intensity as f32,
                 tenseness as f32,
                 loudness as f32,
+                (self.level / self.history_count as f32).sqrt(),
             ]);
+            self.level = 0.0;
             if self.history.len() > 1000 {
                 self.history.remove(0);
             }
         }
         self.history_count -= 1;
+        self.level += self.benihora.get_glottal_output().powi(2) as f32;
 
         let y = self.benihora.process(
             frequency,

@@ -9,8 +9,15 @@ use nih_plug::prelude::*;
 use nih_plug_egui::{create_egui_editor, EguiState};
 use routine::{Routine, Runtime};
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use std::{
+    cell::RefCell,
+    sync::{Arc, Mutex},
+};
 use voice_manager::VoiceManager;
+
+thread_local! {
+    pub static FFT_PLANNER: RefCell<rustfft::FftPlanner<f32>> = RefCell::new(rustfft::FftPlanner::new());
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct Synth {
@@ -280,9 +287,11 @@ struct MyPluginParams {
 
     #[id = "gain"]
     pub gain: FloatParam,
+    #[id = "vibrato_amount"]
+    pub vibrato_amount: FloatParam,
 
     #[persist = "synth"]
-    synth: Arc<Mutex<Synth>>,
+    pub synth: Arc<Mutex<Synth>>,
 }
 
 impl Default for MyPlugin {
@@ -311,6 +320,12 @@ impl Default for MyPluginParams {
             .with_unit(" dB")
             .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
             .with_string_to_value(formatters::s2v_f32_gain_to_db()),
+
+            vibrato_amount: FloatParam::new(
+                "Vibrato Amount",
+                0.0,
+                FloatRange::Linear { min: 0.0, max: 0.1 },
+            ),
 
             synth: Arc::new(Mutex::new(Synth::new())),
         }
@@ -350,7 +365,7 @@ impl Plugin for MyPlugin {
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         create_egui_editor(
             self.params.editor_state.clone(),
-            self.params.synth.clone(),
+            self.params.clone(),
             |_, _| {},
             editor_ui::editor_ui,
         )
@@ -396,6 +411,9 @@ impl Plugin for MyPlugin {
         let dtime = 1.0 / sample_rate;
 
         for mut channel_samples in buffer.iter_samples() {
+            synth.benihora_params.vibrato_amount =
+                self.params.vibrato_amount.smoothed.next() as f64;
+
             let current_time = synth.time;
 
             while let Some(e) = event {
