@@ -311,10 +311,13 @@ impl Voice {
             );
         }
 
+        let detune = self.detune.compute(&[&param_pool, &state.params]);
+
         let bend_amount = self.bend_level.compute(&[&param_pool, &state.params]);
+        let frequency = state.frequency * pitch * detune.exp2();
         let mut x = state.unison.process_range(
             ctx,
-            state.frequency * pitch,
+            frequency,
             self.unison_settings.detune,
             self.unison_settings.stereo_width,
             |phase, next_phase| {

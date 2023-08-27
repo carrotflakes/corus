@@ -144,16 +144,10 @@ pub fn editor_updator(
                 });
             });
 
-            if ui
-                .add(crate::widgets::knob::knob_log(
-                    0.001..1.0,
-                    &mut synth.voice.level.value,
-                    "level",
-                ))
-                .clicked()
-            {
-                // *state.envelope_location.lock().unwrap() = EnvelopeLocation::VoiceGain;
-            };
+            ui.horizontal(|ui| {
+                add_knob(ui, &mut synth.voice.level, 0.001..1.0, true, || ());
+                add_knob(ui, &mut synth.voice.detune, -1.0..1.0, true, || ());
+            });
 
             ui.collapsing("Unison", |ui| {
                 ui.horizontal(|ui| {
@@ -465,28 +459,30 @@ fn add_knob(
             }
 
             ui.label("global");
-            let producer_id = ProducerId::new(0);
-            if param
-                .consumer
-                .producers
-                .iter_mut()
-                .find(|p| p.1 == producer_id)
-                .is_some()
-            {
-                if ui.button("Remove").clicked() {
-                    param.consumer.producers.retain(|p| p.1 != producer_id);
-                }
-                param
+            for i in 0..2 {
+                let producer_id = ProducerId::new(i);
+                if param
                     .consumer
                     .producers
                     .iter_mut()
                     .find(|p| p.1 == producer_id)
-                    .map(|p| {
-                        ui.add(crate::widgets::knob::knob(range.clone(), &mut p.0));
-                    });
-            } else {
-                if ui.button("Add").clicked() {
-                    param.consumer.producers.push((0.0, producer_id));
+                    .is_some()
+                {
+                    if ui.button("Remove").clicked() {
+                        param.consumer.producers.retain(|p| p.1 != producer_id);
+                    }
+                    param
+                        .consumer
+                        .producers
+                        .iter_mut()
+                        .find(|p| p.1 == producer_id)
+                        .map(|p| {
+                            ui.add(crate::widgets::knob::knob(range.clone(), &mut p.0));
+                        });
+                } else {
+                    if ui.button("Add").clicked() {
+                        param.consumer.producers.push((0.0, producer_id));
+                    }
                 }
             }
 
