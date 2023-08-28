@@ -31,146 +31,11 @@ pub fn editor_updator(
         let mut synth = state.synth.lock().unwrap();
 
         ui.collapsing("Generator", |ui| {
-            ui.horizontal(|ui| {
-                let wt = { synth.voice.wavetable_settings.wavetable() };
-                let main_wt_id = ui.id().with("main_wt");
-                let res = egui::Frame::canvas(ui.style()).show(ui, |ui| {
-                    let (_id, rect) = ui.allocate_space(egui::vec2(80.0, 80.0));
-                    let to_screen = emath::RectTransform::from_to(
-                        egui::Rect::from_x_y_ranges(0.0..=1.0, -1.0..=1.0),
-                        rect,
-                    );
-                    let mut shapes = vec![];
-                    let mut points = vec![];
-
-                    let fft = ui
-                        .data()
-                        .get_persisted::<bool>(main_wt_id)
-                        .unwrap_or_default();
-                    if !fft {
-                        let w = rect.width() as usize;
-                        for i in 0..=w {
-                            let p = i as f64 / w as f64;
-                            let v = wt(p % 1.0) as f32;
-                            points.push(to_screen * egui::pos2(p as f32, -v));
-                        }
-
-                        shapes.push(egui::Shape::line(
-                            points,
-                            egui::Stroke::new(1.0, egui::Color32::LIGHT_BLUE),
-                        ));
-                    } else {
-                        let res = 256;
-                        let mut b = (0..res)
-                            .map(|i| wt(i as f64 / res as f64))
-                            .map(Complex64::from)
-                            .collect::<Vec<_>>();
-                        FFT_PLANNER.with(|planner| {
-                            let mut planner = planner.borrow_mut();
-                            let fft = planner.plan_fft_forward(res);
-                            fft.process(&mut b);
-                        });
-                        points.push(to_screen * egui::pos2(0.0, 1.0));
-                        for i in 0..res / 2 {
-                            let x = i as f64 / (res / 2) as f64;
-                            let v = (b[i].norm() as f32 / res as f32).sqrt() * 2.0 - 1.0;
-                            points.push(to_screen * egui::pos2(x as f32, -v));
-                        }
-
-                        shapes.push(egui::Shape::line(
-                            points,
-                            egui::Stroke::new(1.0, egui::Color32::LIGHT_BLUE),
-                        ));
-                    }
-
-                    ui.painter().extend(shapes);
+            for (i, osc) in synth.voice.oscs.iter_mut().enumerate() {
+                ui.push_id(i, |ui| {
+                    generator_ui(ui, osc);
                 });
-
-                if ui
-                    .allocate_rect(res.response.rect, egui::Sense::click())
-                    .clicked()
-                {
-                    *ui.data().get_persisted_mut_or_default::<bool>(main_wt_id) ^= true;
-                }
-
-                ui.vertical(|ui| {
-                    wavetable_seed(&mut synth, ui);
-
-                    ui.horizontal(|ui| {
-                        egui::Frame::canvas(ui.style()).show(ui, |ui| {
-                            let (_id, rect) = ui.allocate_space(egui::vec2(20.0, 20.0));
-                            let to_screen = emath::RectTransform::from_to(
-                                egui::Rect::from_x_y_ranges(0.0..=1.0, -1.0..=0.0),
-                                rect,
-                            );
-
-                            let w = rect.width() as usize;
-                            let mut points = vec![];
-                            for i in 0..=w {
-                                let p = i as f64 / w as f64;
-                                let v = synth.voice.bender.process(synth.voice.bend_level.value, p)
-                                    as f32;
-                                points.push(to_screen * egui::pos2(p as f32, -v));
-                            }
-                            ui.painter().add(egui::Shape::line(
-                                points,
-                                egui::Stroke::new(1.0, egui::Color32::LIGHT_BLUE),
-                            ));
-                        });
-
-                        let r = synth.voice.bender.level_range();
-                        add_knob(ui, &mut synth.voice.bend_level, r, true, || ());
-
-                        egui::ComboBox::from_label("bend")
-                            .selected_text(format!("{:?}", &synth.voice.bender))
-                            .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut synth.voice.bender, Bender::None, "none");
-                                ui.selectable_value(
-                                    &mut synth.voice.bender,
-                                    Bender::Quadratic,
-                                    "quadratic",
-                                );
-                                ui.selectable_value(
-                                    &mut synth.voice.bender,
-                                    Bender::Cubic,
-                                    "cubic",
-                                );
-                                ui.selectable_value(&mut synth.voice.bender, Bender::Sin, "sin");
-                                ui.selectable_value(&mut synth.voice.bender, Bender::Cos, "cos");
-                            });
-                    });
-
-                    ui.checkbox(&mut synth.voice.wavetable_settings.use_buffer, "prerender");
-                });
-            });
-
-            ui.horizontal(|ui| {
-                add_knob(ui, &mut synth.voice.level, 0.001..1.0, true, || ());
-                add_knob(ui, &mut synth.voice.detune, -1.0..1.0, true, || ());
-            });
-
-            ui.collapsing("Unison", |ui| {
-                ui.horizontal(|ui| {
-                    ui.add(
-                        egui::widgets::DragValue::new(&mut synth.voice.unison_settings.num)
-                            .clamp_range(1..=10),
-                    );
-                    ui.label("voices");
-                    ui.checkbox(&mut synth.voice.unison_settings.phase_reset, "phase reset");
-                });
-                ui.horizontal(|ui| {
-                    ui.add(crate::widgets::knob::knob_log(
-                        0.001..1.0,
-                        &mut synth.voice.unison_settings.detune,
-                        "detune",
-                    ));
-                    ui.add(crate::widgets::knob::knob_named(
-                        0.0..1.0,
-                        &mut synth.voice.unison_settings.stereo_width,
-                        "stereo width",
-                    ));
-                });
-            });
+            }
         });
 
         ui.collapsing("Envelope", |ui| {
@@ -188,13 +53,15 @@ pub fn editor_updator(
 
             envelope(ui, &mut synth.voice.envs[*envloc]);
 
-            for l in synth.voice.lfos.iter_mut() {
-                lfo(ui, l);
-            }
+            ui.horizontal(|ui| {
+                for l in synth.voice.lfos.iter_mut() {
+                    lfo(ui, l);
+                }
 
-            for l in synth.lfos.iter_mut() {
-                lfo(ui, l);
-            }
+                for l in synth.lfos.iter_mut() {
+                    lfo(ui, l);
+                }
+            });
         });
 
         ui.collapsing("Effectors", |ui| {
@@ -236,11 +103,7 @@ pub fn editor_updator(
             state.wavetable_lab.lock().unwrap().show(
                 ui,
                 Some(|tree| {
-                    state
-                        .synth
-                        .lock()
-                        .unwrap()
-                        .voice
+                    state.synth.lock().unwrap().voice.oscs[0]
                         .wavetable_settings
                         .set_custom_wavetable(tree);
                 }),
@@ -289,19 +152,151 @@ pub fn editor_updator(
     });
 }
 
-fn wavetable_seed(synth: &mut std::sync::MutexGuard<crate::synth::MySynth>, ui: &mut egui::Ui) {
-    if synth.voice.wavetable_settings.is_custom_wavetable() {
+fn generator_ui(ui: &mut egui::Ui, osc: &mut crate::synth::Osc) {
+    ui.horizontal(|ui| {
+        let wt = { osc.wavetable_settings.wavetable() };
+        let main_wt_id = ui.id().with("main_wt");
+        let res = egui::Frame::canvas(ui.style()).show(ui, |ui| {
+            let (_id, rect) = ui.allocate_space(egui::vec2(80.0, 80.0));
+            let to_screen = emath::RectTransform::from_to(
+                egui::Rect::from_x_y_ranges(0.0..=1.0, -1.0..=1.0),
+                rect,
+            );
+            let mut shapes = vec![];
+            let mut points = vec![];
+
+            let fft = ui
+                .data()
+                .get_persisted::<bool>(main_wt_id)
+                .unwrap_or_default();
+            if !fft {
+                let w = rect.width() as usize;
+                for i in 0..=w {
+                    let p = i as f64 / w as f64;
+                    let v = wt(p % 1.0) as f32;
+                    points.push(to_screen * egui::pos2(p as f32, -v));
+                }
+
+                shapes.push(egui::Shape::line(
+                    points,
+                    egui::Stroke::new(1.0, egui::Color32::LIGHT_BLUE),
+                ));
+            } else {
+                let res = 256;
+                let mut b = (0..res)
+                    .map(|i| wt(i as f64 / res as f64))
+                    .map(Complex64::from)
+                    .collect::<Vec<_>>();
+                FFT_PLANNER.with(|planner| {
+                    let mut planner = planner.borrow_mut();
+                    let fft = planner.plan_fft_forward(res);
+                    fft.process(&mut b);
+                });
+                points.push(to_screen * egui::pos2(0.0, 1.0));
+                for i in 0..res / 2 {
+                    let x = i as f64 / (res / 2) as f64;
+                    let v = (b[i].norm() as f32 / res as f32).sqrt() * 2.0 - 1.0;
+                    points.push(to_screen * egui::pos2(x as f32, -v));
+                }
+
+                shapes.push(egui::Shape::line(
+                    points,
+                    egui::Stroke::new(1.0, egui::Color32::LIGHT_BLUE),
+                ));
+            }
+
+            ui.painter().extend(shapes);
+        });
+
+        if ui
+            .allocate_rect(res.response.rect, egui::Sense::click())
+            .clicked()
+        {
+            *ui.data().get_persisted_mut_or_default::<bool>(main_wt_id) ^= true;
+        }
+
+        ui.vertical(|ui| {
+            wavetable_seed(osc, ui);
+
+            ui.horizontal(|ui| {
+                egui::Frame::canvas(ui.style()).show(ui, |ui| {
+                    let (_id, rect) = ui.allocate_space(egui::vec2(20.0, 20.0));
+                    let to_screen = emath::RectTransform::from_to(
+                        egui::Rect::from_x_y_ranges(0.0..=1.0, -1.0..=0.0),
+                        rect,
+                    );
+
+                    let w = rect.width() as usize;
+                    let mut points = vec![];
+                    for i in 0..=w {
+                        let p = i as f64 / w as f64;
+                        let v = osc.bender.process(osc.bend_level.value, p) as f32;
+                        points.push(to_screen * egui::pos2(p as f32, -v));
+                    }
+                    ui.painter().add(egui::Shape::line(
+                        points,
+                        egui::Stroke::new(1.0, egui::Color32::LIGHT_BLUE),
+                    ));
+                });
+
+                let r = osc.bender.level_range();
+                add_knob(ui, &mut osc.bend_level, r, true, || ());
+
+                egui::ComboBox::from_label("bend")
+                    .selected_text(format!("{:?}", &osc.bender))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut osc.bender, Bender::None, "none");
+                        ui.selectable_value(&mut osc.bender, Bender::Quadratic, "quadratic");
+                        ui.selectable_value(&mut osc.bender, Bender::Cubic, "cubic");
+                        ui.selectable_value(&mut osc.bender, Bender::Sin, "sin");
+                        ui.selectable_value(&mut osc.bender, Bender::Cos, "cos");
+                    });
+            });
+
+            ui.checkbox(&mut osc.wavetable_settings.use_buffer, "prerender");
+        });
+    });
+
+    ui.horizontal(|ui| {
+        add_knob(ui, &mut osc.level, 0.001..1.0, true, || ());
+        add_knob(ui, &mut osc.detune, -1.0..1.0, true, || ());
+    });
+
+    ui.collapsing("Unison", |ui| {
+        ui.horizontal(|ui| {
+            ui.add(egui::widgets::DragValue::new(&mut osc.unison_settings.num).clamp_range(1..=10));
+            ui.label("voices");
+            ui.checkbox(&mut osc.unison_settings.phase_reset, "phase reset");
+
+            ui.separator();
+
+            ui.add(crate::widgets::knob::knob_log(
+                0.001..1.0,
+                &mut osc.unison_settings.detune,
+                "detune",
+            ));
+            ui.add(crate::widgets::knob::knob_named(
+                0.0..1.0,
+                &mut osc.unison_settings.stereo_width,
+                "stereo width",
+            ));
+        });
+    });
+}
+
+fn wavetable_seed(osc: &mut crate::synth::Osc, ui: &mut egui::Ui) {
+    if osc.wavetable_settings.is_custom_wavetable() {
         ui.horizontal(|ui| {
             ui.label("Custom");
             if ui.button("reset").clicked() {
-                synth.voice.wavetable_settings.clear_custom_wavetable();
+                osc.wavetable_settings.clear_custom_wavetable();
             }
         });
         return;
     }
-    let mut seed = synth.voice.wavetable_settings.seed();
+    let mut seed = osc.wavetable_settings.seed();
     if ui.add(egui::widgets::DragValue::new(&mut seed)).changed() {
-        synth.voice.wavetable_settings.set_seed(seed);
+        osc.wavetable_settings.set_seed(seed);
     };
 }
 
