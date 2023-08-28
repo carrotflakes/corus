@@ -188,6 +188,10 @@ pub fn editor_updator(
 
             envelope(ui, &mut synth.voice.envs[*envloc]);
 
+            for l in synth.voice.lfos.iter_mut() {
+                lfo(ui, l);
+            }
+
             for l in synth.lfos.iter_mut() {
                 lfo(ui, l);
             }
@@ -490,7 +494,7 @@ fn add_knob(
                 return;
             }
             ui.label("voice");
-            for i in 0..2 {
+            for i in 0..4 {
                 let producer_id = ProducerId::new(i);
                 if param
                     .voice_consumer

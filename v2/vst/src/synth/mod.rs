@@ -79,6 +79,7 @@ pub struct Voice {
     pub detune: ParamF64,
     pub effectors: Vec<(bool, Effector)>,
     pub envs: Vec<Envelope>,
+    pub lfos: Vec<Lfo>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -128,6 +129,16 @@ impl MySynth {
                 envs: vec![
                     Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
                     Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
+                ],
+                lfos: vec![
+                    Lfo {
+                        frequency: 1.0,
+                        amp: 1.0,
+                    },
+                    Lfo {
+                        frequency: 1.0,
+                        amp: 1.0,
+                    },
                 ],
             },
             effectors: vec![
@@ -227,6 +238,13 @@ impl MySynth {
             }
 
             voice.wt = self.voice.wavetable_settings.generator();
+
+            voice.lfos.resize_with(self.voice.lfos.len(), Phase::new);
+            let params_size = self.voice.envs.len() + self.voice.lfos.len();
+            if voice.params.params.len() != params_size {
+                voice.params =
+                    ParamPool::new(&(0..params_size).map(ProducerId::new).collect::<Vec<_>>());
+            }
         }
     }
 
@@ -264,6 +282,7 @@ pub struct VoiceState {
     effector_states: Vec<effectors::State>,
     params: ParamPool,
     wt: Arc<dyn Fn(f64, f64) -> f64 + Send + Sync>,
+    lfos: Vec<Phase<f64>>,
 }
 
 impl Default for VoiceState {
@@ -283,6 +302,7 @@ impl VoiceState {
             effector_states: vec![],
             params: ParamPool::new(&[ProducerId::new(0), ProducerId::new(1)]),
             wt: Arc::new(|_, _| 0.0),
+            lfos: vec![],
         }
     }
 }
@@ -304,11 +324,19 @@ impl Voice {
             return StereoF64::default();
         };
 
-        for i in 0..self.envs.len() {
+        let env_len = self.envs.len();
+        for i in 0..env_len {
             state.params.set(
                 ProducerId::new(i),
                 self.envs[i].compute(env_state.elapsed, env_state.note_off_time),
             );
+        }
+
+        for (i, lfo) in self.lfos.iter().enumerate() {
+            state.params.set(ProducerId::new(env_len + i), {
+                let phase = state.lfos[i].process(ctx, lfo.frequency);
+                lfo.compute(phase)
+            });
         }
 
         let detune = self.detune.compute(&[&param_pool, &state.params]);
