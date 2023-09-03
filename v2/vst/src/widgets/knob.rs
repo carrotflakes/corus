@@ -19,7 +19,7 @@ pub fn knob_ui(
         let delta = -response.drag_delta().y as f64;
         *value = (*value + delta * (range.end - range.start) / 100.0).clamp(range.start, range.end);
         response.mark_changed();
-        ui.output().cursor_icon = CursorIcon::ResizeVertical;
+        ui.output_mut(|o| o.cursor_icon = CursorIcon::ResizeVertical);
         show_tip = true;
     }
     if response.hovered() {

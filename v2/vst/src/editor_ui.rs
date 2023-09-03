@@ -165,10 +165,7 @@ fn generator_ui(ui: &mut egui::Ui, osc: &mut crate::synth::Osc) {
             let mut shapes = vec![];
             let mut points = vec![];
 
-            let fft = ui
-                .data()
-                .get_persisted::<bool>(main_wt_id)
-                .unwrap_or_default();
+            let fft = ui.data_mut(|d| d.get_persisted::<bool>(main_wt_id).unwrap_or_default());
             if !fft {
                 let w = rect.width() as usize;
                 for i in 0..=w {
@@ -212,7 +209,7 @@ fn generator_ui(ui: &mut egui::Ui, osc: &mut crate::synth::Osc) {
             .allocate_rect(res.response.rect, egui::Sense::click())
             .clicked()
         {
-            *ui.data().get_persisted_mut_or_default::<bool>(main_wt_id) ^= true;
+            ui.data_mut(|d| *d.get_persisted_mut_or_default::<bool>(main_wt_id) ^= true);
         }
 
         ui.vertical(|ui| {

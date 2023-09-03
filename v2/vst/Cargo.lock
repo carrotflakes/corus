@@ -40,7 +40,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c99f64d1e06488f620f932677e24bc6e2897582980441ae90a671415bd7ec2f"
 dependencies = [
  "cfg-if",
- "getrandom",
  "once_cell",
  "version_check",
 ]
@@ -75,9 +74,9 @@ checksum = "224afbd727c3d6e4b90103ece64b8d1b67fbb1973b1046c2281eed3f3803f800"
 
 [[package]]
 name = "anymap"
-version = "0.12.1"
+version = "1.0.0-beta.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33954243bd79057c2de7338850b85983a44588021f8a5fee574a8888c6de4344"
+checksum = "8f1f8f5a6f3d50d89e3797d7593a50f96bb2aaa20ca0cc7be1fb673232c91d72"
 
 [[package]]
 name = "assert_no_alloc"
@@ -135,25 +134,7 @@ dependencies = [
 [[package]]
 name = "baseview"
 version = "0.1.0"
-source = "git+https://github.com/RustAudio/baseview.git?rev=7001c2521fa1a439a01967cb881b411cd75d9ee0#7001c2521fa1a439a01967cb881b411cd75d9ee0"
-dependencies = [
- "cocoa",
- "core-foundation",
- "keyboard-types",
- "nix 0.22.3",
- "objc",
- "raw-window-handle 0.4.3",
- "uuid",
- "winapi",
- "x11",
- "xcb",
- "xcb-util",
-]
-
-[[package]]
-name = "baseview"
-version = "0.1.0"
-source = "git+https://github.com/RustAudio/baseview.git?rev=eae4033e7d2cc9c31ccaa2794d5d08eedf2f510c#eae4033e7d2cc9c31ccaa2794d5d08eedf2f510c"
+source = "git+https://github.com/RustAudio/baseview.git?rev=1d9806d5bd92275d0d8142d9c9c90198757b9b25#1d9806d5bd92275d0d8142d9c9c90198757b9b25"
 dependencies = [
  "cocoa",
  "core-foundation",
@@ -313,8 +294,7 @@ dependencies = [
 [[package]]
 name = "clap-sys"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27f4e06657d33d5d194db1155cef359c359483a4170362bf4e105146dd0109e3"
+source = "git+https://github.com/robbert-vdh/clap-sys.git?branch=feature/cstr-macro#523a5f8a8dd021ec99e7d6e0c0ebe7741a3da9d4"
 
 [[package]]
 name = "clap_derive"
@@ -619,10 +599,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
 
 [[package]]
-name = "egui"
-version = "0.19.0"
+name = "ecolor"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc9fcd393c3daaaf5909008a1d948319d538b79c51871e4df0993260260a94e4"
+checksum = "2e479a7fa3f23d4e794f8b2f8b3568dd4e47886ad1b12c9c095e141cb591eb63"
+dependencies = [
+ "bytemuck",
+]
+
+[[package]]
+name = "egui"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3aef8ec3ae1b772f340170c65bf27d5b8c28f543a0116c844d2ac08d01123e7"
 dependencies = [
  "ahash",
  "epaint",
@@ -632,9 +621,9 @@ dependencies = [
 [[package]]
 name = "egui-baseview"
 version = "0.1.0"
-source = "git+https://github.com/BillyDM/egui-baseview.git?rev=46e21cc11c57c705fb83611389399ec3d2670a44#46e21cc11c57c705fb83611389399ec3d2670a44"
+source = "git+https://github.com/BillyDM/egui-baseview.git?rev=27c027c22a83d2eb214074f922ba4115f712e483#27c027c22a83d2eb214074f922ba4115f712e483"
 dependencies = [
- "baseview 0.1.0 (git+https://github.com/RustAudio/baseview.git?rev=eae4033e7d2cc9c31ccaa2794d5d08eedf2f510c)",
+ "baseview",
  "copypasta",
  "egui",
  "egui_glow",
@@ -644,38 +633,39 @@ dependencies = [
 
 [[package]]
 name = "egui_glow"
-version = "0.19.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad77d4a00402bae9658ee64be148f4b2a0b38e4fc7874970575ca01ed1c5b75d"
+checksum = "1f8c2752cdf1b0ef5fcda59a898cacabad974d4f5880e92a420b2c917022da64"
 dependencies = [
  "bytemuck",
  "egui",
  "glow",
+ "log",
  "memoffset 0.6.5",
- "tracing",
  "wasm-bindgen",
  "web-sys",
 ]
 
 [[package]]
 name = "emath"
-version = "0.19.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9542a40106fdba943a055f418d1746a050e1a903a049b030c2b097d4686a33cf"
+checksum = "3857d743a6e0741cdd60b622a74c7a36ea75f5f8f11b793b41d905d2c9721a4b"
 dependencies = [
  "bytemuck",
 ]
 
 [[package]]
 name = "epaint"
-version = "0.19.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ba04741be7f6602b1a1b28f1082cce45948a7032961c52814f8946b28493300"
+checksum = "09333964d4d57f40a85338ba3ca5ed4716070ab184dcfed966b35491c5c64f3b"
 dependencies = [
  "ab_glyph",
  "ahash",
  "atomic_refcell",
  "bytemuck",
+ "ecolor",
  "emath",
  "nohash-hasher",
  "parking_lot",
@@ -752,9 +742,9 @@ checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 
 [[package]]
 name = "glow"
-version = "0.11.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8bd5877156a19b8ac83a29b2306fe20537429d318f3ff0a1a2119f8d9c61919"
+checksum = "ca0fe580e4b60a8ab24a868bc08e2f03cbcb20d3d676601fa909386713333728"
 dependencies = [
  "js-sys",
  "slotmap",
@@ -1111,9 +1101,9 @@ dependencies = [
 
 [[package]]
 name = "nih_log"
-version = "0.2.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "016c1e345f1130730057d9b5381f423a36393b21c4f38f3ed05638448b6a5c48"
+checksum = "d0cdb52ef79af48ae110401c883bdb9c15e0306a99ab6ecf18bc52068b668e54"
 dependencies = [
  "atty",
  "log",
@@ -1126,7 +1116,7 @@ dependencies = [
 [[package]]
 name = "nih_plug"
 version = "0.0.0"
-source = "git+https://github.com/robbert-vdh/nih-plug.git#15c859a8e6f2530ac79449d402db12c31005054c"
+source = "git+https://github.com/robbert-vdh/nih-plug.git?rev=eb968ba44666d96cb2349ad877fcdcbccb993f8c#eb968ba44666d96cb2349ad877fcdcbccb993f8c"
 dependencies = [
  "anyhow",
  "anymap",
@@ -1134,7 +1124,7 @@ dependencies = [
  "atomic_float",
  "atomic_refcell",
  "backtrace",
- "baseview 0.1.0 (git+https://github.com/RustAudio/baseview.git?rev=7001c2521fa1a439a01967cb881b411cd75d9ee0)",
+ "baseview",
  "bitflags 1.3.2",
  "cfg-if",
  "clap",
@@ -1164,7 +1154,7 @@ dependencies = [
 [[package]]
 name = "nih_plug_derive"
 version = "0.1.0"
-source = "git+https://github.com/robbert-vdh/nih-plug.git#15c859a8e6f2530ac79449d402db12c31005054c"
+source = "git+https://github.com/robbert-vdh/nih-plug.git?rev=eb968ba44666d96cb2349ad877fcdcbccb993f8c#eb968ba44666d96cb2349ad877fcdcbccb993f8c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1174,9 +1164,9 @@ dependencies = [
 [[package]]
 name = "nih_plug_egui"
 version = "0.0.0"
-source = "git+https://github.com/robbert-vdh/nih-plug.git#15c859a8e6f2530ac79449d402db12c31005054c"
+source = "git+https://github.com/robbert-vdh/nih-plug.git?rev=eb968ba44666d96cb2349ad877fcdcbccb993f8c#eb968ba44666d96cb2349ad877fcdcbccb993f8c"
 dependencies = [
- "baseview 0.1.0 (git+https://github.com/RustAudio/baseview.git?rev=eae4033e7d2cc9c31ccaa2794d5d08eedf2f510c)",
+ "baseview",
  "crossbeam",
  "egui",
  "egui-baseview",
@@ -1189,7 +1179,7 @@ dependencies = [
 [[package]]
 name = "nih_plug_xtask"
 version = "0.1.0"
-source = "git+https://github.com/robbert-vdh/nih-plug.git#15c859a8e6f2530ac79449d402db12c31005054c"
+source = "git+https://github.com/robbert-vdh/nih-plug.git?rev=eb968ba44666d96cb2349ad877fcdcbccb993f8c#eb968ba44666d96cb2349ad877fcdcbccb993f8c"
 dependencies = [
  "anyhow",
  "goblin",
@@ -1240,6 +1230,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-complex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02e0d21255c828d6f128a1e41534206671e8c3ea0c62f32291e808dc82cff17d"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "num-derive"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1248,6 +1247,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "num-integer"
+version = "0.1.45"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "225d3389fb3509a24c93f5c29eb6bde2586b98d9f016636dff58d7c6f7569cd9"
+dependencies = [
+ "autocfg",
+ "num-traits",
 ]
 
 [[package]]
@@ -1401,12 +1410,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 
 [[package]]
-name = "pin-project-lite"
-version = "0.2.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0a7ae3ac2f1173085d398531c705756c94a4c56843785df85a60c1a0afac116"
-
-[[package]]
 name = "pkg-config"
 version = "0.3.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1423,6 +1426,15 @@ name = "ppv-lite86"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
+
+[[package]]
+name = "primal-check"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9df7f93fd637f083201473dab4fee2db4c429d32e55e3299980ab3957ab916a0"
+dependencies = [
+ "num-integer",
+]
 
 [[package]]
 name = "proc-macro-crate"
@@ -1584,6 +1596,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
+name = "rustfft"
+version = "6.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e17d4f6cbdb180c9f4b2a26bbf01c4e647f1e1dea22fe8eb9db54198b32f9434"
+dependencies = [
+ "num-complex",
+ "num-integer",
+ "num-traits",
+ "primal-check",
+ "strength_reduce",
+ "transpose",
+ "version_check",
+]
+
+[[package]]
 name = "rustix"
 version = "0.36.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1734,6 +1761,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "strength_reduce"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe895eb47f22e2ddd4dabc02bce419d2e643c8e3b585c78158b349195bc24d82"
+
+[[package]]
 name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1853,23 +1886,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing"
-version = "0.1.37"
+name = "transpose"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ce8c33a8d48bd45d624a6e523445fd21ec13d3653cd51f681abf67418f54eb8"
+checksum = "e6522d49d03727ffb138ae4cbc1283d3774f0d10aa7f9bf52e6784c45daf9b23"
 dependencies = [
- "cfg-if",
- "pin-project-lite",
- "tracing-core",
-]
-
-[[package]]
-name = "tracing-core"
-version = "0.1.30"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24eb03ba0eab1fd845050058ce5e616558e8f8d8fca633e6b163fe25c797213a"
-dependencies = [
- "once_cell",
+ "num-integer",
+ "strength_reduce",
 ]
 
 [[package]]
@@ -1908,6 +1931,7 @@ dependencies = [
  "nih_plug_egui",
  "rand",
  "rand-wt",
+ "rustfft",
  "serde",
  "wavetables",
 ]
