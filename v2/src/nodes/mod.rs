@@ -13,3 +13,4 @@ pub mod poly_synth;
 pub mod sine;
 pub mod unison;
 pub mod voice_manager;
+pub mod voice_manager2;

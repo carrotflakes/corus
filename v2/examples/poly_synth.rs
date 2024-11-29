@@ -1,6 +1,6 @@
 use corus_v2::{
     event_queue::EventQueue,
-    nodes::{envelope::Envelope, phase::Phase, voice_manager::VoiceManager},
+    nodes::{envelope::Envelope, phase::Phase, voice_manager2::VoiceManager},
     signal::IntoStereo,
     ProcessContext,
 };
@@ -52,14 +52,16 @@ fn main() {
 }
 
 struct PolySynth {
-    voices: VoiceManager<u8, Voice>,
+    voice_manager: VoiceManager<u8>,
+    voices: Vec<Voice>,
     envelope: Envelope,
 }
 
 impl PolySynth {
     fn new() -> Self {
         Self {
-            voices: VoiceManager::new(Voice::new, 8),
+            voice_manager: VoiceManager::new(8),
+            voices: (0..8).map(|_| Voice::new()).collect(),
             envelope: Envelope::new(&[(0.01, 1.0, -1.0), (2.0, 0.8, 1.0)], 0.2, 1.0),
         }
     }
@@ -67,13 +69,15 @@ impl PolySynth {
     fn handle_event(&mut self, time: f64, event: (bool, u8)) {
         let notenum = event.1;
         if event.0 {
-            let mut voice = self.voices.note_on(notenum);
+            let i = self.voice_manager.note_on(notenum);
+            let voice = &mut self.voices[i];
             voice.start_time = time;
             voice.end_time = std::f64::INFINITY;
             voice.frequency = 440.0 * 2.0f64.powf((notenum as f64 - 69.0) / 12.0);
             voice.amplitude = 1.0;
         } else {
-            if let Some(mut voice) = self.voices.note_off(notenum) {
+            if let Some(i) = self.voice_manager.note_off(notenum) {
+                let voice = &mut self.voices[i];
                 voice.end_time = time;
             }
         }
